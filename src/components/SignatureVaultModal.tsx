@@ -62,13 +62,12 @@ const SignatureVaultModal: React.FC<SignatureVaultModalProps> = ({
           x: e.clientX - rect.left,
           y: e.clientY - rect.top,
         };
-      } else {
-        const touch = e.touches[0];
-        return {
-          x: touch.clientX - rect.left,
-          y: touch.clientY - rect.top,
-        };
       }
+      const touch = e.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
     };
 
     const startDrawing = (e: MouseEvent | TouchEvent) => {
@@ -236,7 +235,6 @@ const SignatureVaultModal: React.FC<SignatureVaultModalProps> = ({
         </div>
 
         <div className="p-6">
-
           {/* Error message */}
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -297,9 +295,7 @@ const SignatureVaultModal: React.FC<SignatureVaultModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm PIN
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Confirm PIN</label>
                 <input
                   type="password"
                   value={confirmPin}

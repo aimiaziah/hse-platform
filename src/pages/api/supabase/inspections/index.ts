@@ -2,7 +2,12 @@
 import { NextApiResponse } from 'next';
 import { withRBAC, AuthenticatedRequest } from '@/lib/supabase-middleware';
 import { getServiceSupabase, logAuditTrail, createNotification } from '@/lib/supabase';
-import { validateBody, validateQuery, InspectionCreateSchema, ListQuerySchema } from '@/lib/validation';
+import {
+  validateBody,
+  validateQuery,
+  InspectionCreateSchema,
+  ListQuerySchema,
+} from '@/lib/validation';
 import { logger } from '@/lib/logger';
 
 /**
@@ -18,17 +23,13 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       // Validate query parameters
       const queryValidation = validateQuery(ListQuerySchema, req.query);
       if (!queryValidation.success) {
-        logger.warn('Invalid query parameters for inspections list', { errors: queryValidation.details });
+        logger.warn('Invalid query parameters for inspections list', {
+          errors: queryValidation.details,
+        });
         return res.status(400).json(queryValidation);
       }
 
-      const {
-        status,
-        inspection_type,
-        inspector_id,
-        limit,
-        offset,
-      } = queryValidation.data;
+      const { status, inspection_type, inspector_id, limit, offset } = queryValidation.data;
 
       let query = supabase.from('v_inspections_detailed').select('*');
 
@@ -81,7 +82,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       if (!validation.success) {
         logger.warn('Inspection creation validation failed', {
           errors: validation.details,
-          userId: req.user?.id
+          userId: req.user?.id,
         });
         return res.status(400).json(validation);
       }
@@ -89,8 +90,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       const inspectionData = validation.data;
 
       // Create inspection
-      const { data: inspection, error: createError } = await (supabase
-        .from('inspections') as any)
+      const { data: inspection, error: createError } = await (supabase.from('inspections') as any)
         .insert({
           inspection_type: inspectionData.inspection_type,
           inspector_id: req.user!.id,
@@ -116,7 +116,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       logger.info('Inspection created', {
         inspectionId: inspection.id,
         type: (inspection as any).inspection_type,
-        userId: req.user!.id
+        userId: req.user!.id,
       });
 
       // If inspection has items, create them
@@ -129,17 +129,20 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           notes: item.notes || null,
         }));
 
-        const { error: itemsError } = await (supabase.from('inspection_items') as any).insert(items);
+        const { error: itemsError } = await (supabase.from('inspection_items') as any).insert(
+          items,
+        );
 
         if (itemsError) {
-          logger.error('Error creating inspection items', itemsError, { inspectionId: inspection.id });
+          logger.error('Error creating inspection items', itemsError, {
+            inspectionId: inspection.id,
+          });
         }
       }
 
       // Update asset's last inspection date
       if ((inspection as any).asset_id) {
-        await (supabase
-          .from('assets') as any)
+        await (supabase.from('assets') as any)
           .update({ last_inspection_date: (inspection as any).inspection_date })
           .eq('id', (inspection as any).asset_id);
       }
@@ -175,7 +178,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
             await createNotification({
               userId: (supervisor as any).id,
               title: 'New Inspection for Review',
-              message: `${req.user!.name} submitted a ${(inspection as any).inspection_type} inspection for review`,
+              message: `${req.user!.name} submitted a ${
+                (inspection as any).inspection_type
+              } inspection for review`,
               type: 'info',
               relatedEntityType: 'inspection',
               relatedEntityId: (inspection as any).id,

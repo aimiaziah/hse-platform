@@ -109,7 +109,7 @@ async function validateAuthToken(token: string): Promise<User | null> {
     }
 
     // Extract user ID from token
-    const userId = decoded.userId;
+    const { userId } = decoded;
     if (!userId) {
       console.error('No userId in JWT token');
       return null;
@@ -119,7 +119,8 @@ async function validateAuthToken(token: string): Promise<User | null> {
 
     const { data: users, error } = await supabase
       .from('users')
-      .select(`
+      .select(
+        `
         *,
         user_permissions (
           can_manage_users,
@@ -132,7 +133,8 @@ async function validateAuthToken(token: string): Promise<User | null> {
           can_view_pending_inspections,
           can_view_analytics
         )
-      `)
+      `,
+      )
       .eq('id', userId)
       .eq('is_active', true);
 

@@ -34,9 +34,7 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
     const supabase = getServiceSupabase();
 
     // Build query
-    let query = supabase
-      .from('users')
-      .select('*, user_permissions(*)', { count: 'exact' });
+    let query = supabase.from('users').select('*, user_permissions(*)', { count: 'exact' });
 
     // Filter by role
     if (role) {
@@ -109,14 +107,16 @@ async function createUser(req: NextApiRequest, res: NextApiResponse, adminUser: 
   // Validate request body
   const validation = validateBody(UserCreateSchema, req.body);
   if (!validation.success) {
-    logger.warn('User creation validation failed', { errors: validation.details, adminUser: adminUser.id });
+    logger.warn('User creation validation failed', {
+      errors: validation.details,
+      adminUser: adminUser.id,
+    });
     return res.status(400).json(validation);
   }
 
   const { name, role, pin, email, isActive } = validation.data;
 
   try {
-
     const supabase = getServiceSupabase();
 
     // Use provided PIN (already validated by schema)
@@ -129,8 +129,7 @@ async function createUser(req: NextApiRequest, res: NextApiResponse, adminUser: 
     const permissions = getRolePermissions(role);
 
     // Create user in database
-    const { data: newUser, error: userError } = await (supabase
-      .from('users') as any)
+    const { data: newUser, error: userError } = await (supabase.from('users') as any)
       .insert({
         name,
         pin: userPin,
@@ -146,23 +145,25 @@ async function createUser(req: NextApiRequest, res: NextApiResponse, adminUser: 
       return res.status(500).json({ error: 'Failed to create user' });
     }
 
-    logger.info('User created', { userId: newUser.id, role: newUser.role, createdBy: adminUser.id });
+    logger.info('User created', {
+      userId: newUser.id,
+      role: newUser.role,
+      createdBy: adminUser.id,
+    });
 
     // Create user permissions
-    const { error: permError } = await (supabase
-      .from('user_permissions') as any)
-      .insert({
-        user_id: newUser.id,
-        can_manage_users: permissions.canManageUsers || false,
-        can_manage_forms: permissions.canManageForms || false,
-        can_create_inspections: permissions.canCreateInspections || false,
-        can_view_inspections: permissions.canViewInspections || false,
-        can_review_inspections: permissions.canReviewInspections || false,
-        can_approve_inspections: permissions.canApproveInspections || false,
-        can_reject_inspections: permissions.canRejectInspections || false,
-        can_view_pending_inspections: permissions.canViewPendingInspections || false,
-        can_view_analytics: permissions.canViewAnalytics || false,
-      });
+    const { error: permError } = await (supabase.from('user_permissions') as any).insert({
+      user_id: newUser.id,
+      can_manage_users: permissions.canManageUsers || false,
+      can_manage_forms: permissions.canManageForms || false,
+      can_create_inspections: permissions.canCreateInspections || false,
+      can_view_inspections: permissions.canViewInspections || false,
+      can_review_inspections: permissions.canReviewInspections || false,
+      can_approve_inspections: permissions.canApproveInspections || false,
+      can_reject_inspections: permissions.canRejectInspections || false,
+      can_view_pending_inspections: permissions.canViewPendingInspections || false,
+      can_view_analytics: permissions.canViewAnalytics || false,
+    });
 
     if (permError) {
       logger.error('Create permissions error', permError, { userId: newUser.id });

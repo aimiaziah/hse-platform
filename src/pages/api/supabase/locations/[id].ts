@@ -64,8 +64,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Update location
-      const { data: updated, error: updateError } = await (supabase
-        .from('locations') as any)
+      const { data: updated, error: updateError } = await (supabase.from('locations') as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -114,8 +113,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Soft delete - set is_active to false
-      const { error: deleteError } = await (supabase
-        .from('locations') as any)
+      const { error: deleteError } = await (supabase.from('locations') as any)
         .update({ is_active: false })
         .eq('id', id);
 

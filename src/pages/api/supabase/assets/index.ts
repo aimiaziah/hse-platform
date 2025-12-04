@@ -13,14 +13,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   try {
     // GET - List all assets
     if (req.method === 'GET') {
-      const {
-        asset_type,
-        location_id,
-        is_active,
-        status,
-        limit = '100',
-        offset = '0',
-      } = req.query;
+      const { asset_type, location_id, is_active, status, limit = '100', offset = '0' } = req.query;
 
       let query = supabase.from('assets').select('*, locations(name)', { count: 'exact' });
 
@@ -64,7 +57,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
           if (expiryDate && expiryDate < now) {
             assetStatus = 'expired';
-          } else if (expiryDate && expiryDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+          } else if (
+            expiryDate &&
+            expiryDate <= new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+          ) {
             assetStatus = 'expiring_soon';
           } else if (!lastInspection) {
             assetStatus = 'never_inspected';
@@ -112,14 +108,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         .single();
 
       if (existing) {
-        return res
-          .status(409)
-          .json({ error: 'Asset with this serial number already exists' });
+        return res.status(409).json({ error: 'Asset with this serial number already exists' });
       }
 
       // Create asset
-      const { data: asset, error: createError } = await (supabase
-        .from('assets') as any)
+      const { data: asset, error: createError } = await (supabase.from('assets') as any)
         .insert({
           asset_type,
           serial_number,

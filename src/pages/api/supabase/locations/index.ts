@@ -69,8 +69,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Create location
-      const { data: location, error: createError } = await (supabase
-        .from('locations') as any)
+      const { data: location, error: createError } = await (supabase.from('locations') as any)
         .insert({
           name,
           description: description || null,

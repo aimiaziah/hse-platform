@@ -21,7 +21,7 @@ export async function uploadToSharePointWithMetadata(
   fileName: string,
   fileBuffer: ArrayBuffer,
   metadata: SharePointMetadata,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
   try {
     // First, upload the file
@@ -31,7 +31,7 @@ export async function uploadToSharePointWithMetadata(
       libraryName,
       fileName,
       fileBuffer,
-      folderPath
+      folderPath,
     );
 
     if (!uploadResult.success) {
@@ -45,7 +45,7 @@ export async function uploadToSharePointWithMetadata(
       libraryName,
       fileName,
       metadata,
-      folderPath
+      folderPath,
     );
 
     return uploadResult;
@@ -67,7 +67,7 @@ export async function updateSharePointFileMetadata(
   libraryName: string,
   fileName: string,
   metadata: SharePointMetadata,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<void> {
   try {
     // Extract site path from URL
@@ -81,7 +81,7 @@ export async function updateSharePointFileMetadata(
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     if (!siteResponse.ok) {
@@ -102,7 +102,7 @@ export async function updateSharePointFileMetadata(
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     if (!fileResponse.ok) {
@@ -119,7 +119,7 @@ export async function updateSharePointFileMetadata(
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     if (!listItemResponse.ok) {
@@ -170,15 +170,13 @@ export async function updateSharePointFileMetadata(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(fields),
-      }
+      },
     );
 
     if (!updateResponse.ok) {
       const errorData = await updateResponse.json();
       console.error('Metadata update error:', errorData);
-      throw new Error(
-        `Failed to update metadata: ${errorData.error?.message || 'Unknown error'}`
-      );
+      throw new Error(`Failed to update metadata: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     console.log('✅ SharePoint metadata updated successfully:', fields);
@@ -196,7 +194,7 @@ export async function getSharePointFileMetadata(
   siteUrl: string,
   libraryName: string,
   fileName: string,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<SharePointMetadata | null> {
   try {
     const url = new URL(siteUrl);
@@ -209,7 +207,7 @@ export async function getSharePointFileMetadata(
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     if (!siteResponse.ok) {
@@ -230,7 +228,7 @@ export async function getSharePointFileMetadata(
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     if (!fileResponse.ok) {
@@ -238,7 +236,7 @@ export async function getSharePointFileMetadata(
     }
 
     const fileData = await fileResponse.json();
-    const fields = fileData.fields;
+    const { fields } = fileData;
 
     return {
       Status: fields.Status,

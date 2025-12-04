@@ -61,7 +61,9 @@ const SignaturePinVerificationModal: React.FC<SignaturePinVerificationModalProps
           }, 3000);
         } else {
           setError(
-            `Incorrect PIN. ${maxAttempts - newAttempts} attempt${maxAttempts - newAttempts !== 1 ? 's' : ''} remaining.`
+            `Incorrect PIN. ${maxAttempts - newAttempts} attempt${
+              maxAttempts - newAttempts !== 1 ? 's' : ''
+            } remaining.`,
           );
         }
 
@@ -110,9 +112,7 @@ const SignaturePinVerificationModal: React.FC<SignaturePinVerificationModalProps
 
           {/* PIN Input */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Signature PIN
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Signature PIN</label>
             <input
               type="password"
               value={pin}

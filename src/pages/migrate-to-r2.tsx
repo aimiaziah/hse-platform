@@ -69,7 +69,7 @@ export default function MigrateToR2() {
   const migrateInspection = async (
     inspection: any,
     type: string,
-    updateStats: (uploaded: number, failed: number) => void
+    updateStats: (uploaded: number, failed: number) => void,
   ): Promise<any> => {
     let uploaded = 0;
     let failed = 0;
@@ -132,12 +132,12 @@ export default function MigrateToR2() {
 
     try {
       for (const { key, type } of storageKeys) {
-        setStats(prev => ({ ...prev, currentKey: key }));
+        setStats((prev) => ({ ...prev, currentKey: key }));
 
         const inspections = storage.load<any[]>(key, []);
         if (inspections.length === 0) continue;
 
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
           totalInspections: prev.totalInspections + inspections.length,
         }));
@@ -146,7 +146,7 @@ export default function MigrateToR2() {
 
         for (const inspection of inspections) {
           const updateStats = (uploaded: number, failed: number) => {
-            setStats(prev => ({
+            setStats((prev) => ({
               ...prev,
               totalImages: prev.totalImages + uploaded + failed,
               uploadedImages: prev.uploadedImages + uploaded,
@@ -157,7 +157,7 @@ export default function MigrateToR2() {
           const migrated = await migrateInspection(inspection, type, updateStats);
           migratedInspections.push(migrated);
 
-          setStats(prev => ({
+          setStats((prev) => ({
             ...prev,
             processedInspections: prev.processedInspections + 1,
           }));
@@ -167,13 +167,13 @@ export default function MigrateToR2() {
         storage.save(key, migratedInspections);
       }
 
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         status: 'completed',
         currentKey: '',
       }));
     } catch (error) {
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -185,12 +185,10 @@ export default function MigrateToR2() {
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Migrate Images to Cloudflare R2
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Migrate Images to Cloudflare R2</h1>
           <p className="text-gray-600 mb-6">
-            This tool will migrate all existing inspection images from base64 (stored in browser)
-            to Cloudflare R2 storage.
+            This tool will migrate all existing inspection images from base64 (stored in browser) to
+            Cloudflare R2 storage.
           </p>
 
           {/* Status Card */}
@@ -199,12 +197,17 @@ export default function MigrateToR2() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-700">Status:</span>
-                <span className={`font-semibold ${
-                  stats.status === 'completed' ? 'text-green-600' :
-                  stats.status === 'error' ? 'text-red-600' :
-                  stats.status === 'running' ? 'text-blue-600' :
-                  'text-gray-600'
-                }`}>
+                <span
+                  className={`font-semibold ${
+                    stats.status === 'completed'
+                      ? 'text-green-600'
+                      : stats.status === 'error'
+                      ? 'text-red-600'
+                      : stats.status === 'running'
+                      ? 'text-blue-600'
+                      : 'text-gray-600'
+                  }`}
+                >
                   {stats.status.toUpperCase()}
                 </span>
               </div>
@@ -277,9 +280,9 @@ export default function MigrateToR2() {
             <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
               <h3 className="font-semibold text-green-900 mb-2">✅ Migration Completed!</h3>
               <p className="text-sm text-green-800">
-                Successfully migrated {stats.uploadedImages} images to Cloudflare R2.
-                Your app will now use R2 URLs instead of base64 data, significantly reducing
-                Supabase egress costs.
+                Successfully migrated {stats.uploadedImages} images to Cloudflare R2. Your app will
+                now use R2 URLs instead of base64 data, significantly reducing Supabase egress
+                costs.
               </p>
             </div>
           )}

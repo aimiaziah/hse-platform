@@ -82,10 +82,7 @@ const InspectorLayout: React.FC<InspectorLayoutProps> = ({
       <div className="min-h-screen bg-white pb-20 md:pb-0">
         {/* Mobile Header - Shows only on mobile */}
         <div className="md:hidden">
-          <MobileHeader
-            title=""
-            showLogo={true}
-          />
+          <MobileHeader title="" showLogo />
         </div>
 
         {/* Desktop Navigation Header - Hidden on mobile */}
@@ -105,8 +102,12 @@ const InspectorLayout: React.FC<InspectorLayoutProps> = ({
                       <span className="material-icons text-xl">person</span>
                     </Link>
                     <div className="text-left flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-900 leading-none mb-0">{user?.name}</p>
-                      <p className="text-xs text-gray-500 capitalize font-medium leading-none mt-1">{user?.role}</p>
+                      <p className="text-sm font-medium text-gray-900 leading-none mb-0">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize font-medium leading-none mt-1">
+                        {user?.role}
+                      </p>
                     </div>
                   </div>
                 </div>

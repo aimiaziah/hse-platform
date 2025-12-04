@@ -105,7 +105,9 @@ export function getCachedTemplate(templateName: string): ArrayBuffer | null {
       return null;
     }
 
-    console.log(`[TemplateCache] ✅ Cache hit: ${templateName} (${(parsed.size / 1024).toFixed(1)} KB)`);
+    console.log(
+      `[TemplateCache] ✅ Cache hit: ${templateName} (${(parsed.size / 1024).toFixed(1)} KB)`,
+    );
 
     // Convert base64 back to ArrayBuffer
     return base64ToArrayBuffer(parsed.data);
@@ -200,7 +202,7 @@ export function clearAllTemplateCaches(): void {
     const keys = Object.keys(localStorage);
     let cleared = 0;
 
-    keys.forEach(key => {
+    keys.forEach((key) => {
       if (key.startsWith(TEMPLATE_CACHE_PREFIX)) {
         localStorage.removeItem(key);
         cleared++;
@@ -223,7 +225,7 @@ function clearOldCaches(): void {
     const keys = Object.keys(localStorage);
     let cleared = 0;
 
-    keys.forEach(key => {
+    keys.forEach((key) => {
       if (key.startsWith(TEMPLATE_CACHE_PREFIX)) {
         try {
           const cached = localStorage.getItem(key);
@@ -271,7 +273,7 @@ export function getCacheStats(): {
   try {
     const keys = Object.keys(localStorage);
 
-    keys.forEach(key => {
+    keys.forEach((key) => {
       if (key.startsWith(TEMPLATE_CACHE_PREFIX)) {
         const cached = localStorage.getItem(key);
         if (cached) {

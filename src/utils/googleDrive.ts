@@ -58,7 +58,9 @@ export const initializeGoogleAPI = (): Promise<void> => {
           // Provide more helpful error messages
           const errorMsg = error instanceof Error ? error.message : String(error);
           if (errorMsg.includes('discovery') || errorMsg.includes('required fields')) {
-            reject(new Error('Google Drive API not enabled. Please enable it in Google Cloud Console'));
+            reject(
+              new Error('Google Drive API not enabled. Please enable it in Google Cloud Console'),
+            );
           } else if (errorMsg.includes('API key')) {
             reject(new Error('Invalid Google Drive API key'));
           } else {
@@ -228,14 +230,16 @@ const generateExcelViaAPI = async (inspection: any): Promise<Blob> => {
       statusText: response.statusText,
       error: errorText,
     });
-    throw new Error(`Failed to generate Excel for ${inspection.type}: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `Failed to generate Excel for ${inspection.type}: ${response.status} ${response.statusText}`,
+    );
   }
 
   console.log('Excel generated successfully, creating blob...');
   const arrayBuffer = await response.arrayBuffer();
   console.log(`Excel blob size: ${(arrayBuffer.byteLength / 1024).toFixed(2)} KB`);
   return new Blob([arrayBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 };
 
@@ -258,7 +262,7 @@ const uploadToGoogleDrive = async (
 ): Promise<string> => {
   const metadata = {
     name: filename,
-    mimeType: mimeType,
+    mimeType,
     parents: GOOGLE_CONFIG.folderId ? [GOOGLE_CONFIG.folderId] : [],
   };
 
@@ -302,11 +306,11 @@ export const exportToGoogleDrive = async (inspection: any): Promise<string> => {
     // Generate filename with type name
     const timestamp = new Date().toISOString().split('T')[0];
     const typeNames: { [key: string]: string } = {
-      'fire_extinguisher': 'Fire-Extinguisher',
-      'first_aid': 'First-Aid',
-      'hse': 'HSE-Inspection',
-      'hse_observation': 'HSE-Observation',
-      'manhours': 'Manhours-Report'
+      fire_extinguisher: 'Fire-Extinguisher',
+      first_aid: 'First-Aid',
+      hse: 'HSE-Inspection',
+      hse_observation: 'HSE-Observation',
+      manhours: 'Manhours-Report',
     };
     const typeName = typeNames[inspection.type] || inspection.type.replace('_', '-');
     const reviewedSuffix = inspection.reviewedBy ? '-Approved' : '';
@@ -316,7 +320,7 @@ export const exportToGoogleDrive = async (inspection: any): Promise<string> => {
     const fileId = await uploadToGoogleDrive(
       excelBlob,
       filename,
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
 
     console.log('Excel file uploaded to Google Drive:', fileId);

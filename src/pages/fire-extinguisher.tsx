@@ -551,7 +551,8 @@ const FireExtinguisherChecklist: React.FC = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays < 0) {
       return { type: 'expired', days: Math.abs(diffDays) };
-    } else if (diffDays <= 30) {
+    }
+    if (diffDays <= 30) {
       return { type: 'warning', days: diffDays };
     }
     return { type: 'valid', days: diffDays };
@@ -715,7 +716,9 @@ const FireExtinguisherChecklist: React.FC = () => {
       router.push('/inspector/forms');
     } catch (error) {
       console.error('Submit error:', error);
-      alert(`Failed to submit checklist: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to submit checklist: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   };
 
@@ -873,9 +876,7 @@ const FireExtinguisherChecklist: React.FC = () => {
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-bold text-gray-900 mb-1">
-                          Expiry Date Alerts
-                        </h3>
+                        <h3 className="text-sm font-bold text-gray-900 mb-1">Expiry Date Alerts</h3>
                         <div className="space-y-1">
                           {summary.expired > 0 && (
                             <p className="text-sm text-red-700">
@@ -1102,7 +1103,9 @@ const FireExtinguisherChecklist: React.FC = () => {
                                       ? `EXPIRED ${checkExpiryDate(ext.expiryDate)?.days} days ago`
                                       : checkExpiryDate(ext.expiryDate)?.type === 'warning'
                                       ? `Expiring in ${checkExpiryDate(ext.expiryDate)?.days} days`
-                                      : `Valid (${checkExpiryDate(ext.expiryDate)?.days} days remaining)`}
+                                      : `Valid (${
+                                          checkExpiryDate(ext.expiryDate)?.days
+                                        } days remaining)`}
                                   </p>
                                   {checkExpiryDate(ext.expiryDate)?.type !== 'valid' && (
                                     <p className="text-xs text-gray-600 mt-1">
@@ -1269,24 +1272,27 @@ const FireExtinguisherChecklist: React.FC = () => {
                                   : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
                               }`}
                             />
-                            {ext.expiryDate && checkExpiryDate(ext.expiryDate)?.type !== 'valid' && (
-                              <div
-                                className={`text-[10px] font-semibold flex items-center gap-1 ${
-                                  checkExpiryDate(ext.expiryDate)?.type === 'expired'
-                                    ? 'text-red-700'
-                                    : 'text-yellow-700'
-                                }`}
-                              >
-                                <span>
-                                  {checkExpiryDate(ext.expiryDate)?.type === 'expired' ? '⚠️' : '⏰'}
-                                </span>
-                                <span>
-                                  {checkExpiryDate(ext.expiryDate)?.type === 'expired'
-                                    ? `Expired ${checkExpiryDate(ext.expiryDate)?.days}d ago`
-                                    : `${checkExpiryDate(ext.expiryDate)?.days}d left`}
-                                </span>
-                              </div>
-                            )}
+                            {ext.expiryDate &&
+                              checkExpiryDate(ext.expiryDate)?.type !== 'valid' && (
+                                <div
+                                  className={`text-[10px] font-semibold flex items-center gap-1 ${
+                                    checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                      ? 'text-red-700'
+                                      : 'text-yellow-700'
+                                  }`}
+                                >
+                                  <span>
+                                    {checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                      ? '⚠️'
+                                      : '⏰'}
+                                  </span>
+                                  <span>
+                                    {checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                      ? `Expired ${checkExpiryDate(ext.expiryDate)?.days}d ago`
+                                      : `${checkExpiryDate(ext.expiryDate)?.days}d left`}
+                                  </span>
+                                </div>
+                              )}
                           </div>
                         </td>
                         <td className="border border-gray-200 px-3 py-2">
@@ -1468,7 +1474,7 @@ const FireExtinguisherChecklist: React.FC = () => {
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center shadow-lg">
                 <div className="flex justify-center mb-4">
-                  <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
                 </div>
                 <h3 className="text-xl font-bold mb-2 text-gray-800">AI is Analyzing Images</h3>
                 <p className="text-gray-600">

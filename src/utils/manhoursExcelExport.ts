@@ -125,16 +125,16 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     // STATISTICS SECTION (Column H, Rows 17-26)
     // ==========================================
 
-    ws.getCell('H17').value = data.numEmployees || '';                    // No. of Employees
-    ws.getCell('H18').value = data.monthlyManHours || '';                 // Monthly Man-hours
-    ws.getCell('H19').value = data.yearToDateManHours || '';              // Year to Date
-    ws.getCell('H20').value = data.totalAccumulatedManHours || '';        // Total Accumulated
-    ws.getCell('H21').value = data.workdaysLost || '';                    // Workdays Lost
-    ws.getCell('H22').value = data.ltiCases || '0';                       // LTI cases
-    ws.getCell('H23').value = data.noLTICases || '0';                     // No LTI
-    ws.getCell('H24').value = data.nearMissAccidents || '0';              // Near Miss
-    ws.getCell('H25').value = data.dangerousOccurrences || '0';           // Dangerous Occurrence
-    ws.getCell('H26').value = data.occupationalDiseases || '0';           // Occupational Disease
+    ws.getCell('H17').value = data.numEmployees || ''; // No. of Employees
+    ws.getCell('H18').value = data.monthlyManHours || ''; // Monthly Man-hours
+    ws.getCell('H19').value = data.yearToDateManHours || ''; // Year to Date
+    ws.getCell('H20').value = data.totalAccumulatedManHours || ''; // Total Accumulated
+    ws.getCell('H21').value = data.workdaysLost || ''; // Workdays Lost
+    ws.getCell('H22').value = data.ltiCases || '0'; // LTI cases
+    ws.getCell('H23').value = data.noLTICases || '0'; // No LTI
+    ws.getCell('H24').value = data.nearMissAccidents || '0'; // Near Miss
+    ws.getCell('H25').value = data.dangerousOccurrences || '0'; // Dangerous Occurrence
+    ws.getCell('H26').value = data.occupationalDiseases || '0'; // Occupational Disease
 
     // ==========================================
     // FORMULAS SECTION
@@ -143,19 +143,25 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     // LTI Incident Rate (Rows 28-29)
     const ltiRate = calculateLTIIncidentRate(data);
     ws.getCell('E28').value = `No of Accidents [ ${data.formulaLtiCases || 0} ]`;
-    ws.getCell('E29').value = `Annual Average of No. of Employee [${data.formulaAnnualAvgEmployees || 0}]`;
+    ws.getCell('E29').value = `Annual Average of No. of Employee [${
+      data.formulaAnnualAvgEmployees || 0
+    }]`;
     ws.getCell('O28').value = ltiRate;
 
     // Incident Frequency Rate (Rows 31-32)
     const freqRate = calculateIncidentFrequencyRate(data);
     ws.getCell('E31').value = `No of Accidents [ ${data.formulaLtiCases || 0} ]`;
-    ws.getCell('E32').value = `Total Man-hours worked per year [${data.formulaAnnualTotalManHours || 0}]`;
+    ws.getCell('E32').value = `Total Man-hours worked per year [${
+      data.formulaAnnualTotalManHours || 0
+    }]`;
     ws.getCell('O31').value = freqRate;
 
     // Severity Rate (Rows 34-35)
     const sevRate = calculateSeverityRate(data);
     ws.getCell('E34').value = `Loss of Working Days [ ${data.formulaWorkdaysLost || 0} ]`;
-    ws.getCell('E35').value = `Total Man-hours worked per year [${data.formulaAnnualTotalManHours || 0}]`;
+    ws.getCell('E35').value = `Total Man-hours worked per year [${
+      data.formulaAnnualTotalManHours || 0
+    }]`;
     ws.getCell('O34').value = sevRate;
 
     // ==========================================
@@ -196,7 +202,9 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     return wb;
   } catch (error) {
     console.error('Error loading template:', error);
-    throw new Error('Could not load template from Supabase. Please ensure "monthly manhours.xlsx" exists in the templates bucket.');
+    throw new Error(
+      'Could not load template from Supabase. Please ensure "monthly manhours.xlsx" exists in the templates bucket.',
+    );
   }
 }
 

@@ -70,15 +70,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
           .single();
 
         if (duplicate) {
-          return res
-            .status(409)
-            .json({ error: 'Asset with this serial number already exists' });
+          return res.status(409).json({ error: 'Asset with this serial number already exists' });
         }
       }
 
       // Update asset
-      const { data: updated, error: updateError } = await (supabase
-        .from('assets') as any)
+      const { data: updated, error: updateError } = await (supabase.from('assets') as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -132,8 +129,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Soft delete - set is_active to false
-      const { error: deleteError } = await (supabase
-        .from('assets') as any)
+      const { error: deleteError } = await (supabase.from('assets') as any)
         .update({ is_active: false })
         .eq('id', id);
 

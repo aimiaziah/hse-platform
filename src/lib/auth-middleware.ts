@@ -1,8 +1,8 @@
 // Authentication Middleware for API Routes
 import { NextApiRequest, NextApiResponse } from 'next';
 import { parse } from 'cookie';
-import { verifyToken, JWTPayload } from './jwt';
 import { UserRole } from '@/hooks/useAuth';
+import { verifyToken, JWTPayload } from './jwt';
 
 /**
  * Extended request type with authenticated user
@@ -16,7 +16,7 @@ export interface AuthenticatedRequest extends NextApiRequest {
  * Verifies JWT token and attaches user to request
  */
 export function authenticate(
-  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void
+  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void,
 ) {
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
@@ -36,10 +36,7 @@ export function authenticate(
 
       if (!payload) {
         // Clear invalid cookie
-        res.setHeader(
-          'Set-Cookie',
-          'auth-token=; Path=/; HttpOnly; Max-Age=0'
-        );
+        res.setHeader('Set-Cookie', 'auth-token=; Path=/; HttpOnly; Max-Age=0');
 
         return res.status(401).json({
           success: false,
@@ -51,7 +48,7 @@ export function authenticate(
       req.user = payload;
 
       // Call the actual handler
-      return handler(req, res);
+      return await handler(req, res);
     } catch (error) {
       console.error('Authentication middleware error:', error);
       return res.status(500).json({
@@ -68,10 +65,10 @@ export function authenticate(
  */
 export function requireRole(
   allowedRoles: UserRole[],
-  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void
+  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void,
 ) {
   return authenticate(async (req: AuthenticatedRequest, res: NextApiResponse) => {
-    const user = req.user;
+    const { user } = req;
 
     if (!user) {
       return res.status(401).json({
@@ -97,10 +94,10 @@ export function requireRole(
  */
 export function requirePermission(
   permission: keyof JWTPayload['permissions'],
-  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void
+  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void,
 ) {
   return authenticate(async (req: AuthenticatedRequest, res: NextApiResponse) => {
-    const user = req.user;
+    const { user } = req;
 
     if (!user) {
       return res.status(401).json({
@@ -125,7 +122,7 @@ export function requirePermission(
  * Attaches user to request if token is valid, but doesn't block if not
  */
 export function optionalAuthenticate(
-  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void
+  handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void> | void,
 ) {
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
@@ -144,7 +141,7 @@ export function optionalAuthenticate(
       }
 
       // Call the actual handler regardless of auth status
-      return handler(req, res);
+      return await handler(req, res);
     } catch (error) {
       console.error('Optional authentication middleware error:', error);
       // Continue to handler even if auth check fails

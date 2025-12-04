@@ -213,7 +213,8 @@ const FirstAidInspection: React.FC = () => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays < 0) {
       return { type: 'expired', days: Math.abs(diffDays) };
-    } else if (diffDays <= 30) {
+    }
+    if (diffDays <= 30) {
       return { type: 'warning', days: diffDays };
     }
     return { type: 'valid', days: diffDays };
@@ -293,7 +294,9 @@ const FirstAidInspection: React.FC = () => {
       router.push('/inspector/forms');
     } catch (error) {
       console.error('Submit error:', error);
-      alert(`Failed to submit inspection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `Failed to submit inspection: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   };
 
@@ -341,10 +344,10 @@ const FirstAidInspection: React.FC = () => {
                 items: kit.items.map((item, iIdx) =>
                   iIdx === photographingItemIndex
                     ? { ...item, capturedImages: [...(item.capturedImages || []), ...images] }
-                    : item
+                    : item,
                 ),
               }
-            : kit
+            : kit,
         ),
       }));
     } else {
@@ -354,7 +357,7 @@ const FirstAidInspection: React.FC = () => {
         kits: prev.kits.map((kit, idx) =>
           idx === photographingKitIndex
             ? { ...kit, capturedImages: [...(kit.capturedImages || []), ...images] }
-            : kit
+            : kit,
         ),
       }));
     }
@@ -379,7 +382,7 @@ const FirstAidInspection: React.FC = () => {
               ...kit,
               capturedImages: kit.capturedImages?.filter((_, i) => i !== imageIndex),
             }
-          : kit
+          : kit,
       ),
     }));
   };
@@ -397,10 +400,10 @@ const FirstAidInspection: React.FC = () => {
                       ...item,
                       capturedImages: item.capturedImages?.filter((_, i) => i !== imageIndex),
                     }
-                  : item
+                  : item,
               ),
             }
-          : kit
+          : kit,
       ),
     }));
   };
@@ -519,9 +522,7 @@ const FirstAidInspection: React.FC = () => {
                         </svg>
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-bold text-gray-900 mb-1">
-                          Expiry Date Alerts
-                        </h3>
+                        <h3 className="text-sm font-bold text-gray-900 mb-1">Expiry Date Alerts</h3>
                         <div className="space-y-1">
                           {summary.expired > 0 && (
                             <p className="text-sm text-red-700">
@@ -628,7 +629,8 @@ const FirstAidInspection: React.FC = () => {
                                       d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
                                     />
                                   </svg>
-                                  {kit.capturedImages.length} photo{kit.capturedImages.length !== 1 ? 's' : ''}
+                                  {kit.capturedImages.length} photo
+                                  {kit.capturedImages.length !== 1 ? 's' : ''}
                                 </span>
                               )}
                               {expiryStatus.expired > 0 && (
@@ -639,8 +641,7 @@ const FirstAidInspection: React.FC = () => {
                               )}
                               {expiryStatus.expiringSoon > 0 && (
                                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
-                                  ⏰
-                                  {expiryStatus.expiringSoon} expiring soon
+                                  ⏰{expiryStatus.expiringSoon} expiring soon
                                 </span>
                               )}
                             </div>
@@ -789,7 +790,9 @@ const FirstAidInspection: React.FC = () => {
                                               {new Date(image.timestamp).toLocaleTimeString()}
                                             </div>
                                             <button
-                                              onClick={() => deleteItemImage(kitIndex, itemIndex, imgIdx)}
+                                              onClick={() =>
+                                                deleteItemImage(kitIndex, itemIndex, imgIdx)
+                                              }
                                               className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                             >
                                               <svg
@@ -882,7 +885,8 @@ const FirstAidInspection: React.FC = () => {
                                           }`}
                                         >
                                           <span className="flex-shrink-0 text-base">
-                                            {checkItemExpiryDate(item.expiryDate)?.type === 'expired'
+                                            {checkItemExpiryDate(item.expiryDate)?.type ===
+                                            'expired'
                                               ? '⚠️'
                                               : checkItemExpiryDate(item.expiryDate)?.type ===
                                                 'warning'
@@ -1131,7 +1135,9 @@ const FirstAidInspection: React.FC = () => {
                 photographingItemIndex !== null
                   ? Math.max(
                       0,
-                      2 - (inspectionData.kits[photographingKitIndex]?.items[photographingItemIndex]?.capturedImages?.length || 0)
+                      2 -
+                        (inspectionData.kits[photographingKitIndex]?.items[photographingItemIndex]
+                          ?.capturedImages?.length || 0),
                     )
                   : 10
               }

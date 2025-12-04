@@ -187,7 +187,11 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       });
 
       const data = await response.json();
-      console.log('[useAuth] Login response:', { status: response.status, success: data.success, hasToken: !!data.token });
+      console.log('[useAuth] Login response:', {
+        status: response.status,
+        success: data.success,
+        hasToken: !!data.token,
+      });
 
       if (response.ok && data.success && data.user) {
         console.log('[useAuth] Login successful, user:', data.user.name);
@@ -196,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         const loggedInUser: User = {
           id: data.user.id,
           name: data.user.name,
-          pin: pin, // We keep the PIN for consistency
+          pin, // We keep the PIN for consistency
           role: data.user.role as UserRole,
           isActive: true,
           createdAt: new Date().toISOString(),
@@ -268,7 +272,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }
   };
 
-  const updateSignatureWithPin = async (signature: string, signaturePin: string): Promise<boolean> => {
+  const updateSignatureWithPin = async (
+    signature: string,
+    signaturePin: string,
+  ): Promise<boolean> => {
     try {
       if (!user) return false;
 
@@ -294,7 +301,9 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }
   };
 
-  const verifySignaturePin = async (signaturePin: string): Promise<{ success: boolean; signature?: string }> => {
+  const verifySignaturePin = async (
+    signaturePin: string,
+  ): Promise<{ success: boolean; signature?: string }> => {
     try {
       if (!user) return { success: false };
 

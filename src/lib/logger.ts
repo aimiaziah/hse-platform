@@ -57,11 +57,7 @@ function redactSensitiveData(data: any): any {
 /**
  * Format log message with timestamp and level
  */
-function formatLogMessage(
-  level: LogLevel,
-  message: string,
-  context?: LogContext
-): string {
+function formatLogMessage(level: LogLevel, message: string, context?: LogContext): string {
   const timestamp = new Date().toISOString();
   const levelUpper = level.toUpperCase().padEnd(8);
 
@@ -139,11 +135,14 @@ class Logger {
     if (shouldLog('error')) {
       const errorContext = {
         ...context,
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        } : error,
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              }
+            : error,
       };
       console.error(formatLogMessage('error', message, errorContext));
     }
@@ -168,11 +167,7 @@ class Logger {
   /**
    * Log HTTP request (with automatic redaction)
    */
-  logRequest(
-    method: string,
-    path: string,
-    context?: LogContext
-  ): void {
+  logRequest(method: string, path: string, context?: LogContext): void {
     this.info(`${method} ${path}`, redactSensitiveData(context));
   }
 
@@ -182,7 +177,7 @@ class Logger {
   logAuth(
     event: 'login' | 'logout' | 'login_failed' | 'token_expired',
     userId: string,
-    context?: LogContext
+    context?: LogContext,
   ): void {
     this.security(`AUTH_${event.toUpperCase()}`, {
       userId,
@@ -193,11 +188,7 @@ class Logger {
   /**
    * Log database operations
    */
-  logDatabase(
-    operation: string,
-    table: string,
-    context?: LogContext
-  ): void {
+  logDatabase(operation: string, table: string, context?: LogContext): void {
     this.debug(`DB_${operation.toUpperCase()}`, {
       table,
       ...context,
@@ -211,7 +202,7 @@ class Logger {
     endpoint: string,
     statusCode: number,
     error: Error | unknown,
-    context?: LogContext
+    context?: LogContext,
   ): void {
     this.error(`API_ERROR ${endpoint} [${statusCode}]`, error, context);
   }

@@ -7,8 +7,8 @@ export function getAllowedEmailDomains(): string[] {
   const domains = process.env.ALLOWED_EMAIL_DOMAINS || '';
   return domains
     .split(',')
-    .map(d => d.trim().toLowerCase())
-    .filter(d => d.length > 0);
+    .map((d) => d.trim().toLowerCase())
+    .filter((d) => d.length > 0);
 }
 
 /**

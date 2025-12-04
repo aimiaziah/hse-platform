@@ -38,7 +38,10 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
       return router.pathname === '/supervisor';
     }
     if (path === '/supervisor/reviews') {
-      return router.pathname === '/supervisor/reviews' || router.pathname.startsWith('/supervisor/review/');
+      return (
+        router.pathname === '/supervisor/reviews' ||
+        router.pathname.startsWith('/supervisor/review/')
+      );
     }
     if (path === '/supervisor/profile') {
       return router.pathname === '/supervisor/profile';
@@ -67,10 +70,7 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
       <div className="min-h-screen bg-white pb-20 md:pb-0">
         {/* Mobile Header - Shows only on mobile */}
         <div className="md:hidden">
-          <MobileHeader
-            title=""
-            showLogo={true}
-          />
+          <MobileHeader title="" showLogo />
         </div>
 
         {/* Desktop Navigation Header - Hidden on mobile */}
@@ -90,8 +90,12 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
                       <span className="material-icons text-xl">person</span>
                     </Link>
                     <div className="text-left flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-900 leading-none mb-0">{user?.name}</p>
-                      <p className="text-xs text-gray-500 capitalize font-medium leading-none mt-1">{user?.role}</p>
+                      <p className="text-sm font-medium text-gray-900 leading-none mb-0">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs text-gray-500 capitalize font-medium leading-none mt-1">
+                        {user?.role}
+                      </p>
                     </div>
                   </div>
                 </div>

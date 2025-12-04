@@ -84,18 +84,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Report period
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Report Period: ${reportMonth} ${reportYear}`, pageWidth / 2, yPos, { align: 'center' });
+      doc.text(`Report Period: ${reportMonth} ${reportYear}`, pageWidth / 2, yPos, {
+        align: 'center',
+      });
       yPos += 15;
 
       // Header info
       doc.setFontSize(10);
       doc.text(`Prepared By: ${preparedBy}`, 15, yPos);
-      doc.text(`Date: ${new Date(preparedDate).toLocaleDateString()}`, pageWidth - 15, yPos, { align: 'right' });
+      doc.text(`Date: ${new Date(preparedDate).toLocaleDateString()}`, pageWidth - 15, yPos, {
+        align: 'right',
+      });
       yPos += 10;
 
       if (reviewedBy) {
         doc.text(`Reviewed By: ${reviewedBy}`, 15, yPos);
-        doc.text(`Date: ${reviewedAt ? new Date(reviewedAt).toLocaleDateString() : ''}`, pageWidth - 15, yPos, { align: 'right' });
+        doc.text(
+          `Date: ${reviewedAt ? new Date(reviewedAt).toLocaleDateString() : ''}`,
+          pageWidth - 15,
+          yPos,
+          { align: 'right' },
+        );
         yPos += 10;
       }
 
@@ -171,7 +180,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="Manhours_Report_${reportMonth}_${reportYear}.pdf"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="Manhours_Report_${reportMonth}_${reportYear}.pdf"`,
+      );
       return res.send(pdfBuffer);
     }
 
@@ -179,14 +191,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const workbook = await generateManhoursExcel(reportData);
     const buffer = await workbook.xlsx.writeBuffer();
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="Manhours_Report_${reportMonth}_${reportYear}.xlsx"`);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="Manhours_Report_${reportMonth}_${reportYear}.xlsx"`,
+    );
     return res.send(Buffer.from(buffer));
   } catch (error) {
     console.error('Manhours report export error:', error);
     return res.status(500).json({
       error: 'Failed to generate export',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 }

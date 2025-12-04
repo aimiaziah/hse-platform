@@ -137,8 +137,8 @@ const LoginPage: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-200 flex items-center justify-center p-4">
         {/* Background Pattern */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-blue-200 opacity-20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-indigo-200 opacity-20 rounded-full blur-3xl"></div>
+          <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-blue-200 opacity-20 rounded-full blur-3xl" />
+          <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-indigo-200 opacity-20 rounded-full blur-3xl" />
         </div>
         <div className="w-full max-w-md relative z-10">
           {/* Login Card */}
@@ -149,7 +149,9 @@ const LoginPage: React.FC = () => {
                 Health, Safety & Environment Platform
               </h1>
               <p className="text-xs sm:text-sm text-gray-500">
-                {loginMethod === 'pin' ? 'Enter 4-digit PIN to access' : 'Sign in with your company Microsoft account'}
+                {loginMethod === 'pin'
+                  ? 'Enter 4-digit PIN to access'
+                  : 'Sign in with your company Microsoft account'}
               </p>
             </div>
 
@@ -191,9 +193,7 @@ const LoginPage: React.FC = () => {
                     <path fill="#05a6f0" d="M1 12h10v10H1z" />
                     <path fill="#ffba08" d="M12 12h10v10H12z" />
                   </svg>
-                  <span className="text-gray-700 font-medium">
-                    Sign in with Microsoft
-                  </span>
+                  <span className="text-gray-700 font-medium">Sign in with Microsoft</span>
                 </button>
                 <p className="mt-3 text-xs text-gray-500 text-center">
                   Use your @theta-edge.com account to sign in
@@ -241,61 +241,61 @@ const LoginPage: React.FC = () => {
             )}
             {/* Numeric Keypad (only show for PIN login) */}
             {loginMethod === 'pin' && (
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+              <div className="grid grid-cols-3 gap-3 mb-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
+                  <button
+                    key={digit}
+                    type="button"
+                    onClick={() => handlePinInput(digit.toString())}
+                    disabled={isLoading || pin.length >= 4}
+                    className="h-14 bg-white hover:bg-gray-50 active:bg-gray-100 rounded-lg text-xl font-semibold text-gray-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300"
+                  >
+                    {digit}
+                  </button>
+                ))}
                 <button
-                  key={digit}
                   type="button"
-                  onClick={() => handlePinInput(digit.toString())}
-                  disabled={isLoading || pin.length >= 4}
-                  className="h-14 bg-white hover:bg-gray-50 active:bg-gray-100 rounded-lg text-xl font-semibold text-gray-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300"
+                  onClick={handleDelete}
+                  disabled={isLoading || pin.length === 0}
+                  className="h-14 bg-white hover:bg-gray-50 active:bg-gray-100 rounded-lg text-gray-600 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-gray-200 hover:border-gray-300"
                 >
-                  {digit}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isLoading || pin.length === 0}
-                className="h-14 bg-white hover:bg-gray-50 active:bg-gray-100 rounded-lg text-gray-600 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-gray-200 hover:border-gray-300"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePinInput('0')}
-                disabled={isLoading || pin.length >= 4}
-                className="h-14 bg-white hover:bg-gray-50 active:bg-gray-100 rounded-lg text-xl font-semibold text-gray-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300"
-              >
-                0
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isLoading || pin.length !== 4}
-                className="h-14 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-semibold"
-              >
-                {isLoading ? (
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      strokeWidth={2}
+                      d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"
                     />
                   </svg>
-                )}
-              </button>
-            </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePinInput('0')}
+                  disabled={isLoading || pin.length >= 4}
+                  className="h-14 bg-white hover:bg-gray-50 active:bg-gray-100 rounded-lg text-xl font-semibold text-gray-800 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 hover:border-gray-300"
+                >
+                  0
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isLoading || pin.length !== 4}
+                  className="h-14 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-semibold"
+                >
+                  {isLoading ? (
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
             )}
             {/* Logo at the bottom of the card */}
             <div className="text-center border-t border-gray-200 pt-6 mt-6">

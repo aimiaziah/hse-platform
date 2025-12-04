@@ -35,7 +35,20 @@ interface Inspector {
   inspectionCount: number;
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 const COLORS = [
   'bg-blue-500',
   'bg-purple-500',
@@ -75,9 +88,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     }
 
     // Separate inspections by type
-    const fireInspections = (allInspections as any[])?.filter((i: any) => i.inspection_type === 'fire_extinguisher') || [];
-    const firstAidInspections = (allInspections as any[])?.filter((i: any) => i.inspection_type === 'first_aid') || [];
-    const manhoursReports = (allInspections as any[])?.filter((i: any) => i.inspection_type === 'manhours_report') || [];
+    const fireInspections =
+      (allInspections as any[])?.filter((i: any) => i.inspection_type === 'fire_extinguisher') ||
+      [];
+    const firstAidInspections =
+      (allInspections as any[])?.filter((i: any) => i.inspection_type === 'first_aid') || [];
+    const manhoursReports =
+      (allInspections as any[])?.filter((i: any) => i.inspection_type === 'manhours_report') || [];
 
     // Fetch users for inspector information
     const { data: users, error: usersError } = await supabase
@@ -147,13 +164,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     const averageEmployees = employeeCount > 0 ? Math.round(totalEmployees / employeeCount) : 0;
 
     // Current month stats (or all months if selectedMonth is 0)
-    const currentMonthReports = selectedMonth === 0
-      ? manhoursReports
-      : manhoursReports.filter((report: any) => {
-          if (!report.inspection_date) return false;
-          const reportDate = new Date(report.inspection_date);
-          return reportDate.getMonth() === selectedMonth - 1 && reportDate.getFullYear() === selectedYear;
-        });
+    const currentMonthReports =
+      selectedMonth === 0
+        ? manhoursReports
+        : manhoursReports.filter((report: any) => {
+            if (!report.inspection_date) return false;
+            const reportDate = new Date(report.inspection_date);
+            return (
+              reportDate.getMonth() === selectedMonth - 1 &&
+              reportDate.getFullYear() === selectedYear
+            );
+          });
 
     let currentMonthEmployees = 0;
     let currentMonthManHours = 0;
@@ -161,8 +182,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
 
     currentMonthReports.forEach((report: any) => {
       const formData = report.form_data || {};
-      currentMonthEmployees += parseInt(formData.numEmployees || formData.totalEmployees || '0') || 0;
-      currentMonthManHours += parseFloat(formData.monthlyManHours || formData.totalManHours || '0') || 0;
+      currentMonthEmployees +=
+        parseInt(formData.numEmployees || formData.totalEmployees || '0') || 0;
+      currentMonthManHours +=
+        parseFloat(formData.monthlyManHours || formData.totalManHours || '0') || 0;
 
       const ltiCases = parseInt(formData.ltiCases || '0') || 0;
       const noLTICases = parseInt(formData.noLTICases || '0') || 0;
@@ -180,13 +203,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
       const fireCount = fireInspections.filter((inspection: any) => {
         if (!inspection.inspection_date) return false;
         const inspectionDate = new Date(inspection.inspection_date);
-        return inspectionDate.getMonth() === monthIndex && inspectionDate.getFullYear() === selectedYear;
+        return (
+          inspectionDate.getMonth() === monthIndex && inspectionDate.getFullYear() === selectedYear
+        );
       }).length;
 
       const firstAidCount = firstAidInspections.filter((inspection: any) => {
         if (!inspection.inspection_date) return false;
         const inspectionDate = new Date(inspection.inspection_date);
-        return inspectionDate.getMonth() === monthIndex && inspectionDate.getFullYear() === selectedYear;
+        return (
+          inspectionDate.getMonth() === monthIndex && inspectionDate.getFullYear() === selectedYear
+        );
       }).length;
 
       monthlyInspectionData.push({
@@ -198,47 +225,50 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     }
 
     // This month inspections (or all if selectedMonth is 0)
-    const thisMonthInspections = selectedMonth === 0
-      ? [...fireInspections, ...firstAidInspections]
-      : [
-          ...fireInspections,
-          ...firstAidInspections,
-        ].filter((inspection: any) => {
-          if (!inspection.inspection_date) return false;
-          const inspectionDate = new Date(inspection.inspection_date);
-          return inspectionDate.getMonth() === selectedMonth - 1 && inspectionDate.getFullYear() === selectedYear;
-        });
+    const thisMonthInspections =
+      selectedMonth === 0
+        ? [...fireInspections, ...firstAidInspections]
+        : [...fireInspections, ...firstAidInspections].filter((inspection: any) => {
+            if (!inspection.inspection_date) return false;
+            const inspectionDate = new Date(inspection.inspection_date);
+            return (
+              inspectionDate.getMonth() === selectedMonth - 1 &&
+              inspectionDate.getFullYear() === selectedYear
+            );
+          });
 
     // Total inspections for the year
     const totalInspectionsYear = fireInspections.length + firstAidInspections.length;
 
     // Get inspectors
-    const inspectors = users?.filter(
-      (u: any) => u.role?.toLowerCase() === 'inspector' || u.role?.toLowerCase() === 'employee'
-    ) || [];
+    const inspectors =
+      users?.filter(
+        (u: any) => u.role?.toLowerCase() === 'inspector' || u.role?.toLowerCase() === 'employee',
+      ) || [];
 
     // Create inspector list with counts
-    const inspectorList: Inspector[] = inspectors.slice(0, 3).map((inspector: any, index: number) => {
-      const inspectionsByThisInspector = [
-        ...fireInspections,
-        ...firstAidInspections,
-      ].filter((inspection: any) =>
-        inspection.inspector_id === inspector.id || inspection.inspected_by === inspector.name
-      );
+    const inspectorList: Inspector[] = inspectors
+      .slice(0, 3)
+      .map((inspector: any, index: number) => {
+        const inspectionsByThisInspector = [...fireInspections, ...firstAidInspections].filter(
+          (inspection: any) =>
+            inspection.inspector_id === inspector.id || inspection.inspected_by === inspector.name,
+        );
 
-      const nameParts = inspector.name.split(' ');
-      const initials = nameParts.length > 1
-        ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
-        : nameParts[0].substring(0, 2).toUpperCase();
+        const nameParts = inspector.name.split(' ');
+        const initials =
+          nameParts.length > 1
+            ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+            : nameParts[0].substring(0, 2).toUpperCase();
 
-      return {
-        id: inspector.id,
-        name: inspector.name,
-        initials,
-        color: COLORS[index % COLORS.length],
-        inspectionCount: inspectionsByThisInspector.length,
-      };
-    });
+        return {
+          id: inspector.id,
+          name: inspector.name,
+          initials,
+          color: COLORS[index % COLORS.length],
+          inspectionCount: inspectionsByThisInspector.length,
+        };
+      });
 
     // Get expiry items from all inspections (not filtered by year for safety)
     const { data: allInspectionsForExpiry, error: expiryError } = await supabase
@@ -260,7 +290,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
             if (item.expiryDate) {
               const expiryDate = new Date(item.expiryDate);
               const daysUntilExpiry = Math.ceil(
-                (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+                (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
               );
 
               if (daysUntilExpiry > -30) {
@@ -288,7 +318,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
             if (item.expiryDate) {
               const expiryDate = new Date(item.expiryDate);
               const daysUntilExpiry = Math.ceil(
-                (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+                (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
               );
 
               if (daysUntilExpiry > -30) {
@@ -332,7 +362,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
       );
     });
 
-    const monthlyCompleted = (hasFireExtinguisherThisMonth ? 1 : 0) + (hasFirstAidThisMonth ? 1 : 0);
+    const monthlyCompleted =
+      (hasFireExtinguisherThisMonth ? 1 : 0) + (hasFirstAidThisMonth ? 1 : 0);
 
     // Calculate yearly completion stats (24 forms = 2 forms × 12 months)
     let yearlyCompleted = 0;
@@ -345,8 +376,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
       .lte('inspection_date', `${actualCurrentYear}-12-31`)
       .in('inspection_type', ['fire_extinguisher', 'first_aid']);
 
-    const fireInspectionsCurrentYear = (currentYearInspections as any[])?.filter((i: any) => i.inspection_type === 'fire_extinguisher') || [];
-    const firstAidInspectionsCurrentYear = (currentYearInspections as any[])?.filter((i: any) => i.inspection_type === 'first_aid') || [];
+    const fireInspectionsCurrentYear =
+      (currentYearInspections as any[])?.filter(
+        (i: any) => i.inspection_type === 'fire_extinguisher',
+      ) || [];
+    const firstAidInspectionsCurrentYear =
+      (currentYearInspections as any[])?.filter((i: any) => i.inspection_type === 'first_aid') ||
+      [];
 
     for (let monthIndex = 0; monthIndex < 12; monthIndex++) {
       const hasFireInMonth = fireInspectionsCurrentYear.some((inspection: any) => {

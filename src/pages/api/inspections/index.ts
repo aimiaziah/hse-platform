@@ -76,14 +76,16 @@ async function assignToSupervisor(supabase: any): Promise<string | null> {
           name: supervisor.name,
           pendingCount: count || 0,
         };
-      })
+      }),
     );
 
     // Assign to supervisor with least pending inspections
     supervisorLoads.sort((a, b) => a.pendingCount - b.pendingCount);
     const assignedSupervisor = supervisorLoads[0];
 
-    console.log(`Auto-assigned to supervisor: ${assignedSupervisor.name} (${assignedSupervisor.pendingCount} pending)`);
+    console.log(
+      `Auto-assigned to supervisor: ${assignedSupervisor.name} (${assignedSupervisor.pendingCount} pending)`,
+    );
     return assignedSupervisor.id;
   } catch (error) {
     console.error('Error assigning supervisor:', error);
@@ -163,7 +165,18 @@ async function getInspections(req: NextApiRequest, res: NextApiResponse, user: U
 
 // POST /api/inspections
 async function createInspection(req: NextApiRequest, res: NextApiResponse, user: User) {
-  const { id, formType, formTemplateId, data, signature, status = 'draft', locationId, assetId, inspectorId, inspectorName } = req.body;
+  const {
+    id,
+    formType,
+    formTemplateId,
+    data,
+    signature,
+    status = 'draft',
+    locationId,
+    assetId,
+    inspectorId,
+    inspectorName,
+  } = req.body;
 
   try {
     if (!formType || !data) {
@@ -220,8 +233,7 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
       inspectionData.id = id;
     }
 
-    const { data: newInspection, error } = await (supabase
-      .from('inspections') as any)
+    const { data: newInspection, error } = await (supabase.from('inspections') as any)
       .insert(inspectionData)
       .select()
       .single();

@@ -35,62 +35,148 @@ const categories = [
   {
     id: 1,
     name: 'WORKING AREAS',
-    items: ['Housekeeping', 'Proper barrier/ safety signs', 'Lighting adequacy', 'Site layout arrangement', 'Ventilation', 'Floor/ ground-edge/ opening condition', 'Escape/ working route condition', 'Material storage/ stacking']
+    items: [
+      'Housekeeping',
+      'Proper barrier/ safety signs',
+      'Lighting adequacy',
+      'Site layout arrangement',
+      'Ventilation',
+      'Floor/ ground-edge/ opening condition',
+      'Escape/ working route condition',
+      'Material storage/ stacking',
+    ],
   },
   {
     id: 2,
     name: 'SITE OFFICE',
-    items: ['Office ergonomics', 'Location and maintenance', 'Fire extinguishers condition', 'First aid box facility', "Worker's legality / age", 'Green card (CIDB)/ NIOSH cert.', 'PMA/ PMT/ JBE/ DOE approval', 'Competent scaffolder']
+    items: [
+      'Office ergonomics',
+      'Location and maintenance',
+      'Fire extinguishers condition',
+      'First aid box facility',
+      "Worker's legality / age",
+      'Green card (CIDB)/ NIOSH cert.',
+      'PMA/ PMT/ JBE/ DOE approval',
+      'Competent scaffolder',
+    ],
   },
   {
     id: 3,
     name: 'HOT WORK/ ELECTRICAL',
-    items: ['Gas cylinders secured and upright', 'Gauge functionality', 'Flashback arrestors availability', 'Cables insulation/ earthing', 'Wiring condition-plugs, joints, DB']
+    items: [
+      'Gas cylinders secured and upright',
+      'Gauge functionality',
+      'Flashback arrestors availability',
+      'Cables insulation/ earthing',
+      'Wiring condition-plugs, joints, DB',
+    ],
   },
   {
     id: 4,
     name: 'PERSONAL PROTECTIVE EQUIPMENT',
-    items: ['Safety helmets', 'Safety footwear', 'Safety vest', 'Proper attire', 'Other; as per job requirements']
+    items: [
+      'Safety helmets',
+      'Safety footwear',
+      'Safety vest',
+      'Proper attire',
+      'Other; as per job requirements',
+    ],
   },
   {
     id: 5,
     name: 'EXCAVATIONS',
-    items: ['Safely secured-sign, barrier covered', 'No material at 1m from edge', 'Proper & adequate access & egress', 'Adequate slope protection', 'Check for underground hazard', 'Inspection checklist']
+    items: [
+      'Safely secured-sign, barrier covered',
+      'No material at 1m from edge',
+      'Proper & adequate access & egress',
+      'Adequate slope protection',
+      'Check for underground hazard',
+      'Inspection checklist',
+    ],
   },
   {
     id: 6,
     name: 'SCAFFOLDING',
-    items: ['PE design requirement', 'Access condition', 'Walkways/ platform condition', 'Adequate slope protection', 'Means of fall protection', 'Ground/base condition', 'Inspection checklist']
+    items: [
+      'PE design requirement',
+      'Access condition',
+      'Walkways/ platform condition',
+      'Adequate slope protection',
+      'Means of fall protection',
+      'Ground/base condition',
+      'Inspection checklist',
+    ],
   },
   {
     id: 7,
     name: 'MACHINERY & PLANT',
-    items: ['Machinery guarding', 'Machinery/ plant service record', 'Properly and safely sited', 'Skid tank condition', 'Lifting process/ gear condition', "Vehicle's condition"]
+    items: [
+      'Machinery guarding',
+      'Machinery/ plant service record',
+      'Properly and safely sited',
+      'Skid tank condition',
+      'Lifting process/ gear condition',
+      "Vehicle's condition",
+    ],
   },
   {
     id: 8,
     name: 'TRAFFIC MANAGEMENT',
-    items: ['Flagman availability & adequacy', 'Signages availability & adequacy', 'Vehicle route maintenance', 'Public road maintenance', 'Loads protection', 'Method of controlling']
+    items: [
+      'Flagman availability & adequacy',
+      'Signages availability & adequacy',
+      'Vehicle route maintenance',
+      'Public road maintenance',
+      'Loads protection',
+      'Method of controlling',
+    ],
   },
   {
     id: 9,
     name: 'HEALTH',
-    items: ['First aid box/ facility', 'First aider availability', 'Vector/ Pest control', 'Washing/ clean water facility', 'Toilet condition / availability']
+    items: [
+      'First aid box/ facility',
+      'First aider availability',
+      'Vector/ Pest control',
+      'Washing/ clean water facility',
+      'Toilet condition / availability',
+    ],
   },
   {
     id: 10,
     name: 'ENVIRONMENTAL',
-    items: ['Control of oil pollution', 'Control of dust pollution / emission', 'Control of noise pollution / emission', 'Control of open burning', 'Control of debris / rubbish', 'Silt trap/drainage/culvert maintenance']
+    items: [
+      'Control of oil pollution',
+      'Control of dust pollution / emission',
+      'Control of noise pollution / emission',
+      'Control of open burning',
+      'Control of debris / rubbish',
+      'Silt trap/drainage/culvert maintenance',
+    ],
   },
   {
     id: 11,
     name: 'SECURITY',
-    items: ['Security personal adequacy', 'Security sign condition/ availability', 'Control of site access/ exit', 'Hoarding/ fencing condition', 'Emergency contact list']
+    items: [
+      'Security personal adequacy',
+      'Security sign condition/ availability',
+      'Control of site access/ exit',
+      'Hoarding/ fencing condition',
+      'Emergency contact list',
+    ],
   },
   {
     id: 12,
     name: 'PUBLIC SAFETY',
-    items: ['Warning signs', 'Control of public entry', 'Proper work planning toward public safety', 'Communication establishment', 'Training on public safety to worker', 'Catch platform', 'Pedestrian protection']
+    items: [
+      'Warning signs',
+      'Control of public entry',
+      'Proper work planning toward public safety',
+      'Communication establishment',
+      'Training on public safety to worker',
+      'Catch platform',
+      'Pedestrian protection',
+    ],
   },
 ];
 
@@ -127,11 +213,16 @@ function formatDate(dateString: string): string {
 /**
  * Generate HSE Inspection Checklist Excel using template
  */
-export async function generateHSEInspectionChecklistExcel(data: HSEInspectionChecklistData): Promise<ExcelJS.Workbook> {
+export async function generateHSEInspectionChecklistExcel(
+  data: HSEInspectionChecklistData,
+): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from storage
     console.log('Fetching HSE Inspection template from storage...');
-    const templateBuffer = await fetchTemplateFromStorage('templates', 'hse-inspection-template.xlsx');
+    const templateBuffer = await fetchTemplateFromStorage(
+      'templates',
+      'hse-inspection-template.xlsx',
+    );
 
     // Load the template with ExcelJS
     console.log('Loading template with ExcelJS...');
@@ -176,7 +267,7 @@ export async function generateHSEInspectionChecklistExcel(data: HSEInspectionChe
     // ==========================================
 
     // Personnel table starts around row 9-10 (adjust based on template)
-    let personnelStartRow = 10;
+    const personnelStartRow = 10;
     data.tablePersons.forEach((person, index) => {
       if (person.name || person.designation) {
         const row = personnelStartRow + index;
@@ -194,17 +285,17 @@ export async function generateHSEInspectionChecklistExcel(data: HSEInspectionChe
     // Inspection items start around row 15 (adjust based on template)
     let currentRow = 15;
 
-    categories.forEach(category => {
+    categories.forEach((category) => {
       // Category header row
       currentRow++;
       ws.getCell(`A${currentRow}`).value = `${category.id}. ${category.name}`;
       ws.getCell(`A${currentRow}`).font = { bold: true };
 
       // Items for this category
-      category.items.forEach(item => {
+      category.items.forEach((item) => {
         currentRow++;
         const key = `${category.id}-${item}`;
-        const itemData = data.inspectionItems.find(i => i.key === key);
+        const itemData = data.inspectionItems.find((i) => i.key === key);
         const rating = itemData?.rating;
         const comment = itemData?.comment || '';
 
@@ -239,7 +330,9 @@ export async function generateHSEInspectionChecklistExcel(data: HSEInspectionChe
     return wb;
   } catch (error) {
     console.error('Error loading HSE Inspection template:', error);
-    throw new Error('Could not load HSE Inspection template. Please ensure "hse-inspection-template.xlsx" exists in the templates storage.');
+    throw new Error(
+      'Could not load HSE Inspection template. Please ensure "hse-inspection-template.xlsx" exists in the templates storage.',
+    );
   }
 }
 
@@ -252,7 +345,10 @@ export async function downloadHSEInspectionChecklist(
 ): Promise<void> {
   try {
     const wb = await generateHSEInspectionChecklistExcel(formData);
-    const defaultFilename = `HSE_Inspection_Checklist_${formData.location.replace(/[^a-z0-9]/gi, '_')}_${formData.date}.xlsx`;
+    const defaultFilename = `HSE_Inspection_Checklist_${formData.location.replace(
+      /[^a-z0-9]/gi,
+      '_',
+    )}_${formData.date}.xlsx`;
 
     // Generate buffer and download
     const buffer = await wb.xlsx.writeBuffer();
@@ -290,7 +386,7 @@ export async function downloadHSEInspectionChecklistWithTemplate(
   try {
     // For now, use the template-based approach for Excel
     if (format === 'excel') {
-      return downloadHSEInspectionChecklist(formData);
+      return await downloadHSEInspectionChecklist(formData);
     }
 
     // For PDF, call the API endpoint
@@ -315,7 +411,9 @@ export async function downloadHSEInspectionChecklistWithTemplate(
 
     // Generate filename
     const extension = format === 'pdf' ? 'pdf' : 'xlsx';
-    const filename = `HSE_Inspection_Checklist_${formData.location.replace(/[^a-z0-9]/gi, '_')}_${formData.date}.${extension}`;
+    const filename = `HSE_Inspection_Checklist_${formData.location.replace(/[^a-z0-9]/gi, '_')}_${
+      formData.date
+    }.${extension}`;
 
     // Create download link
     const url = window.URL.createObjectURL(blob);

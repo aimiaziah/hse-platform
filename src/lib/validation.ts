@@ -48,11 +48,7 @@ export const UserCreateSchema = z.object({
     .length(4, 'PIN must be exactly 4 digits')
     .regex(/^\d{4}$/, 'PIN must contain only numbers'),
 
-  email: z
-    .string()
-    .email('Invalid email format')
-    .optional()
-    .or(z.literal('')),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
 
   role: UserRoleSchema,
 
@@ -78,11 +74,7 @@ export const UserUpdateSchema = z.object({
     .regex(/^\d{4}$/, 'PIN must contain only numbers')
     .optional(),
 
-  email: z
-    .string()
-    .email('Invalid email format')
-    .optional()
-    .or(z.literal('')),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
 
   role: UserRoleSchema.optional(),
 
@@ -116,7 +108,7 @@ export const InspectionTypeSchema = z.enum(
   ['hse', 'fire_extinguisher', 'first_aid', 'manhours_report', 'hse_observation'],
   {
     errorMap: () => ({ message: 'Invalid inspection type' }),
-  }
+  },
 );
 
 /**
@@ -126,7 +118,7 @@ export const InspectionStatusSchema = z.enum(
   ['draft', 'pending_review', 'completed', 'approved', 'rejected'],
   {
     errorMap: () => ({ message: 'Invalid status' }),
-  }
+  },
 );
 
 /**
@@ -142,11 +134,15 @@ export const InspectionCreateSchema = z.object({
   status: InspectionStatusSchema.optional().default('draft'),
   signature: z.string().optional().nullable(),
   remarks: z.string().max(2000, 'Remarks too long').optional().nullable(),
-  items: z.array(z.object({
-    label: z.string().min(1, 'Item label required'),
-    answer: z.any().optional().nullable(),
-    notes: z.string().optional().nullable(),
-  })).optional(),
+  items: z
+    .array(
+      z.object({
+        label: z.string().min(1, 'Item label required'),
+        answer: z.any().optional().nullable(),
+        notes: z.string().optional().nullable(),
+      }),
+    )
+    .optional(),
 });
 
 export type InspectionCreateInput = z.infer<typeof InspectionCreateSchema>;
@@ -190,7 +186,10 @@ export const ManhoursReportSchema = z.object({
   reviewedBy: z.string().max(100).optional(),
   reviewedDate: z.string().optional(),
   reportMonth: z.string().min(1, 'Report month is required'),
-  reportYear: z.string().min(1, 'Report year is required').regex(/^\d{4}$/, 'Invalid year format'),
+  reportYear: z
+    .string()
+    .min(1, 'Report year is required')
+    .regex(/^\d{4}$/, 'Invalid year format'),
 
   // Statistics
   numEmployees: z.string(),
@@ -270,7 +269,7 @@ export type ValidationResult<T> =
 export function validateRequest<T>(
   schema: z.ZodSchema<T>,
   data: unknown,
-  context?: string
+  context?: string,
 ): ValidationResult<T> {
   const result = schema.safeParse(data);
 
@@ -301,11 +300,7 @@ export function validateRequest<T>(
  * Validate and return data or throw error
  * Use this when you want to throw on validation failure
  */
-export function validateOrThrow<T>(
-  schema: z.ZodSchema<T>,
-  data: unknown,
-  context?: string
-): T {
+export function validateOrThrow<T>(schema: z.ZodSchema<T>, data: unknown, context?: string): T {
   const result = validateRequest(schema, data, context);
 
   if (!result.success) {
@@ -320,30 +315,21 @@ export function validateOrThrow<T>(
 /**
  * Validate query parameters
  */
-export function validateQuery<T>(
-  schema: z.ZodSchema<T>,
-  query: unknown
-): ValidationResult<T> {
+export function validateQuery<T>(schema: z.ZodSchema<T>, query: unknown): ValidationResult<T> {
   return validateRequest(schema, query, 'query-params');
 }
 
 /**
  * Validate request body
  */
-export function validateBody<T>(
-  schema: z.ZodSchema<T>,
-  body: unknown
-): ValidationResult<T> {
+export function validateBody<T>(schema: z.ZodSchema<T>, body: unknown): ValidationResult<T> {
   return validateRequest(schema, body, 'request-body');
 }
 
 /**
  * Validate path parameters
  */
-export function validateParams<T>(
-  schema: z.ZodSchema<T>,
-  params: unknown
-): ValidationResult<T> {
+export function validateParams<T>(schema: z.ZodSchema<T>, params: unknown): ValidationResult<T> {
   return validateRequest(schema, params, 'path-params');
 }
 
@@ -382,10 +368,7 @@ export const FileUploadSchema = z.object({
     .string()
     .min(1, 'Filename is required')
     .max(255, 'Filename too long')
-    .regex(
-      /^[a-zA-Z0-9_\-. ]+$/,
-      'Filename contains invalid characters'
-    ),
+    .regex(/^[a-zA-Z0-9_\-. ]+$/, 'Filename contains invalid characters'),
 
   mimetype: z.string().min(1, 'Mime type is required'),
 
@@ -400,18 +383,13 @@ export type FileUploadInput = z.infer<typeof FileUploadSchema>;
 /**
  * Validate email domain against whitelist
  */
-export function validateEmailDomain(
-  email: string,
-  allowedDomains: string[]
-): boolean {
+export function validateEmailDomain(email: string, allowedDomains: string[]): boolean {
   if (allowedDomains.length === 0) return true;
 
   const domain = email.split('@')[1]?.toLowerCase();
   if (!domain) return false;
 
-  return allowedDomains.some((allowed) =>
-    domain === allowed.toLowerCase()
-  );
+  return allowedDomains.some((allowed) => domain === allowed.toLowerCase());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -437,27 +415,31 @@ export const ExportRequestSchema = z.object({
  * Fire extinguisher export validation
  */
 export const FireExtinguisherExportSchema = ExportRequestSchema.extend({
-  extinguishers: z.array(z.object({
-    no: z.number().int().positive(),
-    serialNo: z.string().min(1, 'Serial number is required'),
-    location: z.string().min(1, 'Location is required'),
-    typeSize: z.string().min(1, 'Type/Size is required'),
-    shell: z.string().nullable().optional(),
-    hose: z.string().nullable().optional(),
-    nozzle: z.string().nullable().optional(),
-    pressureGauge: z.string().nullable().optional(),
-    safetyPin: z.string().nullable().optional(),
-    pinSeal: z.string().nullable().optional(),
-    accessible: z.string().nullable().optional(),
-    missingNotInPlace: z.string().nullable().optional(),
-    emptyPressureLow: z.string().nullable().optional(),
-    servicingTags: z.string().nullable().optional(),
-    expiryDate: z.string(),
-    remarks: z.string(),
-    aiScanned: z.boolean().optional(),
-    aiConfidence: z.record(z.number()).optional(),
-    aiCapturedImages: z.array(z.any()).optional(),
-  })).min(1, 'At least one extinguisher is required'),
+  extinguishers: z
+    .array(
+      z.object({
+        no: z.number().int().positive(),
+        serialNo: z.string().min(1, 'Serial number is required'),
+        location: z.string().min(1, 'Location is required'),
+        typeSize: z.string().min(1, 'Type/Size is required'),
+        shell: z.string().nullable().optional(),
+        hose: z.string().nullable().optional(),
+        nozzle: z.string().nullable().optional(),
+        pressureGauge: z.string().nullable().optional(),
+        safetyPin: z.string().nullable().optional(),
+        pinSeal: z.string().nullable().optional(),
+        accessible: z.string().nullable().optional(),
+        missingNotInPlace: z.string().nullable().optional(),
+        emptyPressureLow: z.string().nullable().optional(),
+        servicingTags: z.string().nullable().optional(),
+        expiryDate: z.string(),
+        remarks: z.string(),
+        aiScanned: z.boolean().optional(),
+        aiConfidence: z.record(z.number()).optional(),
+        aiCapturedImages: z.array(z.any()).optional(),
+      }),
+    )
+    .min(1, 'At least one extinguisher is required'),
 });
 
 export type FireExtinguisherExportInput = z.infer<typeof FireExtinguisherExportSchema>;
@@ -467,19 +449,37 @@ export type FireExtinguisherExportInput = z.infer<typeof FireExtinguisherExportS
  * Note: Query parameters come as strings, we transform them to appropriate types
  */
 export const ListQuerySchema = z.object({
-  page: z.union([z.string(), z.number()]).optional().default(1).transform(val => {
-    return typeof val === 'string' ? parseInt(val, 10) : val;
-  }).pipe(z.number().int().positive()),
-  limit: z.union([z.string(), z.number()]).optional().default(50).transform(val => {
-    return typeof val === 'string' ? parseInt(val, 10) : val;
-  }).pipe(z.number().int().positive()),
-  offset: z.union([z.string(), z.number()]).optional().default(0).transform(val => {
-    return typeof val === 'string' ? parseInt(val, 10) : val;
-  }).pipe(z.number().int().nonnegative()),
+  page: z
+    .union([z.string(), z.number()])
+    .optional()
+    .default(1)
+    .transform((val) => {
+      return typeof val === 'string' ? parseInt(val, 10) : val;
+    })
+    .pipe(z.number().int().positive()),
+  limit: z
+    .union([z.string(), z.number()])
+    .optional()
+    .default(50)
+    .transform((val) => {
+      return typeof val === 'string' ? parseInt(val, 10) : val;
+    })
+    .pipe(z.number().int().positive()),
+  offset: z
+    .union([z.string(), z.number()])
+    .optional()
+    .default(0)
+    .transform((val) => {
+      return typeof val === 'string' ? parseInt(val, 10) : val;
+    })
+    .pipe(z.number().int().nonnegative()),
   status: z.string().optional(),
   search: z.string().optional(),
   role: z.string().optional(),
-  year: z.string().optional().refine(val => !val || /^\d{4}$/.test(val), 'Invalid year format'),
+  year: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^\d{4}$/.test(val), 'Invalid year format'),
   month: z.string().optional(),
   inspector_id: z.string().optional(), // Validate UUID separately if needed
   inspection_type: z.string().optional(), // Keep as string to match query params

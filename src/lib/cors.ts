@@ -13,13 +13,7 @@ const ALLOWED_ORIGINS = [
 ].filter(Boolean) as string[];
 
 const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'];
-const ALLOWED_HEADERS = [
-  'Content-Type',
-  'Authorization',
-  'X-Requested-With',
-  'Accept',
-  'Origin',
-];
+const ALLOWED_HEADERS = ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'];
 
 /**
  * Check if origin is allowed
@@ -44,9 +38,9 @@ export function applyCorsHeaders(
   options: {
     allowCredentials?: boolean;
     maxAge?: number;
-  } = {}
+  } = {},
 ): void {
-  const origin = req.headers.origin;
+  const { origin } = req.headers;
   const { allowCredentials = true, maxAge = 86400 } = options;
 
   // Set CORS headers only for allowed origins
@@ -72,7 +66,7 @@ export function withCors(
   options?: {
     allowCredentials?: boolean;
     maxAge?: number;
-  }
+  },
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     // Apply CORS headers
@@ -84,7 +78,7 @@ export function withCors(
     }
 
     // Verify origin for non-OPTIONS requests
-    const origin = req.headers.origin;
+    const { origin } = req.headers;
     if (origin && !isOriginAllowed(origin)) {
       return res.status(403).json({
         success: false,
@@ -102,7 +96,7 @@ export function withCors(
  * Use this for additional origin validation in handlers
  */
 export function validateOrigin(req: NextApiRequest): boolean {
-  const origin = req.headers.origin;
+  const { origin } = req.headers;
   return isOriginAllowed(origin);
 }
 

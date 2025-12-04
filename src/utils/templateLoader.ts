@@ -50,7 +50,10 @@ async function downloadFromLocalServer(templateName: string): Promise<ArrayBuffe
       if (fs.existsSync(templatePath)) {
         const buffer = fs.readFileSync(templatePath);
         console.log(`[TemplateLoader] ✅ Local server template found: ${name}`);
-        return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+        return buffer.buffer.slice(
+          buffer.byteOffset,
+          buffer.byteOffset + buffer.byteLength,
+        ) as ArrayBuffer;
       }
     } catch (error) {
       console.log(`[TemplateLoader] Error reading ${name}:`, error);
@@ -95,10 +98,9 @@ async function downloadFromLocalClient(templateName: string): Promise<ArrayBuffe
  */
 async function downloadFromLocal(templateName: string): Promise<ArrayBuffer | null> {
   if (isServerSide()) {
-    return await downloadFromLocalServer(templateName);
-  } else {
-    return await downloadFromLocalClient(templateName);
+    return downloadFromLocalServer(templateName);
   }
+  return downloadFromLocalClient(templateName);
 }
 
 /**
@@ -121,7 +123,7 @@ async function downloadFromSupabase(
   }
 
   console.log(`[TemplateLoader] ✅ Downloaded from Supabase: ${templateName}`);
-  return await data.arrayBuffer();
+  return data.arrayBuffer();
 }
 
 /**
@@ -131,7 +133,7 @@ async function downloadFromSupabase(
  * 3. Supabase Storage (fallback)
  */
 export async function loadTemplate(
-  bucketName: string = 'templates',
+  bucketName = 'templates',
   templateName: string,
 ): Promise<ArrayBuffer> {
   try {
@@ -148,7 +150,7 @@ export async function loadTemplate(
 
       // Fallback to Supabase
       console.log('[TemplateLoader] 🔄 Falling back to Supabase...');
-      return await downloadFromSupabase(bucketName, templateName);
+      return downloadFromSupabase(bucketName, templateName);
     });
   } catch (error) {
     console.error('[TemplateLoader] ❌ Failed to load template:', error);

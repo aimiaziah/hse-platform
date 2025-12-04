@@ -47,7 +47,10 @@ function cleanupExpiredEntries() {
  * Check if request should be rate limited
  * Returns true if rate limit exceeded
  */
-export function checkRateLimit(req: NextApiRequest, prefix: string = 'auth'): {
+export function checkRateLimit(
+  req: NextApiRequest,
+  prefix = 'auth',
+): {
   limited: boolean;
   remaining: number;
   resetTime: number;
@@ -92,7 +95,7 @@ export function checkRateLimit(req: NextApiRequest, prefix: string = 'auth'): {
 export function rateLimitMiddleware(
   req: NextApiRequest,
   res: NextApiResponse,
-  prefix: string = 'auth'
+  prefix = 'auth',
 ): boolean {
   const { limited, remaining, resetTime } = checkRateLimit(req, prefix);
 
@@ -118,7 +121,7 @@ export function rateLimitMiddleware(
 /**
  * Reset rate limit for a specific client (useful after successful login)
  */
-export function resetRateLimit(req: NextApiRequest, prefix: string = 'auth'): void {
+export function resetRateLimit(req: NextApiRequest, prefix = 'auth'): void {
   const clientId = `${prefix}:${getClientIdentifier(req)}`;
   rateLimitStore.delete(clientId);
 }

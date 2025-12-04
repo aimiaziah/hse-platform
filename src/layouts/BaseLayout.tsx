@@ -217,7 +217,10 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
         <title>{title}</title>
         <meta name="description" content={description} />
         <meta name="theme-color" content="#ffffff" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5"
+        />
 
         {/* PWA Meta Tags */}
         <link rel="manifest" href="/manifest.json" />
@@ -250,7 +253,9 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
                     <h1 className="text-sm sm:text-base md:text-lg font-bold text-gray-900 leading-tight mb-0">
                       Platform
                     </h1>
-                    <p className="text-xs text-gray-600 hidden sm:block leading-tight">Theta Edge Berhad</p>
+                    <p className="text-xs text-gray-600 hidden sm:block leading-tight">
+                      Theta Edge Berhad
+                    </p>
                   </div>
                 </Link>
 
@@ -379,8 +384,12 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
                                 </span>
                               </div>
                               <div className="mt-1">
-                                <div className="font-medium text-gray-900 leading-tight mb-0">{user.name}</div>
-                                <div className="text-sm text-gray-500 capitalize leading-tight">{user.role}</div>
+                                <div className="font-medium text-gray-900 leading-tight mb-0">
+                                  {user.name}
+                                </div>
+                                <div className="text-sm text-gray-500 capitalize leading-tight">
+                                  {user.role}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -498,7 +507,6 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
               </div>
             </div>
           </div>
-
         </header>
 
         {/* Breadcrumb - Preserving original */}

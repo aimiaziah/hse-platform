@@ -2,7 +2,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { exportToGoogleDrive, isGoogleDriveConfigured } from '@/utils/googleDrive';
 import { storage } from '@/utils/storage';
-import { compressSignature, compressPhoto, compressObservationPhotos } from '@/utils/imageCompression';
+import {
+  compressSignature,
+  compressPhoto,
+  compressObservationPhotos,
+} from '@/utils/imageCompression';
 import SignaturePinVerificationModal from '@/components/SignaturePinVerificationModal';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -230,7 +234,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
       // Compress any observation photos if present
       let compressedFormData = { ...inspection.formData };
       if (inspection.formData?.observations) {
-        const observations = inspection.formData.observations;
+        const { observations } = inspection.formData;
         if (Array.isArray(observations)) {
           const compressedObservations = await Promise.all(
             observations.map(async (obs: any) => {
@@ -239,7 +243,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                 return { ...obs, photos: compressedPhotos };
               }
               return obs;
-            })
+            }),
           );
           compressedFormData = { ...compressedFormData, observations: compressedObservations };
         }
@@ -301,7 +305,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
           user.name,
           reviewDate,
           compressedSignature,
-          'excel'
+          'excel',
         );
 
         // Create download link and trigger download
@@ -369,10 +373,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
           );
         } else {
           // Just log configuration errors, don't alert the user
-          console.warn(
-            'Google Drive upload skipped due to configuration issue:',
-            errorMsg,
-          );
+          console.warn('Google Drive upload skipped due to configuration issue:', errorMsg);
         }
       }
       createNotification(
@@ -380,10 +381,12 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
         'approval',
         `Your ${getInspectionTypeName(inspection.type)} inspection has been approved by ${
           user.name
-        }${reviewComments ? ': ' + reviewComments : ''}`,
+        }${reviewComments ? `: ${reviewComments}` : ''}`,
       );
       if (isGoogleDriveConfigured()) {
-        alert('Inspection approved successfully! Excel file downloaded and exported to Google Drive.');
+        alert(
+          'Inspection approved successfully! Excel file downloaded and exported to Google Drive.',
+        );
       } else {
         alert('Inspection approved successfully! Excel file has been downloaded.');
       }
@@ -477,7 +480,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
         reviewerName,
         reviewDate,
         reviewerSig,
-        'excel'
+        'excel',
       );
 
       // Create download link and trigger download
@@ -917,8 +920,12 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                               {item.aiCapturedImages && item.aiCapturedImages.length > 0 && (
                                 <div className="mt-4">
                                   <p className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                    <svg className="w-4 h-4 text-purple-600" viewBox="0 0 24 24" fill="currentColor">
-                                      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 22.5l-.394-1.933a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/>
+                                    <svg
+                                      className="w-4 h-4 text-purple-600"
+                                      viewBox="0 0 24 24"
+                                      fill="currentColor"
+                                    >
+                                      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 22.5l-.394-1.933a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
                                     </svg>
                                     AI Scan Images ({item.aiCapturedImages.length})
                                   </p>
@@ -936,8 +943,12 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                                         </div>
                                         {image.timestamp && (
                                           <div className="absolute top-2 right-2 bg-purple-600/90 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1">
-                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                                              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+                                            <svg
+                                              className="w-3 h-3"
+                                              fill="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
                                             </svg>
                                             AI
                                           </div>
@@ -1578,12 +1589,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                   disabled={processing}
                   className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md flex items-center justify-center gap-2"
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -1672,9 +1678,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
             />
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-6 pt-5 pb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Approve Inspection
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Approve Inspection</h3>
                 <p className="text-sm text-gray-600">
                   This will approve the inspection and generate the report with your signature.
                 </p>
@@ -1710,12 +1714,8 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
             />
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
               <div className="bg-white px-6 pt-5 pb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Reject Inspection
-                </h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  Explain what needs to be corrected
-                </p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Reject Inspection</h3>
+                <p className="text-sm text-gray-600 mb-3">Explain what needs to be corrected</p>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
@@ -1764,12 +1764,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
               onClick={() => setFullImageUrl(null)}
               className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
             >
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

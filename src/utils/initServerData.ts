@@ -1,6 +1,6 @@
 // src/utils/initServerData.ts - Initialize default admin user
-import { serverStorage } from './serverStorage';
 import { getRolePermissions } from '@/lib/rbac';
+import { serverStorage } from './serverStorage';
 
 export function initializeServerData() {
   // Check if users already exist

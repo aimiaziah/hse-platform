@@ -45,8 +45,12 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
 
                 {/* User Name and Role */}
                 <div className="flex flex-col justify-center mt-1">
-                  <p className="text-sm font-semibold text-gray-900 leading-tight mb-0">{user.name}</p>
-                  <p className="text-xs text-gray-600 capitalize font-medium leading-tight">{user.role}</p>
+                  <p className="text-sm font-semibold text-gray-900 leading-tight mb-0">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-gray-600 capitalize font-medium leading-tight">
+                    {user.role}
+                  </p>
                 </div>
               </>
             )}

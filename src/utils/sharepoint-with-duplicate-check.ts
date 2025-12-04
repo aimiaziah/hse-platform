@@ -28,7 +28,7 @@ async function checkFileExists(
   fileName: string,
   folderPath: string,
   config: SharePointConfig,
-  accessToken: string
+  accessToken: string,
 ): Promise<{ exists: boolean; fileId?: string; fileUrl?: string }> {
   try {
     const siteUrlObj = new URL(config.siteUrl);
@@ -66,7 +66,7 @@ export async function uploadToSharePointWithDuplicateCheck(
   fileName: string,
   fileBuffer: Buffer | Blob,
   folderPath?: string,
-  duplicateHandling: DuplicateHandling = 'version' // Default: use SharePoint versioning
+  duplicateHandling: DuplicateHandling = 'version', // Default: use SharePoint versioning
 ): Promise<UploadResult> {
   try {
     // Get SharePoint configuration from environment variables
@@ -99,7 +99,7 @@ export async function uploadToSharePointWithDuplicateCheck(
           scope: 'https://graph.microsoft.com/.default',
           grant_type: 'client_credentials',
         }),
-      }
+      },
     );
 
     if (!tokenResponse.ok) {
@@ -191,7 +191,7 @@ export async function uploadToSharePointWithDuplicateCheck(
 async function uploadToSupabaseStorage(
   fileName: string,
   fileBuffer: Buffer | Blob,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<UploadResult> {
   try {
     const supabase = getServiceSupabase();
@@ -211,9 +211,7 @@ async function uploadToSupabaseStorage(
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('inspection-reports')
-      .getPublicUrl(fullPath);
+    const { data: urlData } = supabase.storage.from('inspection-reports').getPublicUrl(fullPath);
 
     return {
       success: true,
@@ -239,12 +237,22 @@ export async function uploadInspectionDocumentsWithCheck(
   excelBuffer: Buffer,
   pdfBuffer: Buffer,
   inspectionDate: string,
-  duplicateHandling: DuplicateHandling = 'version'
+  duplicateHandling: DuplicateHandling = 'version',
 ): Promise<{ excel: UploadResult; pdf: UploadResult }> {
   const date = new Date(inspectionDate);
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
 

@@ -110,7 +110,7 @@ function cleanupExpiredEntries(): void {
 async function checkRateLimitRedis(
   redis: Redis,
   clientId: string,
-  config: { maxRequests: number; windowMs: number }
+  config: { maxRequests: number; windowMs: number },
 ): Promise<{
   limited: boolean;
   remaining: number;
@@ -168,7 +168,7 @@ async function checkRateLimitRedis(
  */
 function checkRateLimitMemory(
   clientId: string,
-  config: { maxRequests: number; windowMs: number }
+  config: { maxRequests: number; windowMs: number },
 ): {
   limited: boolean;
   remaining: number;
@@ -212,7 +212,7 @@ function checkRateLimitMemory(
  */
 export async function checkRateLimit(
   req: NextApiRequest,
-  prefix: string = 'auth'
+  prefix = 'auth',
 ): Promise<{
   limited: boolean;
   remaining: number;
@@ -237,7 +237,7 @@ export async function checkRateLimit(
 export async function rateLimitMiddleware(
   req: NextApiRequest,
   res: NextApiResponse,
-  prefix: string = 'auth'
+  prefix = 'auth',
 ): Promise<boolean> {
   const { limited, remaining, resetTime } = await checkRateLimit(req, prefix);
 
@@ -271,10 +271,7 @@ export async function rateLimitMiddleware(
 /**
  * Reset rate limit for a specific client
  */
-export async function resetRateLimit(
-  req: NextApiRequest,
-  prefix: string = 'auth'
-): Promise<void> {
+export async function resetRateLimit(req: NextApiRequest, prefix = 'auth'): Promise<void> {
   const clientId = `${prefix}:${getClientIdentifier(req)}`;
 
   // Try Redis first

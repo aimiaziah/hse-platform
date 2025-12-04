@@ -14,7 +14,7 @@ import { logger } from './logger';
 export function safeJsonParse<T>(
   json: string | null | undefined,
   fallback: T,
-  context?: string
+  context?: string,
 ): T {
   // Handle null/undefined input
   if (json === null || json === undefined || json === '') {
@@ -42,10 +42,7 @@ export function safeJsonParse<T>(
  * @param context - Context for logging
  * @returns Parsed value or null
  */
-export function tryJsonParse<T>(
-  json: string | null | undefined,
-  context?: string
-): T | null {
+export function tryJsonParse<T>(json: string | null | undefined, context?: string): T | null {
   if (json === null || json === undefined || json === '') {
     return null;
   }
@@ -70,11 +67,7 @@ export function tryJsonParse<T>(
  * @param pretty - Whether to pretty-print the JSON
  * @returns JSON string or fallback
  */
-export function safeJsonStringify(
-  obj: any,
-  fallback: string = '{}',
-  pretty: boolean = false
-): string {
+export function safeJsonStringify(obj: any, fallback = '{}', pretty = false): string {
   try {
     return pretty ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
   } catch (error) {
@@ -92,7 +85,7 @@ export function safeJsonStringify(
  */
 export function parseJsonOrEmpty<T extends object = any>(
   json: string | null | undefined,
-  context?: string
+  context?: string,
 ): T {
   return safeJsonParse<T>(json, {} as T, context);
 }
@@ -103,7 +96,7 @@ export function parseJsonOrEmpty<T extends object = any>(
  */
 export function parseJsonOrEmptyArray<T = any>(
   json: string | null | undefined,
-  context?: string
+  context?: string,
 ): T[] {
   return safeJsonParse<T[]>(json, [], context);
 }
@@ -214,7 +207,7 @@ export function parseJsonWithSchema<T>(
   json: string | null | undefined,
   schema: { safeParse: (data: unknown) => { success: boolean; data?: T } },
   fallback: T,
-  context?: string
+  context?: string,
 ): T {
   const parsed = tryJsonParse(json, context);
 
@@ -280,16 +273,12 @@ export function removeCircularReferences(obj: any, seen = new WeakSet()): any {
 /**
  * Stringify with circular reference handling
  */
-export function stringifyWithCircular(obj: any, pretty: boolean = false): string {
+export function stringifyWithCircular(obj: any, pretty = false): string {
   try {
-    return pretty
-      ? JSON.stringify(obj, null, 2)
-      : JSON.stringify(obj);
+    return pretty ? JSON.stringify(obj, null, 2) : JSON.stringify(obj);
   } catch (error) {
     // If regular stringify fails (likely circular), remove circular refs and try again
     const cleaned = removeCircularReferences(obj);
-    return pretty
-      ? JSON.stringify(cleaned, null, 2)
-      : JSON.stringify(cleaned);
+    return pretty ? JSON.stringify(cleaned, null, 2) : JSON.stringify(cleaned);
   }
 }

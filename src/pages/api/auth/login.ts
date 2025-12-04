@@ -27,10 +27,7 @@ interface LoginResponse {
   details?: Array<{ field: string; message: string }>;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<LoginResponse>,
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -40,7 +37,7 @@ export default async function handler(
   if (!isAuthMethodEnabled('pin')) {
     return res.status(403).json({
       success: false,
-      error: 'PIN authentication is disabled. Please use Microsoft login.'
+      error: 'PIN authentication is disabled. Please use Microsoft login.',
     });
   }
 
@@ -73,7 +70,8 @@ export default async function handler(
     // Find user with matching PIN
     const { data: users, error: fetchError } = await supabase
       .from('users')
-      .select(`
+      .select(
+        `
         *,
         user_permissions (
           can_manage_users,
@@ -86,7 +84,8 @@ export default async function handler(
           can_view_pending_inspections,
           can_view_analytics
         )
-      `)
+      `,
+      )
       .eq('pin', pin)
       .eq('is_active', true);
 
@@ -108,8 +107,7 @@ export default async function handler(
     const permissions = user.user_permissions || {};
 
     // Update last login
-    await (supabase
-      .from('users') as any)
+    await (supabase.from('users') as any)
       .update({ last_login: new Date().toISOString() })
       .eq('id', user.id);
 

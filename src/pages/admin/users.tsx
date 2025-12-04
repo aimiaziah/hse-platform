@@ -109,9 +109,7 @@ const UserManagement: React.FC = () => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (user) =>
-          user.name.toLowerCase().includes(query) ||
-          user.pin.includes(query),
+        (user) => user.name.toLowerCase().includes(query) || user.pin.includes(query),
       );
     }
 

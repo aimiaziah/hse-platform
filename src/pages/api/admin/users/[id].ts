@@ -25,7 +25,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     // Allow users to update their own signature without admin permissions
     const isUpdatingSelf = userId === user.id;
     const { signature, ...otherUpdates } = req.body;
-    const hasOnlySignatureUpdate = signature !== undefined && Object.keys(otherUpdates).length === 0;
+    const hasOnlySignatureUpdate =
+      signature !== undefined && Object.keys(otherUpdates).length === 0;
 
     if (isUpdatingSelf && hasOnlySignatureUpdate) {
       return updateUserSignature(req, res, userId);
@@ -46,10 +47,12 @@ async function getUser(req: NextApiRequest, res: NextApiResponse, userId: string
 
     const { data: user, error } = await supabase
       .from('users')
-      .select(`
+      .select(
+        `
         *,
         user_permissions (*)
-      `)
+      `,
+      )
       .eq('id', userId)
       .single();
 
@@ -89,19 +92,14 @@ async function getUser(req: NextApiRequest, res: NextApiResponse, userId: string
 }
 
 // PUT /api/admin/users/[id]/signature - Update user's own signature (no admin required)
-async function updateUserSignature(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  userId: string,
-) {
+async function updateUserSignature(req: NextApiRequest, res: NextApiResponse, userId: string) {
   const { signature } = req.body;
 
   try {
     const supabase = getServiceSupabase();
 
     // Update signature in database
-    const { error: updateError } = await (supabase
-      .from('users') as any)
+    const { error: updateError } = await (supabase.from('users') as any)
       .update({
         signature,
         updated_at: new Date().toISOString(),
@@ -185,8 +183,7 @@ async function updateUser(
     }
 
     // Update user in database
-    const { error: updateError } = await (supabase
-      .from('users') as any)
+    const { error: updateError } = await (supabase.from('users') as any)
       .update(updates)
       .eq('id', userId);
 
@@ -199,12 +196,9 @@ async function updateUser(
 
     // Update permissions if role changed or custom permissions provided
     if (updates.role || permissions) {
-      const newPermissions = updates.role
-        ? getRolePermissions(updates.role)
-        : permissions;
+      const newPermissions = updates.role ? getRolePermissions(updates.role) : permissions;
 
-      const { error: permError } = await (supabase
-        .from('user_permissions') as any)
+      const { error: permError } = await (supabase.from('user_permissions') as any)
         .update({
           can_manage_users: newPermissions.canManageUsers || false,
           can_manage_forms: newPermissions.canManageForms || false,
@@ -274,8 +268,7 @@ async function deactivateUser(
     }
 
     // Deactivate user
-    const { error: updateError } = await (supabase
-      .from('users') as any)
+    const { error: updateError } = await (supabase.from('users') as any)
       .update({
         is_active: false,
         updated_at: new Date().toISOString(),
@@ -287,7 +280,11 @@ async function deactivateUser(
       return res.status(500).json({ error: 'Failed to deactivate user' });
     }
 
-    logger.security('USER_DEACTIVATED', { userId, deactivatedBy: adminUser.id, userName: (user as any).name });
+    logger.security('USER_DEACTIVATED', {
+      userId,
+      deactivatedBy: adminUser.id,
+      userName: (user as any).name,
+    });
 
     // Log deactivation to audit trail
     await (supabase.from('audit_trail') as any).insert({

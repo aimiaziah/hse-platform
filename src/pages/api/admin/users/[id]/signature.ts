@@ -56,7 +56,7 @@ async function updateSignature(req: NextApiRequest, res: NextApiResponse, userId
 
     // Prepare update data
     const updateData: any = {
-      signature: signature,
+      signature,
       signature_pin: signaturePin,
       updated_at: new Date().toISOString(),
     };
@@ -121,12 +121,11 @@ async function verifySignaturePin(req: NextApiRequest, res: NextApiResponse, use
         message: 'PIN verified successfully',
         signature: user.signature,
       });
-    } else {
-      return res.status(401).json({
-        success: false,
-        error: 'Incorrect signature PIN',
-      });
     }
+    return res.status(401).json({
+      success: false,
+      error: 'Incorrect signature PIN',
+    });
   } catch (error) {
     console.error('Error in verifySignaturePin:', error);
     return res.status(500).json({ error: 'Internal server error' });

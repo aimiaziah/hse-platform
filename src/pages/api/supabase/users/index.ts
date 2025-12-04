@@ -31,7 +31,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       // Apply pagination
       query = query
         .order('created_at', { ascending: false })
-        .range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
+        .range(
+          parseInt(offset as string),
+          parseInt(offset as string) + parseInt(limit as string) - 1,
+        );
 
       const { data, error, count } = await query;
 
@@ -90,8 +93,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Create user
-      const { data: user, error: createError } = await (supabase
-        .from('users') as any)
+      const { data: user, error: createError } = await (supabase.from('users') as any)
         .insert({
           email,
           name,

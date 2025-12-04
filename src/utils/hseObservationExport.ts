@@ -72,7 +72,9 @@ function formatDate(dateString: string): string {
 /**
  * Generate HSE Observation Excel using template
  */
-export async function generateHSEObservationExcel(data: HSEObservationFormData): Promise<ExcelJS.Workbook> {
+export async function generateHSEObservationExcel(
+  data: HSEObservationFormData,
+): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from storage
     console.log('Fetching HSE Observation template from storage...');
@@ -150,7 +152,8 @@ export async function generateHSEObservationExcel(data: HSEObservationFormData):
       ws.getCell(`K${currentRow}`).value = obs.remarks;
 
       // Photo count
-      ws.getCell(`L${currentRow}`).value = obs.photos.length > 0 ? `${obs.photos.length} photos` : '';
+      ws.getCell(`L${currentRow}`).value =
+        obs.photos.length > 0 ? `${obs.photos.length} photos` : '';
 
       currentRow++;
     });
@@ -181,7 +184,7 @@ export async function generateHSEObservationExcel(data: HSEObservationFormData):
     // ==========================================
 
     const observationsWithPhotos = data.observations.filter(
-      (obs) => obs.photos && obs.photos.length > 0
+      (obs) => obs.photos && obs.photos.length > 0,
     );
 
     if (observationsWithPhotos.length > 0) {
@@ -207,7 +210,8 @@ export async function generateHSEObservationExcel(data: HSEObservationFormData):
       // Row 4: Blank
 
       // Row 5: Note
-      imgWs.getCell('A5').value = 'Note: This sheet contains photo metadata. Images are embedded as base64 data URLs.';
+      imgWs.getCell('A5').value =
+        'Note: This sheet contains photo metadata. Images are embedded as base64 data URLs.';
       imgWs.mergeCells('A5:G5');
 
       // Row 6: Blank
@@ -222,23 +226,23 @@ export async function generateHSEObservationExcel(data: HSEObservationFormData):
       imgWs.getCell('G7').value = 'Image Data (Base64)';
 
       // Style headers
-      ['A7', 'B7', 'C7', 'D7', 'E7', 'F7', 'G7'].forEach(cell => {
+      ['A7', 'B7', 'C7', 'D7', 'E7', 'F7', 'G7'].forEach((cell) => {
         imgWs.getCell(cell).font = { bold: true };
         imgWs.getCell(cell).fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: 'FFD3D3D3' }
+          fgColor: { argb: 'FFD3D3D3' },
         };
       });
 
       // Set column widths
-      imgWs.getColumn('A').width = 10;  // Item No.
-      imgWs.getColumn('B').width = 20;  // Category
-      imgWs.getColumn('C').width = 15;  // Location
-      imgWs.getColumn('D').width = 30;  // Observation
-      imgWs.getColumn('E').width = 10;  // Photo #
-      imgWs.getColumn('F').width = 20;  // Timestamp
-      imgWs.getColumn('G').width = 50;  // Image Data
+      imgWs.getColumn('A').width = 10; // Item No.
+      imgWs.getColumn('B').width = 20; // Category
+      imgWs.getColumn('C').width = 15; // Location
+      imgWs.getColumn('D').width = 30; // Observation
+      imgWs.getColumn('E').width = 10; // Photo #
+      imgWs.getColumn('F').width = 20; // Timestamp
+      imgWs.getColumn('G').width = 50; // Image Data
 
       // Add photo data starting from row 8
       let imageRow = 8;
@@ -276,7 +280,9 @@ export async function generateHSEObservationExcel(data: HSEObservationFormData):
     return wb;
   } catch (error) {
     console.error('Error loading HSE Observation template:', error);
-    throw new Error('Could not load HSE Observation template. Please ensure "observation-template.xlsx" exists in the templates storage.');
+    throw new Error(
+      'Could not load HSE Observation template. Please ensure "observation-template.xlsx" exists in the templates storage.',
+    );
   }
 }
 
@@ -285,11 +291,13 @@ export async function generateHSEObservationExcel(data: HSEObservationFormData):
  */
 export async function downloadHSEObservationForm(
   data: HSEObservationFormData,
-  filename?: string
+  filename?: string,
 ): Promise<void> {
   try {
     const wb = await generateHSEObservationExcel(data);
-    const defaultFilename = `HSE_Observation_Form_${data.location.replace(/[^a-z0-9]/gi, '_')}_${data.date}.xlsx`;
+    const defaultFilename = `HSE_Observation_Form_${data.location.replace(/[^a-z0-9]/gi, '_')}_${
+      data.date
+    }.xlsx`;
 
     // Generate buffer and download
     const buffer = await wb.xlsx.writeBuffer();

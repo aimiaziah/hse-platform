@@ -20,7 +20,7 @@ export const protectedApiRoute = authenticate(async (req, res) => {
   logger.logRequest(req.method!, req.url || '');
 
   try {
-    const user = req.user;
+    const { user } = req;
     logger.info('Processing request for user', { userId: user?.userId });
 
     // Your business logic here
@@ -267,6 +267,7 @@ export async function customRateLimiting(req: NextApiRequest, res: NextApiRespon
 
 class ValidationError extends Error {
   details: any;
+
   constructor(message: string, details?: any) {
     super(message);
     this.name = 'ValidationError';

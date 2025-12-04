@@ -222,7 +222,7 @@ const AuditTrail: React.FC<AuditTrailProps> = ({ inspectionId, inspectionType })
   const uniqueUsers = Array.from(new Set(auditLogs.map((log) => log.user)));
   const uniqueActions = Array.from(new Set(auditLogs.map((log) => log.action)));
   const uniqueInspectionTypes = Array.from(
-    new Set(auditLogs.map((log) => log.inspectionType).filter(Boolean))
+    new Set(auditLogs.map((log) => log.inspectionType).filter(Boolean)),
   );
 
   if (loading) {

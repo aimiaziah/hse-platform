@@ -15,7 +15,7 @@ type InspectionType = 'hse' | 'fire_extinguisher' | 'first_aid' | 'hse_observati
  */
 export async function exportInspectionOriginalFormat(
   inspectionId: string,
-  type: InspectionType
+  type: InspectionType,
 ): Promise<void> {
   try {
     // First try to fetch from database
@@ -67,7 +67,9 @@ export async function exportInspectionOriginalFormat(
     }
   } catch (error) {
     console.error('Error exporting inspection:', error);
-    alert(`Failed to export inspection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    alert(
+      `Failed to export inspection: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
 }
 
@@ -76,7 +78,7 @@ export async function exportInspectionOriginalFormat(
  */
 async function getInspectionFromLocalStorage(
   inspectionId: string,
-  type: InspectionType
+  type: InspectionType,
 ): Promise<any | null> {
   const storageKeys: Record<InspectionType, string> = {
     hse: 'hse_inspections',

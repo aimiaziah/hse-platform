@@ -139,9 +139,8 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     // Calculate compliance rate
     const totalCompleted = statusSummary.approved + statusSummary.rejected;
-    const complianceRate = totalCompleted > 0
-      ? ((statusSummary.approved / totalCompleted) * 100).toFixed(2)
-      : 0;
+    const complianceRate =
+      totalCompleted > 0 ? ((statusSummary.approved / totalCompleted) * 100).toFixed(2) : 0;
 
     // Get location statistics
     const { data: locationStats } = await supabase

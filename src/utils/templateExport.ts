@@ -3,8 +3,8 @@
 // while preserving original formatting, logos, and layout
 
 import ExcelJS from 'exceljs';
-import { loadTemplate } from './templateLoader';
 import { supabase } from '@/lib/supabase';
+import { loadTemplate } from './templateLoader';
 
 /**
  * Interface for fire extinguisher form data
@@ -175,8 +175,8 @@ async function fillFireExtinguisherTemplate(
  */
 export async function exportFireExtinguisherWithTemplate(
   formData: FireExtinguisherFormData,
-  templateBucket: string = 'templates',
-  templatePath: string = 'fire extinguisher form.xlsx',
+  templateBucket = 'templates',
+  templatePath = 'fire extinguisher form.xlsx',
   customMapping?: TemplateCellMapping,
 ): Promise<Blob> {
   try {
@@ -265,7 +265,7 @@ export async function downloadFireExtinguisherReport(
  */
 export async function uploadFilledTemplate(
   formData: FireExtinguisherFormData,
-  uploadBucket: string = 'filled-reports',
+  uploadBucket = 'filled-reports',
   uploadPath?: string,
 ): Promise<string> {
   try {

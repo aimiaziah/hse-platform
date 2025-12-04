@@ -18,13 +18,9 @@ const envSchema = z.object({
   // ═══════════════════════════════════════════════════════════
   // REQUIRED - Client-side variables (available in browser)
   // ═══════════════════════════════════════════════════════════
-  NEXT_PUBLIC_SUPABASE_URL: z
-    .string()
-    .url('NEXT_PUBLIC_SUPABASE_URL must be a valid URL'),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url('NEXT_PUBLIC_SUPABASE_URL must be a valid URL'),
 
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
-    .string()
-    .min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required'),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required'),
 
   // ═══════════════════════════════════════════════════════════
   // REQUIRED - Server-side only (NOT available in browser)
@@ -40,13 +36,9 @@ const envSchema = z.object({
   // ═══════════════════════════════════════════════════════════
   // OPTIONAL - Environment & Logging
   // ═══════════════════════════════════════════════════════════
-  NODE_ENV: z
-    .enum(['development', 'production', 'test'])
-    .default('development'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  LOG_LEVEL: z
-    .enum(['debug', 'info', 'warn', 'error'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
   // ═══════════════════════════════════════════════════════════
   // OPTIONAL - Authentication Configuration
@@ -154,30 +146,33 @@ let validatedEnv: z.infer<typeof envSchema> | null = null;
 function initializeEnv() {
   try {
     // In browser, use a more lenient approach since Next.js inlines these at build time
-    const envToValidate = typeof window !== 'undefined'
-      ? {
-          // Client-side: explicitly pull from process.env (which Next.js should have inlined)
-          NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-          // Add other NEXT_PUBLIC_ vars that the client needs
-          NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID: process.env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID,
-          NEXT_PUBLIC_SHAREPOINT_TENANT_ID: process.env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID,
-          NEXT_PUBLIC_SHAREPOINT_SITE_URL: process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL,
-          NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME: process.env.NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME,
-          NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER: process.env.NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER,
-          NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-          NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
-          NEXT_PUBLIC_R2_ACCOUNT_ID: process.env.NEXT_PUBLIC_R2_ACCOUNT_ID,
-          NEXT_PUBLIC_R2_BUCKET_NAME: process.env.NEXT_PUBLIC_R2_BUCKET_NAME,
-          NEXT_PUBLIC_R2_PUBLIC_DOMAIN: process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN,
-          NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL: process.env.NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL,
-          NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
-          NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
-          NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-          NODE_ENV: process.env.NODE_ENV,
-          LOG_LEVEL: process.env.LOG_LEVEL,
-        }
-      : process.env; // Server-side: use full process.env
+    const envToValidate =
+      typeof window !== 'undefined'
+        ? {
+            // Client-side: explicitly pull from process.env (which Next.js should have inlined)
+            NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            // Add other NEXT_PUBLIC_ vars that the client needs
+            NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID:
+              process.env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID,
+            NEXT_PUBLIC_SHAREPOINT_TENANT_ID: process.env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID,
+            NEXT_PUBLIC_SHAREPOINT_SITE_URL: process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL,
+            NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME: process.env.NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME,
+            NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER: process.env.NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER,
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+            NEXT_PUBLIC_GOOGLE_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
+            NEXT_PUBLIC_R2_ACCOUNT_ID: process.env.NEXT_PUBLIC_R2_ACCOUNT_ID,
+            NEXT_PUBLIC_R2_BUCKET_NAME: process.env.NEXT_PUBLIC_R2_BUCKET_NAME,
+            NEXT_PUBLIC_R2_PUBLIC_DOMAIN: process.env.NEXT_PUBLIC_R2_PUBLIC_DOMAIN,
+            NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL:
+              process.env.NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL,
+            NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME,
+            NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+            NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+            NODE_ENV: process.env.NODE_ENV,
+            LOG_LEVEL: process.env.LOG_LEVEL,
+          }
+        : process.env; // Server-side: use full process.env
 
     validatedEnv = envSchema.parse(envToValidate);
 
@@ -230,7 +225,7 @@ export { env };
 /**
  * Get a specific environment variable
  */
-export function getEnv<K extends keyof typeof env>(key: K): typeof env[K] {
+export function getEnv<K extends keyof typeof env>(key: K): (typeof env)[K] {
   if (!env) {
     throw new Error('Environment variables not initialized');
   }
@@ -302,15 +297,9 @@ export function hasOAuthConfig(provider: 'microsoft' | 'google'): boolean {
 
   switch (provider) {
     case 'microsoft':
-      return !!(
-        env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID &&
-        env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID
-      );
+      return !!(env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID && env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID);
     case 'google':
-      return !!(
-        env.NEXT_PUBLIC_GOOGLE_CLIENT_ID &&
-        env.NEXT_PUBLIC_GOOGLE_API_KEY
-      );
+      return !!(env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && env.NEXT_PUBLIC_GOOGLE_API_KEY);
     default:
       return false;
   }

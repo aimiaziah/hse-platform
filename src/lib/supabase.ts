@@ -38,7 +38,9 @@ export const getServiceSupabase = (): SupabaseClient<Database> => {
   const supabaseServiceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseServiceKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured. This should only be called on the server.');
+    throw new Error(
+      'SUPABASE_SERVICE_ROLE_KEY is not configured. This should only be called on the server.',
+    );
   }
 
   return createClient<Database>(supabaseUrl, supabaseServiceKey, {
@@ -86,10 +88,7 @@ export async function getUserProfile(userId: string) {
 /**
  * Check if user has specific permission
  */
-export async function checkUserPermission(
-  userId: string,
-  permission: string,
-): Promise<boolean> {
+export async function checkUserPermission(userId: string, permission: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('user_permissions')
     .select(permission)

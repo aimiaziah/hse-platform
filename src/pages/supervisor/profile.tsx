@@ -41,13 +41,12 @@ const SupervisorProfile: React.FC = () => {
           x: e.clientX - rect.left,
           y: e.clientY - rect.top,
         };
-      } else {
-        const touch = e.touches[0];
-        return {
-          x: touch.clientX - rect.left,
-          y: touch.clientY - rect.top,
-        };
       }
+      const touch = e.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
     };
 
     const startDrawing = (e: MouseEvent | TouchEvent) => {
@@ -200,9 +199,7 @@ const SupervisorProfile: React.FC = () => {
 
           {/* Profile Information */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Profile Information
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Profile Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>

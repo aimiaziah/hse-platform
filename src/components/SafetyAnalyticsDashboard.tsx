@@ -75,7 +75,20 @@ interface AnalyticsData {
   };
 }
 
-const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 const COLORS = [
   'bg-blue-500',
@@ -106,16 +119,13 @@ const SafetyAnalyticsDashboard: React.FC = () => {
 
     try {
       // Fetch data from API with year filter only (showing all months)
-      const response = await fetch(
-        `/api/analytics/dashboard?year=${selectedYear}&month=0`,
-        {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await fetch(`/api/analytics/dashboard?year=${selectedYear}&month=0`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch analytics data');
@@ -168,8 +178,18 @@ const SafetyAnalyticsDashboard: React.FC = () => {
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <svg
+            className="w-8 h-8 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
           </svg>
         </div>
         <p className="text-gray-600">No data available.</p>
@@ -571,11 +591,11 @@ const SafetyAnalyticsDashboard: React.FC = () => {
             {/* Legend */}
             <div className="flex items-center justify-center gap-3 mt-2">
               <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#1E355E' }}></div>
+                <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#1E355E' }} />
                 <span className="text-[10px] text-gray-600">Fire Extinguishers</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#0EA974' }}></div>
+                <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#0EA974' }} />
                 <span className="text-[10px] text-gray-600">First Aid Items</span>
               </div>
             </div>

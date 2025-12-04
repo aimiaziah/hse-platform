@@ -13,7 +13,10 @@ class Storage {
     try {
       const serializedData = JSON.stringify(data);
       localStorage.setItem(key, serializedData);
-      console.log(`[Storage] ✅ Saved '${key}':`, Array.isArray(data) ? `${data.length} items` : typeof data);
+      console.log(
+        `[Storage] ✅ Saved '${key}':`,
+        Array.isArray(data) ? `${data.length} items` : typeof data,
+      );
     } catch (error) {
       console.error(`[Storage] ❌ Error saving '${key}':`, error);
       throw error; // Re-throw to notify caller
@@ -33,7 +36,10 @@ class Storage {
         return defaultValue;
       }
       const parsed = JSON.parse(item) as T;
-      console.log(`[Storage] ✅ Loaded '${key}':`, Array.isArray(parsed) ? `${parsed.length} items` : typeof parsed);
+      console.log(
+        `[Storage] ✅ Loaded '${key}':`,
+        Array.isArray(parsed) ? `${parsed.length} items` : typeof parsed,
+      );
       return parsed;
     } catch (error) {
       console.error(`[Storage] ❌ Error loading '${key}':`, error);

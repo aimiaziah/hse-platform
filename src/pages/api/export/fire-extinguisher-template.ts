@@ -46,10 +46,7 @@ interface FireExtinguisherFormData {
   reviewerSignature?: string;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -126,11 +123,22 @@ export default async function handler(
 
     // Fill extinguisher data
     const columns = {
-      no: 'A', serialNo: 'B', location: 'C', typeSize: 'D',
-      shell: 'E', hose: 'F', nozzle: 'G', pressureGauge: 'H',
-      safetyPin: 'I', pinSeal: 'J', accessible: 'K',
-      missingNotInPlace: 'L', emptyPressureLow: 'M',
-      servicingTags: 'N', expiryDate: 'O', remarks: 'P',
+      no: 'A',
+      serialNo: 'B',
+      location: 'C',
+      typeSize: 'D',
+      shell: 'E',
+      hose: 'F',
+      nozzle: 'G',
+      pressureGauge: 'H',
+      safetyPin: 'I',
+      pinSeal: 'J',
+      accessible: 'K',
+      missingNotInPlace: 'L',
+      emptyPressureLow: 'M',
+      servicingTags: 'N',
+      expiryDate: 'O',
+      remarks: 'P',
     };
 
     formData.extinguishers.forEach((ext, index) => {
@@ -292,8 +300,18 @@ export default async function handler(
     // Prepare filename
     const date = new Date(formData.inspectionDate);
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     if (format === 'pdf') {
@@ -310,7 +328,9 @@ export default async function handler(
           orientation: 'landscape',
         });
 
-        const filename = `Fire_Extinguisher_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.pdf`;
+        const filename = `Fire_Extinguisher_Checklist_${
+          monthNames[date.getMonth()]
+        }_${date.getFullYear()}.pdf`;
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -326,9 +346,14 @@ export default async function handler(
     } else {
       // Generate Excel buffer
       const buffer = await workbook.xlsx.writeBuffer();
-      const filename = `Fire_Extinguisher_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.xlsx`;
+      const filename = `Fire_Extinguisher_Checklist_${
+        monthNames[date.getMonth()]
+      }_${date.getFullYear()}.xlsx`;
 
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.setHeader('Content-Length', (buffer as any).length);
       res.status(200).send(buffer);

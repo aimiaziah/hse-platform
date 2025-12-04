@@ -39,9 +39,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (req.method === 'PUT') {
       // Only admins can update form templates
       if (!req.user?.permissions.canManageForms) {
-        return res
-          .status(403)
-          .json({ error: 'Forbidden - Only admins can update form templates' });
+        return res.status(403).json({ error: 'Forbidden - Only admins can update form templates' });
       }
 
       const updates = req.body;
@@ -69,8 +67,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Update form template
-      const { data: updated, error: updateError } = await (supabase
-        .from('form_templates') as any)
+      const { data: updated, error: updateError } = await (supabase.from('form_templates') as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -109,9 +106,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (req.method === 'DELETE') {
       // Only admins can delete form templates
       if (!req.user?.permissions.canManageForms) {
-        return res
-          .status(403)
-          .json({ error: 'Forbidden - Only admins can delete form templates' });
+        return res.status(403).json({ error: 'Forbidden - Only admins can delete form templates' });
       }
 
       // Check if template exists
@@ -126,8 +121,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Soft delete - set is_active to false
-      const { error: deleteError } = await (supabase
-        .from('form_templates') as any)
+      const { error: deleteError } = await (supabase.from('form_templates') as any)
         .update({ is_active: false })
         .eq('id', id);
 

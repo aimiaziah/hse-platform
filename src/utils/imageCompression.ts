@@ -50,12 +50,7 @@ export async function compressImage(
   imageSource: string | HTMLImageElement,
   options: CompressionOptions = {},
 ): Promise<string> {
-  const {
-    maxWidth = 1200,
-    maxHeight = 1200,
-    quality = 0.8,
-    mimeType = 'image/jpeg',
-  } = options;
+  const { maxWidth = 1200, maxHeight = 1200, quality = 0.8, mimeType = 'image/jpeg' } = options;
 
   return new Promise((resolve, reject) => {
     try {
@@ -113,9 +108,8 @@ export async function compressImage(
           // Log compression stats
           const originalSize = typeof imageSource === 'string' ? imageSource.length : 0;
           const compressedSize = compressedDataUrl.length;
-          const reduction = originalSize > 0
-            ? ((1 - compressedSize / originalSize) * 100).toFixed(1)
-            : 'N/A';
+          const reduction =
+            originalSize > 0 ? ((1 - compressedSize / originalSize) * 100).toFixed(1) : 'N/A';
 
           console.log('Image compressed:', {
             originalDimensions: `${img.width}x${img.height}`,
@@ -158,7 +152,7 @@ export async function compressImages(
   images: string[],
   options: CompressionOptions = {},
 ): Promise<string[]> {
-  return Promise.all(images.map(img => compressImage(img, options)));
+  return Promise.all(images.map((img) => compressImage(img, options)));
 }
 
 /**
@@ -274,7 +268,7 @@ export function getImageSize(dataUrl: string): number {
  * @param maxSizeKB - Maximum size in KB before compression is needed
  * @returns true if compression is needed
  */
-export function needsCompression(dataUrl: string, maxSizeKB: number = 500): boolean {
+export function needsCompression(dataUrl: string, maxSizeKB = 500): boolean {
   const sizeBytes = getImageSize(dataUrl);
   const sizeKB = sizeBytes / 1024;
   return sizeKB > maxSizeKB;

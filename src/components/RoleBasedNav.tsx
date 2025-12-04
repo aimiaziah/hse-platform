@@ -23,19 +23,19 @@ const RoleBasedNav: React.FC = () => {
       label: 'Home',
       href: '/analytics',
       icon: 'home',
-      iconClass: 'text-purple-600'
+      iconClass: 'text-purple-600',
     },
     {
       label: 'User Management',
       href: '/admin/users',
       icon: 'manage_accounts',
-      iconClass: 'text-blue-600'
+      iconClass: 'text-blue-600',
     },
     {
       label: 'Form Management',
       href: '/admin/checklist-items',
       icon: 'description',
-      iconClass: 'text-green-600'
+      iconClass: 'text-green-600',
     },
   ];
 
@@ -44,7 +44,7 @@ const RoleBasedNav: React.FC = () => {
       label: 'Home',
       href: '/analytics',
       icon: 'home',
-      iconClass: 'text-green-600'
+      iconClass: 'text-green-600',
     },
   ];
 
@@ -53,19 +53,19 @@ const RoleBasedNav: React.FC = () => {
       label: 'Fire Extinguisher',
       href: '/fire-extinguisher',
       icon: 'local_fire_department',
-      iconClass: 'text-orange-600'
+      iconClass: 'text-orange-600',
     },
     {
       label: 'First Aid Items',
       href: '/first-aid',
       icon: 'medical_services',
-      iconClass: 'text-red-600'
+      iconClass: 'text-red-600',
     },
     {
       label: 'HSE Inspection',
       href: '/hse-inspection',
       icon: 'verified_user',
-      iconClass: 'text-indigo-600'
+      iconClass: 'text-indigo-600',
     },
   ];
 
@@ -74,7 +74,7 @@ const RoleBasedNav: React.FC = () => {
       label: 'Home',
       href: '/analytics',
       icon: 'home',
-      iconClass: 'text-blue-600'
+      iconClass: 'text-blue-600',
     },
   ];
 
@@ -83,7 +83,7 @@ const RoleBasedNav: React.FC = () => {
       label: 'Home',
       href: '/analytics',
       icon: 'home',
-      iconClass: 'text-cyan-600'
+      iconClass: 'text-cyan-600',
     },
   ];
 
@@ -98,7 +98,7 @@ const RoleBasedNav: React.FC = () => {
   const navItems = getNavItems();
 
   const isInspectionFormActive = () => {
-    return inspectionForms.some(form => router.pathname.startsWith(form.href));
+    return inspectionForms.some((form) => router.pathname.startsWith(form.href));
   };
 
   const handleLogout = async () => {
@@ -112,7 +112,12 @@ const RoleBasedNav: React.FC = () => {
   };
 
   const isActiveRoute = (href: string) => {
-    if (href === '/admin' || href === '/analytics' || href === '/supervisor' || href === '/inspector') {
+    if (
+      href === '/admin' ||
+      href === '/analytics' ||
+      href === '/supervisor' ||
+      href === '/inspector'
+    ) {
       return router.pathname === href;
     }
     return router.pathname.startsWith(href);
@@ -125,7 +130,6 @@ const RoleBasedNav: React.FC = () => {
     if (isRole('employee')) return 'bg-orange-100 text-orange-800';
     return 'bg-gray-100 text-gray-800';
   };
-
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -169,9 +173,7 @@ const RoleBasedNav: React.FC = () => {
                         settings
                       </span>
                       Management
-                      <span className="material-icons text-base md:text-lg ml-1">
-                        expand_more
-                      </span>
+                      <span className="material-icons text-base md:text-lg ml-1">expand_more</span>
                     </button>
                     {showAdminDropdown && (
                       <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
@@ -229,7 +231,11 @@ const RoleBasedNav: React.FC = () => {
                         assignment
                       </span>
                       Inspection Forms
-                      <span className={`material-icons text-base md:text-lg ml-1 transition-transform ${showInspectionsDropdown ? 'rotate-180' : ''}`}>
+                      <span
+                        className={`material-icons text-base md:text-lg ml-1 transition-transform ${
+                          showInspectionsDropdown ? 'rotate-180' : ''
+                        }`}
+                      >
                         expand_more
                       </span>
                     </button>
@@ -296,9 +302,7 @@ const RoleBasedNav: React.FC = () => {
               onClick={handleLogout}
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors inline-flex items-center gap-2"
             >
-              <span className="material-icons text-base md:text-lg">
-                logout
-              </span>
+              <span className="material-icons text-base md:text-lg">logout</span>
               Logout
             </button>
           </div>
@@ -317,9 +321,7 @@ const RoleBasedNav: React.FC = () => {
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
-                <span className="material-icons text-green-600 mr-1.5 text-2xl">
-                  home
-                </span>
+                <span className="material-icons text-green-600 mr-1.5 text-2xl">home</span>
                 Home
               </Link>
               <div>
@@ -332,12 +334,14 @@ const RoleBasedNav: React.FC = () => {
                   }`}
                 >
                   <span className="inline-flex items-center">
-                    <span className="material-icons text-blue-600 mr-1.5 text-2xl">
-                      assignment
-                    </span>
+                    <span className="material-icons text-blue-600 mr-1.5 text-2xl">assignment</span>
                     Inspection Forms
                   </span>
-                  <span className={`material-icons text-xl transition-transform ${showInspectionsDropdown ? 'rotate-180' : ''}`}>
+                  <span
+                    className={`material-icons text-xl transition-transform ${
+                      showInspectionsDropdown ? 'rotate-180' : ''
+                    }`}
+                  >
                     expand_more
                   </span>
                 </button>

@@ -5,10 +5,7 @@ import { storage } from '@/utils/storage';
  * Wrapper around fetch that includes authentication credentials
  * This ensures cookies are sent with all API requests
  */
-export async function apiClient(
-  url: string,
-  options: RequestInit = {},
-): Promise<Response> {
+export async function apiClient(url: string, options: RequestInit = {}): Promise<Response> {
   // Get token from localStorage as fallback
   const token = storage.load('authToken', null);
 
@@ -16,7 +13,7 @@ export async function apiClient(
     credentials: 'include', // Always include cookies for authentication
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}), // Add token as fallback
+      ...(token ? { Authorization: `Bearer ${token}` } : {}), // Add token as fallback
       ...options.headers,
     },
   };

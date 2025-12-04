@@ -1035,7 +1035,7 @@ const HSEInspectionForm = () => {
                           tablePersons: formData.tablePersons,
                           inspectionItems: formData.inspectionItems,
                           commentsRemarks: formData.commentsRemarks,
-                          observations: observations,
+                          observations,
                           totalObservations: observations.length,
                         },
                         signature: null,
@@ -1090,7 +1090,7 @@ const HSEInspectionForm = () => {
                         date: formData.date,
                         inspectedBy: formData.inspectedBy,
                         workActivity: formData.workActivity,
-                        observations: observations,
+                        observations,
                       };
                       await downloadHSEInspectionChecklistWithTemplate(checklistData);
                       setTimeout(async () => {

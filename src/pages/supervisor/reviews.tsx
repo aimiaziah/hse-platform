@@ -91,7 +91,7 @@ const SupervisorReviews: React.FC = () => {
               : mapDbTypeToLocal(inspection.inspection_type);
             allInspections.push({
               id: inspection.id,
-              type: type,
+              type,
               title: isObservation ? 'HSE Observation' : getInspectionTypeName(type),
               location: inspection.form_data?.location || inspection.form_data?.contractor || 'N/A',
               inspector: inspection.inspected_by,
@@ -264,7 +264,6 @@ const SupervisorReviews: React.FC = () => {
           };
           setPreviewInspection(fullInspection);
           setShowPreviewModal(true);
-          return;
         }
       }
       // Fallback to localStorage

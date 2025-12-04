@@ -150,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Add supervisor review information if available
     if (formData.reviewedBy && formData.reviewedAt) {
       const reviewDate = new Date(formData.reviewedAt).toLocaleDateString('en-GB');
-      const lastRow = FIRST_AID_MAPPING.dataStartRow + (formData.kits.length * 3) + 2;
+      const lastRow = FIRST_AID_MAPPING.dataStartRow + formData.kits.length * 3 + 2;
 
       // Add "Reviewed by" section
       worksheet.getCell(`A${lastRow}`).value = 'Reviewed by:';
@@ -231,8 +231,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const col = getColumnLetter(FIRST_AID_MAPPING.columns.itemsStartColumn + itemIndex);
         quantityRow.getCell(col).value = item.quantity || '';
       });
-      quantityRow.getCell(FIRST_AID_MAPPING.columns.remarks).value =
-        kit.remarks || '';
+      quantityRow.getCell(FIRST_AID_MAPPING.columns.remarks).value = kit.remarks || '';
       currentRow++;
     });
 
@@ -267,7 +266,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           orientation: 'portrait',
         });
 
-        const filename = `First_Aid_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.pdf`;
+        const filename = `First_Aid_Checklist_${
+          monthNames[date.getMonth()]
+        }_${date.getFullYear()}.pdf`;
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

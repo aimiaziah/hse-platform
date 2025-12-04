@@ -23,7 +23,7 @@ const PDFJSViewer: React.FC<PDFJSViewerProps> = ({
   showToolbar = true,
   height = '800px',
   onError,
-  onLoad
+  onLoad,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ const PDFJSViewer: React.FC<PDFJSViewerProps> = ({
     const viewerUrl = buildViewerUrl(viewerPath, pdfUrl, {
       enablePrint,
       enableDownload,
-      showToolbar
+      showToolbar,
     });
 
     // Create iframe element
@@ -124,9 +124,7 @@ const PDFJSViewer: React.FC<PDFJSViewerProps> = ({
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Error Loading PDF
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading PDF</h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
@@ -151,7 +149,7 @@ function buildViewerUrl(
     enablePrint: boolean;
     enableDownload: boolean;
     showToolbar: boolean;
-  }
+  },
 ): string {
   const params = new URLSearchParams();
 
@@ -216,7 +214,7 @@ export function loadSupervisorPDF(
     enablePrint?: boolean;
     enableDownload?: boolean;
     showToolbar?: boolean;
-  } = {}
+  } = {},
 ): HTMLIFrameElement | null {
   const container = document.getElementById('document-review-area');
 

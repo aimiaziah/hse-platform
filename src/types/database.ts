@@ -5,12 +5,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type UserRole = 'admin' | 'inspector' | 'supervisor' | 'employee';
 
-export type InspectionStatus =
-  | 'draft'
-  | 'pending_review'
-  | 'approved'
-  | 'rejected'
-  | 'completed';
+export type InspectionStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'completed';
 
 export type InspectionType = 'fire_extinguisher' | 'first_aid' | 'hse_general' | 'manhours_report';
 

@@ -27,14 +27,22 @@ export default function TestSharePointConfig() {
         <div className="space-y-4">
           <div className="border-b pb-3">
             <h2 className="font-semibold text-gray-700">Client ID:</h2>
-            <p className={`font-mono text-sm ${config.clientId === 'NOT SET' ? 'text-red-600' : 'text-green-600'}`}>
+            <p
+              className={`font-mono text-sm ${
+                config.clientId === 'NOT SET' ? 'text-red-600' : 'text-green-600'
+              }`}
+            >
               {config.clientId}
             </p>
           </div>
 
           <div className="border-b pb-3">
             <h2 className="font-semibold text-gray-700">Tenant ID:</h2>
-            <p className={`font-mono text-sm ${config.tenantId === 'NOT SET' ? 'text-red-600' : 'text-green-600'}`}>
+            <p
+              className={`font-mono text-sm ${
+                config.tenantId === 'NOT SET' ? 'text-red-600' : 'text-green-600'
+              }`}
+            >
               {config.tenantId}
             </p>
           </div>
@@ -48,16 +56,12 @@ export default function TestSharePointConfig() {
 
           <div className="border-b pb-3">
             <h2 className="font-semibold text-gray-700">Current Origin (for redirect URI):</h2>
-            <p className="font-mono text-sm text-blue-600">
-              {config.origin}
-            </p>
+            <p className="font-mono text-sm text-blue-600">{config.origin}</p>
           </div>
 
           <div className="border-b pb-3">
             <h2 className="font-semibold text-gray-700">Expected Redirect URI:</h2>
-            <p className="font-mono text-sm text-purple-600">
-              {config.origin}/sharepoint-callback
-            </p>
+            <p className="font-mono text-sm text-purple-600">{config.origin}/sharepoint-callback</p>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded p-4 mt-6">
@@ -74,15 +78,16 @@ export default function TestSharePointConfig() {
             <div className="bg-red-50 border border-red-200 rounded p-4 mt-4">
               <h3 className="font-semibold text-red-900 mb-2">❌ Configuration Issue Detected!</h3>
               <p className="text-sm text-red-800">
-                SharePoint OAuth is not properly configured. Please check your .env.local file
-                and make sure it contains:
+                SharePoint OAuth is not properly configured. Please check your .env.local file and
+                make sure it contains:
               </p>
               <pre className="mt-2 bg-gray-800 text-white p-2 rounded text-xs overflow-x-auto">
-{`NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID=your_client_id
+                {`NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID=your_client_id
 NEXT_PUBLIC_SHAREPOINT_TENANT_ID=your_tenant_id`}
               </pre>
               <p className="text-sm text-red-800 mt-2">
-                After updating .env.local, restart your dev server: <code className="bg-gray-200 px-1 rounded">npm run dev</code>
+                After updating .env.local, restart your dev server:{' '}
+                <code className="bg-gray-200 px-1 rounded">npm run dev</code>
               </p>
             </div>
           )}

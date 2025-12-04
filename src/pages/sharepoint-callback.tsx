@@ -28,7 +28,7 @@ export default function SharePointCallback() {
           error_description,
           expires_in: expires_in ? parseInt(expires_in, 10) : null,
         },
-        window.location.origin
+        window.location.origin,
       );
 
       // Close this popup window
@@ -43,7 +43,7 @@ export default function SharePointCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
         <p className="text-gray-600">Completing authentication...</p>
         <p className="text-sm text-gray-500 mt-2">This window will close automatically</p>
       </div>

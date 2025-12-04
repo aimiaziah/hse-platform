@@ -18,10 +18,7 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
-import {
-  AIInspectionResult,
-  CapturedImage,
-} from '@/types/ai-inspection';
+import { AIInspectionResult, CapturedImage } from '@/types/ai-inspection';
 import {
   mapYOLOToInspectionResults,
   YOLOImageResult,
@@ -36,11 +33,11 @@ import {
 const DEPLOYMENT_TYPE = process.env.AI_DEPLOYMENT_TYPE || 'roboflow'; // 'roboflow' | 'aws' | 'gcp' | 'azure'
 
 // API endpoints and keys
-const ROBOFLOW_API_KEY = process.env.ROBOFLOW_API_KEY;
-const ROBOFLOW_MODEL_ENDPOINT = process.env.ROBOFLOW_MODEL_ENDPOINT;
-const AWS_LAMBDA_ENDPOINT = process.env.AWS_LAMBDA_ENDPOINT;
-const GCP_CLOUD_RUN_ENDPOINT = process.env.GCP_CLOUD_RUN_ENDPOINT;
-const AZURE_FUNCTION_ENDPOINT = process.env.AZURE_FUNCTION_ENDPOINT;
+const { ROBOFLOW_API_KEY } = process.env;
+const { ROBOFLOW_MODEL_ENDPOINT } = process.env;
+const { AWS_LAMBDA_ENDPOINT } = process.env;
+const { GCP_CLOUD_RUN_ENDPOINT } = process.env;
+const { AZURE_FUNCTION_ENDPOINT } = process.env;
 
 // Confidence thresholds
 const MIN_CONFIDENCE = parseFloat(process.env.AI_MIN_CONFIDENCE || '0.5');
@@ -52,7 +49,7 @@ const DETECTION_TIMEOUT = parseInt(process.env.AI_TIMEOUT_MS || '30000');
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<AIInspectionResult>
+  res: NextApiResponse<AIInspectionResult>,
 ) {
   console.log('[AI Analysis API] Request received:', req.method);
 
@@ -87,7 +84,9 @@ export default async function handler(
       });
     }
 
-    console.log(`[AI Analysis API] Processing ${images.length} images for extinguisher ${extinguisherInfo?.serialNo}`);
+    console.log(
+      `[AI Analysis API] Processing ${images.length} images for extinguisher ${extinguisherInfo?.serialNo}`,
+    );
     console.log(`[AI Analysis API] Using deployment type: ${DEPLOYMENT_TYPE}`);
 
     // Route to appropriate detection service
@@ -121,11 +120,10 @@ export default async function handler(
 
     console.log(
       `[AI Analysis API] Complete in ${inspectionResult.processingTime}ms - ` +
-      `${inspectionResult.detections.length} fields analyzed`
+        `${inspectionResult.detections.length} fields analyzed`,
     );
 
     return res.status(200).json(inspectionResult);
-
   } catch (error: any) {
     console.error('[AI Analysis API] Error:', error);
 
@@ -165,7 +163,7 @@ async function detectWithRoboflow(images: CapturedImage[]): Promise<YOLOImageRes
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: base64Data,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -190,7 +188,6 @@ async function detectWithRoboflow(images: CapturedImage[]): Promise<YOLOImageRes
         stepId: image.stepId,
         detections,
       });
-
     } catch (error) {
       console.error(`[Roboflow] Error processing image ${image.stepId}:`, error);
       results.push({
@@ -209,7 +206,7 @@ async function detectWithRoboflow(images: CapturedImage[]): Promise<YOLOImageRes
 
 async function detectWithAWS(
   images: CapturedImage[],
-  extinguisherInfo: any
+  extinguisherInfo: any,
 ): Promise<YOLOImageResult[]> {
   if (!AWS_LAMBDA_ENDPOINT) {
     console.warn('[AI Analysis] AWS Lambda not configured, using mock data');
@@ -236,7 +233,6 @@ async function detectWithAWS(
 
     const data = await response.json();
     return data.results || [];
-
   } catch (error: any) {
     console.error('[AWS Lambda] Error:', error);
     throw error;
@@ -249,7 +245,7 @@ async function detectWithAWS(
 
 async function detectWithGCP(
   images: CapturedImage[],
-  extinguisherInfo: any
+  extinguisherInfo: any,
 ): Promise<YOLOImageResult[]> {
   if (!GCP_CLOUD_RUN_ENDPOINT) {
     console.warn('[AI Analysis] GCP Cloud Run not configured, using mock data');
@@ -285,13 +281,12 @@ async function detectWithGCP(
       detections: (result.detections || []).map((det: any) => ({
         class: det.class_name || det.class, // Map class_name to class
         confidence: det.confidence,
-        bbox: det.bbox
-      }))
+        bbox: det.bbox,
+      })),
     }));
 
     console.log('[GCP] Mapped results:', mappedResults);
     return mappedResults;
-
   } catch (error: any) {
     console.error('[GCP Cloud Run] Error:', error);
     throw error;
@@ -304,7 +299,7 @@ async function detectWithGCP(
 
 async function detectWithAzure(
   images: CapturedImage[],
-  extinguisherInfo: any
+  extinguisherInfo: any,
 ): Promise<YOLOImageResult[]> {
   if (!AZURE_FUNCTION_ENDPOINT) {
     console.warn('[AI Analysis] Azure Function not configured, using mock data');
@@ -331,7 +326,6 @@ async function detectWithAzure(
 
     const data = await response.json();
     return data.results || [];
-
   } catch (error: any) {
     console.error('[Azure Function] Error:', error);
     throw error;
@@ -346,10 +340,10 @@ async function generateMockDetections(images: CapturedImage[]): Promise<YOLOImag
   console.log('[AI Analysis] Using mock detection data for testing');
 
   // Simulate processing delay (like a real AI service)
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  await new Promise((resolve) => setTimeout(resolve, 1500));
 
   // Generate realistic mock detections
-  return images.map(image => ({
+  return images.map((image) => ({
     stepId: image.stepId,
     detections: [
       // Shell component
@@ -361,7 +355,7 @@ async function generateMockDetections(images: CapturedImage[]): Promise<YOLOImag
       // Pressure gauge
       { class: 'pressure_gauge', confidence: 0.95, bbox: [150, 150, 250, 250] },
       // Safety pin
-      { class: 'safety_pin', confidence: 0.90, bbox: [180, 100, 220, 140] },
+      { class: 'safety_pin', confidence: 0.9, bbox: [180, 100, 220, 140] },
       // Pin seal
       { class: 'pin_seal', confidence: 0.87, bbox: [180, 110, 220, 130] },
       // Service tag

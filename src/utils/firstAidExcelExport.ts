@@ -84,7 +84,9 @@ function formatDate(dateString: string): string {
 /**
  * Generate First Aid Inspection Excel file using template
  */
-export async function generateFirstAidExcel(data: FirstAidInspectionData): Promise<ExcelJS.Workbook> {
+export async function generateFirstAidExcel(
+  data: FirstAidInspectionData,
+): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from storage
     console.log('Fetching First Aid template from storage...');
@@ -189,7 +191,7 @@ export async function generateFirstAidExcel(data: FirstAidInspectionData): Promi
     // ==========================================
 
     const kitsWithImages = data.kits.filter(
-      (kit) => kit.capturedImages && kit.capturedImages.length > 0
+      (kit) => kit.capturedImages && kit.capturedImages.length > 0,
     );
 
     if (kitsWithImages.length > 0) {
@@ -197,7 +199,9 @@ export async function generateFirstAidExcel(data: FirstAidInspectionData): Promi
       const imgWs = wb.addWorksheet('Kit Images');
 
       const date = new Date(data.inspectionDate);
-      const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+      const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(
+        date.getMonth() + 1,
+      ).padStart(2, '0')}/${date.getFullYear()}`;
 
       // Row 1: Title
       imgWs.getCell('A1').value = 'KIT IMAGES - FIRST AID INSPECTION';
@@ -216,7 +220,8 @@ export async function generateFirstAidExcel(data: FirstAidInspectionData): Promi
       // Row 4: Blank
 
       // Row 5: Note
-      imgWs.getCell('A5').value = 'Note: This sheet contains image metadata with timestamps. Images are embedded as base64 data URLs.';
+      imgWs.getCell('A5').value =
+        'Note: This sheet contains image metadata with timestamps. Images are embedded as base64 data URLs.';
       imgWs.mergeCells('A5:F5');
 
       // Row 6: Blank
@@ -230,22 +235,22 @@ export async function generateFirstAidExcel(data: FirstAidInspectionData): Promi
       imgWs.getCell('F7').value = 'Image Data (Base64)';
 
       // Style headers
-      ['A7', 'B7', 'C7', 'D7', 'E7', 'F7'].forEach(cell => {
+      ['A7', 'B7', 'C7', 'D7', 'E7', 'F7'].forEach((cell) => {
         imgWs.getCell(cell).font = { bold: true };
         imgWs.getCell(cell).fill = {
           type: 'pattern',
           pattern: 'solid',
-          fgColor: { argb: 'FFD3D3D3' }
+          fgColor: { argb: 'FFD3D3D3' },
         };
       });
 
       // Set column widths
-      imgWs.getColumn('A').width = 10;  // Kit #
-      imgWs.getColumn('B').width = 20;  // Model
-      imgWs.getColumn('C').width = 15;  // Location
-      imgWs.getColumn('D').width = 15;  // Model No.
-      imgWs.getColumn('E').width = 22;  // Capture Time
-      imgWs.getColumn('F').width = 50;  // Image Data
+      imgWs.getColumn('A').width = 10; // Kit #
+      imgWs.getColumn('B').width = 20; // Model
+      imgWs.getColumn('C').width = 15; // Location
+      imgWs.getColumn('D').width = 15; // Model No.
+      imgWs.getColumn('E').width = 22; // Capture Time
+      imgWs.getColumn('F').width = 50; // Image Data
 
       // Add image data starting from row 8
       let imageRow = 8;
@@ -266,7 +271,10 @@ export async function generateFirstAidExcel(data: FirstAidInspectionData): Promi
       // Add summary section
       imageRow++;
       imgWs.getCell(`A${imageRow}`).value = 'Total Images:';
-      imgWs.getCell(`B${imageRow}`).value = kitsWithImages.reduce((sum, kit) => sum + (kit.capturedImages?.length || 0), 0);
+      imgWs.getCell(`B${imageRow}`).value = kitsWithImages.reduce(
+        (sum, kit) => sum + (kit.capturedImages?.length || 0),
+        0,
+      );
       imgWs.getCell(`A${imageRow}`).font = { bold: true };
 
       imageRow++;
@@ -279,7 +287,9 @@ export async function generateFirstAidExcel(data: FirstAidInspectionData): Promi
     return wb;
   } catch (error) {
     console.error('Error loading First Aid template:', error);
-    throw new Error('Could not load First Aid template. Please ensure "first-aid-template.xlsx" exists in the templates storage.');
+    throw new Error(
+      'Could not load First Aid template. Please ensure "first-aid-template.xlsx" exists in the templates storage.',
+    );
   }
 }
 
@@ -290,9 +300,23 @@ export async function downloadFirstAidExcel(data: FirstAidInspectionData, filena
   try {
     const wb = await generateFirstAidExcel(data);
     const date = new Date(data.inspectionDate);
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
-    const defaultFilename = `First_Aid_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.xlsx`;
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const defaultFilename = `First_Aid_Checklist_${
+      monthNames[date.getMonth()]
+    }_${date.getFullYear()}.xlsx`;
 
     // Generate buffer and download
     const buffer = await wb.xlsx.writeBuffer();

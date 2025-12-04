@@ -31,7 +31,7 @@ function isR2Configured(): boolean {
  */
 export async function uploadImage(
   base64Data: string,
-  folder: string = 'inspections'
+  folder = 'inspections',
 ): Promise<ImageStorageResult> {
   // If R2 is configured, upload to R2
   if (isR2Configured()) {
@@ -60,9 +60,8 @@ export async function uploadImage(
           data: result.url,
           isUrl: true,
         };
-      } else {
-        throw new Error(result.error || 'Upload failed');
       }
+      throw new Error(result.error || 'Upload failed');
     } catch (error) {
       console.error('[ImageStorage] R2 upload failed, falling back to base64:', error);
       // Fallback to base64 if R2 upload fails
@@ -90,9 +89,9 @@ export async function uploadImage(
  */
 export async function uploadImages(
   images: string[],
-  folder: string = 'inspections'
+  folder = 'inspections',
 ): Promise<ImageStorageResult[]> {
-  const uploadPromises = images.map(image => uploadImage(image, folder));
+  const uploadPromises = images.map((image) => uploadImage(image, folder));
   return Promise.all(uploadPromises);
 }
 
@@ -105,8 +104,8 @@ export async function uploadImages(
  */
 export async function compressAndUploadImage(
   base64Data: string,
-  folder: string = 'inspections',
-  compressionOptions?: CompressionOptions
+  folder = 'inspections',
+  compressionOptions?: CompressionOptions,
 ): Promise<ImageStorageResult> {
   try {
     // Compress first
@@ -134,8 +133,8 @@ export async function compressAndUploadImage(
  */
 export async function compressAndUploadImages(
   images: string[],
-  folder: string = 'inspections',
-  compressionOptions?: CompressionOptions
+  folder = 'inspections',
+  compressionOptions?: CompressionOptions,
 ): Promise<ImageStorageResult[]> {
   try {
     // Compress all images first

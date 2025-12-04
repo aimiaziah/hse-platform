@@ -6,17 +6,39 @@ import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
 import { useAuth } from '@/hooks/useAuth';
 import { exportToGoogleDrive } from '@/utils/googleDrive';
-import { exportToSharePoint as exportToSharePointOAuth, isSharePointAuthenticated, isSharePointOAuthConfigured } from '@/utils/sharepoint-oauth';
-import { uploadToSharePointViaPowerAutomate, isPowerAutomateConfigured } from '@/utils/powerAutomate';
-import { generateAndDownloadInspectionPDF, generateInspectionPDF } from '@/utils/inspectionPdfGenerator';
-import { generateFireExtinguisherPDF, generateFirstAidPDF, downloadPDF } from '@/utils/templatePdfGenerator';
+import {
+  exportToSharePoint as exportToSharePointOAuth,
+  isSharePointAuthenticated,
+  isSharePointOAuthConfigured,
+} from '@/utils/sharepoint-oauth';
+import {
+  uploadToSharePointViaPowerAutomate,
+  isPowerAutomateConfigured,
+} from '@/utils/powerAutomate';
+import {
+  generateAndDownloadInspectionPDF,
+  generateInspectionPDF,
+} from '@/utils/inspectionPdfGenerator';
+import {
+  generateFireExtinguisherPDF,
+  generateFirstAidPDF,
+  downloadPDF,
+} from '@/utils/templatePdfGenerator';
 import PDFViewer from '@/components/PDFViewer';
 import PDFJSViewer from '@/components/PDFJSViewer';
 import ExcelViewer from '@/components/ExcelViewer';
 import jsPDF from 'jspdf';
 import ExcelJS from 'exceljs';
 
-type InspectionStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'completed' | 'Open' | 'Closed' | 'Ongoing';
+type InspectionStatus =
+  | 'draft'
+  | 'pending_review'
+  | 'approved'
+  | 'rejected'
+  | 'completed'
+  | 'Open'
+  | 'Closed'
+  | 'Ongoing';
 type InspectionType = 'hse' | 'fire_extinguisher' | 'first_aid' | 'hse_observation' | 'manhours';
 
 interface Inspection {
@@ -139,7 +161,8 @@ const InspectionReview: React.FC = () => {
         }
 
         const inspections = storage.load(storageKey, []);
-        found = inspections.find((i: Inspection) => i.id === id) as Inspection | undefined || null;
+        found =
+          (inspections.find((i: Inspection) => i.id === id) as Inspection | undefined) || null;
       }
 
       if (found) {
@@ -248,9 +271,10 @@ const InspectionReview: React.FC = () => {
   // Load Excel preview for fire extinguisher and first aid inspections
   const loadExcelPreview = async (inspection: Inspection) => {
     try {
-      const apiEndpoint = inspectionType === 'fire_extinguisher'
-        ? '/api/export/fire-extinguisher-template'
-        : '/api/export/first-aid-template';
+      const apiEndpoint =
+        inspectionType === 'fire_extinguisher'
+          ? '/api/export/fire-extinguisher-template'
+          : '/api/export/first-aid-template';
 
       const requestBody = {
         inspectedBy: inspection.inspectedBy,
@@ -305,7 +329,7 @@ const InspectionReview: React.FC = () => {
     inspection: Inspection,
     supervisorName: string,
     reviewDate: string,
-    signature: string
+    signature: string,
   ): Promise<{ excelBuffer: Buffer; pdfBuffer: Buffer }> => {
     // Generate both Excel and PDF from the same template
     // This ensures they match exactly
@@ -323,7 +347,7 @@ const InspectionReview: React.FC = () => {
     supervisorName: string,
     reviewDate: string,
     signature: string,
-    format: 'excel' | 'pdf'
+    format: 'excel' | 'pdf',
   ): Promise<Buffer> => {
     let apiEndpoint = '';
     let requestBody: any = {};
@@ -341,7 +365,7 @@ const InspectionReview: React.FC = () => {
           reviewedBy: supervisorName,
           reviewedAt: reviewDate,
           reviewerSignature: signature,
-          format: format,
+          format,
         };
         break;
 
@@ -356,7 +380,7 @@ const InspectionReview: React.FC = () => {
           reviewedBy: supervisorName,
           reviewedAt: reviewDate,
           reviewerSignature: signature,
-          format: format,
+          format,
         };
         break;
 
@@ -375,7 +399,7 @@ const InspectionReview: React.FC = () => {
           reviewedBy: supervisorName,
           reviewedAt: reviewDate,
           reviewerSignature: signature,
-          format: format,
+          format,
         };
         break;
 
@@ -397,7 +421,7 @@ const InspectionReview: React.FC = () => {
           reviewedBy: supervisorName,
           reviewedAt: reviewDate,
           reviewerSignature: signature,
-          format: format,
+          format,
         };
         break;
 
@@ -429,7 +453,7 @@ const InspectionReview: React.FC = () => {
           monthlyData: inspection.monthlyData || [],
           remarks: inspection.remarks || '',
           reviewerSignature: signature,
-          format: format,
+          format,
         };
         break;
 
@@ -521,8 +545,18 @@ const InspectionReview: React.FC = () => {
 
       const date = new Date(inspection.inspectionDate);
       const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December',
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
 
       let typeName = 'Inspection';
@@ -530,7 +564,9 @@ const InspectionReview: React.FC = () => {
       else if (inspectionType === 'first_aid') typeName = 'First_Aid';
       else if (inspectionType === 'hse') typeName = 'HSE_Inspection';
 
-      const filename = `${typeName}_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.xlsx`;
+      const filename = `${typeName}_Checklist_${
+        monthNames[date.getMonth()]
+      }_${date.getFullYear()}.xlsx`;
 
       link.download = filename;
       document.body.appendChild(link);
@@ -637,7 +673,7 @@ const InspectionReview: React.FC = () => {
           updatedInspection,
           user.name,
           reviewDate,
-          supervisorSignature
+          supervisorSignature,
         );
 
         // Convert buffers to blobs for OAuth upload
@@ -650,7 +686,11 @@ const InspectionReview: React.FC = () => {
         if (isPowerAutomateConfigured()) {
           try {
             console.log('🔄 Using Power Automate for SharePoint upload...');
-            const uploadResult = await uploadToSharePointViaPowerAutomate(excelBlob, pdfBlob, updatedInspection);
+            const uploadResult = await uploadToSharePointViaPowerAutomate(
+              excelBlob,
+              pdfBlob,
+              updatedInspection,
+            );
 
             // Update inspection with SharePoint links if provided
             if (uploadResult.excelUrl) {
@@ -670,7 +710,9 @@ const InspectionReview: React.FC = () => {
             sharePointExported = true;
           } catch (powerAutomateError: any) {
             console.error('Power Automate upload error:', powerAutomateError);
-            alert(`Inspection approved! Power Automate upload encountered an issue: ${powerAutomateError.message}. Documents can be downloaded manually.`);
+            alert(
+              `Inspection approved! Power Automate upload encountered an issue: ${powerAutomateError.message}. Documents can be downloaded manually.`,
+            );
           }
         }
         // Fallback to OAuth if Power Automate not configured
@@ -678,7 +720,11 @@ const InspectionReview: React.FC = () => {
           try {
             console.log('🔄 Using OAuth for SharePoint upload...');
             // Upload both files to SharePoint/OneDrive via OAuth
-            const uploadResult = await exportToSharePointOAuth(excelBlob, pdfBlob, updatedInspection);
+            const uploadResult = await exportToSharePointOAuth(
+              excelBlob,
+              pdfBlob,
+              updatedInspection,
+            );
 
             // Update inspection with SharePoint links
             updatedInspection.sharePointExcelUrl = uploadResult.excel.webUrl;
@@ -701,23 +747,33 @@ const InspectionReview: React.FC = () => {
             console.error('SharePoint OAuth error:', oauthError);
             // Show user-friendly error message
             if (oauthError.message?.includes('Popup blocked')) {
-              alert('Inspection approved! Please allow popups for this site to enable automatic SharePoint export. You can download the documents manually instead.');
+              alert(
+                'Inspection approved! Please allow popups for this site to enable automatic SharePoint export. You can download the documents manually instead.',
+              );
             } else if (oauthError.message?.includes('cancelled')) {
-              alert('Inspection approved! SharePoint authentication was cancelled. Documents can be downloaded manually.');
+              alert(
+                'Inspection approved! SharePoint authentication was cancelled. Documents can be downloaded manually.',
+              );
             } else {
-              alert(`Inspection approved! SharePoint upload encountered an issue: ${oauthError.message}. Documents can be downloaded manually.`);
+              alert(
+                `Inspection approved! SharePoint upload encountered an issue: ${oauthError.message}. Documents can be downloaded manually.`,
+              );
             }
           }
         }
         // Neither Power Automate nor OAuth configured
         else {
           console.warn('SharePoint export not configured - skipping automatic upload');
-          alert('Inspection approved! Note: SharePoint export is not configured. You can set up Power Automate (recommended) or OAuth. See POWER_AUTOMATE_SETUP.md for details. Documents can be downloaded manually.');
+          alert(
+            'Inspection approved! Note: SharePoint export is not configured. You can set up Power Automate (recommended) or OAuth. See POWER_AUTOMATE_SETUP.md for details. Documents can be downloaded manually.',
+          );
         }
       } catch (exportError) {
         console.error('Document export error:', exportError);
         // Continue even if export fails - files can still be downloaded manually
-        alert('Inspection approved! Note: Document generation encountered an issue. Please try downloading the documents manually.');
+        alert(
+          'Inspection approved! Note: Document generation encountered an issue. Please try downloading the documents manually.',
+        );
       }
 
       // Create notification for inspector
@@ -726,14 +782,22 @@ const InspectionReview: React.FC = () => {
         'approval',
         `Your ${getInspectionTypeName(inspectionType)} inspection has been approved by ${
           user.name
-        }${reviewComments ? ': ' + reviewComments : ''}`,
+        }${reviewComments ? `: ${reviewComments}` : ''}`,
       );
 
       // Show appropriate success message based on export status
       if (sharePointExported) {
-        alert(`${getInspectionTypeName(inspectionType)} approved successfully! Excel and PDF reports have been exported to SharePoint.`);
+        alert(
+          `${getInspectionTypeName(
+            inspectionType,
+          )} approved successfully! Excel and PDF reports have been exported to SharePoint.`,
+        );
       } else {
-        alert(`${getInspectionTypeName(inspectionType)} approved successfully! Documents are ready to download.`);
+        alert(
+          `${getInspectionTypeName(
+            inspectionType,
+          )} approved successfully! Documents are ready to download.`,
+        );
       }
       router.push('/supervisor');
     } catch (error) {
@@ -1002,8 +1066,18 @@ const InspectionReview: React.FC = () => {
 
       const date = new Date(inspection.inspectionDate);
       const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December',
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
 
       let typeName = 'Inspection';
@@ -1011,7 +1085,9 @@ const InspectionReview: React.FC = () => {
       else if (inspectionType === 'first_aid') typeName = 'First_Aid';
       else if (inspectionType === 'hse') typeName = 'HSE_Inspection';
 
-      const filename = `${typeName}_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.pdf`;
+      const filename = `${typeName}_Checklist_${
+        monthNames[date.getMonth()]
+      }_${date.getFullYear()}.pdf`;
 
       link.download = filename;
       document.body.appendChild(link);
@@ -1055,10 +1131,16 @@ const InspectionReview: React.FC = () => {
       const result = await exportToSharePointOAuth(excelBlob, pdfBlob, inspection);
 
       console.log('✅ SharePoint Export Success!', result);
-      alert(`Success! Files uploaded to OneDrive:\n\n📊 Excel: ${result.excel.webUrl}\n\n📄 PDF: ${result.pdf.webUrl}\n\nCheck your OneDrive > InspectionReports folder`);
+      alert(
+        `Success! Files uploaded to OneDrive:\n\n📊 Excel: ${result.excel.webUrl}\n\n📄 PDF: ${result.pdf.webUrl}\n\nCheck your OneDrive > InspectionReports folder`,
+      );
     } catch (error) {
       console.error('SharePoint export error:', error);
-      alert(`SharePoint export failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck browser console for details.`);
+      alert(
+        `SharePoint export failed: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }\n\nCheck browser console for details.`,
+      );
     } finally {
       setProcessing(false);
     }
@@ -1066,12 +1148,18 @@ const InspectionReview: React.FC = () => {
 
   const getApiEndpointForType = () => {
     switch (inspectionType) {
-      case 'fire_extinguisher': return '/api/export/fire-extinguisher-template';
-      case 'first_aid': return '/api/export/first-aid-template';
-      case 'hse': return '/api/export/hse-inspection-template';
-      case 'hse_observation': return '/api/export/hse-observation-template';
-      case 'manhours': return '/api/export/manhours-template';
-      default: throw new Error('Unsupported inspection type');
+      case 'fire_extinguisher':
+        return '/api/export/fire-extinguisher-template';
+      case 'first_aid':
+        return '/api/export/first-aid-template';
+      case 'hse':
+        return '/api/export/hse-inspection-template';
+      case 'hse_observation':
+        return '/api/export/hse-observation-template';
+      case 'manhours':
+        return '/api/export/manhours-template';
+      default:
+        throw new Error('Unsupported inspection type');
     }
   };
 
@@ -1146,7 +1234,9 @@ const InspectionReview: React.FC = () => {
     }
   };
 
-  const mapInspectionType = (type: InspectionType): 'fire_extinguisher' | 'first_aid' | 'hse_general' | 'hse_observation' | 'manhours' => {
+  const mapInspectionType = (
+    type: InspectionType,
+  ): 'fire_extinguisher' | 'first_aid' | 'hse_general' | 'hse_observation' | 'manhours' => {
     switch (type) {
       case 'fire_extinguisher':
         return 'fire_extinguisher';
@@ -1166,17 +1256,17 @@ const InspectionReview: React.FC = () => {
     switch (type) {
       case 'fire_extinguisher':
         return {
-          extinguishers: inspection.extinguishers || []
+          extinguishers: inspection.extinguishers || [],
         };
       case 'first_aid':
         return {
-          kits: inspection.kits || []
+          kits: inspection.kits || [],
         };
       case 'hse':
         return {
           contractorInfo: inspection.contractorInfo || {},
           categories: inspection.categories || inspection.items || [],
-          observations: inspection.observations || []
+          observations: inspection.observations || [],
         };
       case 'hse_observation':
         return {
@@ -1186,7 +1276,7 @@ const InspectionReview: React.FC = () => {
           hazards: inspection.hazards || '',
           remarks: inspection.remarks || '',
           photos: inspection.photos || [],
-          status: inspection.status || ''
+          status: inspection.status || '',
         };
       case 'manhours':
         return {
@@ -1196,7 +1286,7 @@ const InspectionReview: React.FC = () => {
           monthlyManHours: inspection.monthlyManHours || '',
           ltiCases: inspection.ltiCases || '0',
           nearMissAccidents: inspection.nearMissAccidents || '0',
-          monthlyData: inspection.monthlyData || []
+          monthlyData: inspection.monthlyData || [],
         };
       default:
         return inspection;
@@ -1321,9 +1411,13 @@ const InspectionReview: React.FC = () => {
                 onClick={handleDownloadExcel}
                 disabled={processing}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                title={inspectionType === 'hse' && inspection.observations && inspection.observations.length > 0
-                  ? "Download Excel with Observations"
-                  : "Download Excel Report"}
+                title={
+                  inspectionType === 'hse' &&
+                  inspection.observations &&
+                  inspection.observations.length > 0
+                    ? 'Download Excel with Observations'
+                    : 'Download Excel Report'
+                }
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -1334,11 +1428,13 @@ const InspectionReview: React.FC = () => {
                   />
                 </svg>
                 Download Excel
-                {inspectionType === 'hse' && inspection.observations && inspection.observations.length > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 bg-orange-500 text-white rounded-full text-xs font-bold">
-                    +{inspection.observations.length}
-                  </span>
-                )}
+                {inspectionType === 'hse' &&
+                  inspection.observations &&
+                  inspection.observations.length > 0 && (
+                    <span className="inline-flex items-center justify-center w-5 h-5 bg-orange-500 text-white rounded-full text-xs font-bold">
+                      +{inspection.observations.length}
+                    </span>
+                  )}
               </button>
               <button
                 onClick={handleDownloadPDF}
@@ -1448,110 +1544,134 @@ const InspectionReview: React.FC = () => {
           </div>
 
           {/* HSE Observations Section (if applicable) */}
-          {inspectionType === 'hse' && inspection.observations && inspection.observations.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <span className="text-orange-600">📋</span>
-                HSE Observation Forms ({inspection.observations.length})
-              </h2>
-              <p className="text-sm text-gray-600 mb-4">
-                The following observations were documented during this inspection:
-              </p>
-              <div className="space-y-4">
-                {inspection.observations.map((obs: any, index: number) => (
-                  <div key={obs.id || index} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                            Item #{obs.itemNo}
-                          </span>
-                          <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                            obs.status === 'Open' ? 'bg-red-100 text-red-700' :
-                            obs.status === 'Closed' ? 'bg-green-100 text-green-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {obs.status}
-                          </span>
-                        </div>
-                        <h3 className="font-semibold text-gray-900 text-sm mb-1">
-                          {obs.categoryName} - {obs.itemName}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-2">
-                          <span className="font-medium">Location:</span> {obs.location || 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 text-sm">
-                      <div>
-                        <p className="font-medium text-gray-700 mb-1">Observation:</p>
-                        <p className="text-gray-600 bg-gray-50 p-2 rounded">{obs.observation}</p>
-                      </div>
-
-                      {obs.actionNeeded && (
-                        <div>
-                          <p className="font-medium text-gray-700 mb-1">Action Needed:</p>
-                          <p className="text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
-                            {obs.actionNeeded}
-                          </p>
-                        </div>
-                      )}
-
-                      {obs.hazards && (
-                        <div>
-                          <p className="font-medium text-gray-700 mb-1">Hazards Identified:</p>
-                          <p className="text-gray-600 bg-red-50 p-2 rounded border-l-4 border-red-400">
-                            {obs.hazards}
-                          </p>
-                        </div>
-                      )}
-
-                      {obs.remarks && (
-                        <div>
-                          <p className="font-medium text-gray-700 mb-1">Remarks:</p>
-                          <p className="text-gray-600 bg-gray-50 p-2 rounded">{obs.remarks}</p>
-                        </div>
-                      )}
-
-                      {obs.photos && obs.photos.length > 0 && (
-                        <div>
-                          <p className="font-medium text-gray-700 mb-2">Photos ({obs.photos.length}):</p>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {obs.photos.map((photo: string, photoIndex: number) => (
-                              <div key={photoIndex} className="relative aspect-video bg-gray-100 rounded overflow-hidden border">
-                                <img
-                                  src={photo}
-                                  alt={`Observation photo ${photoIndex + 1}`}
-                                  className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                                  onClick={() => window.open(photo, '_blank')}
-                                />
-                              </div>
-                            ))}
+          {inspectionType === 'hse' &&
+            inspection.observations &&
+            inspection.observations.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="text-orange-600">📋</span>
+                  HSE Observation Forms ({inspection.observations.length})
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  The following observations were documented during this inspection:
+                </p>
+                <div className="space-y-4">
+                  {inspection.observations.map((obs: any, index: number) => (
+                    <div
+                      key={obs.id || index}
+                      className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                              Item #{obs.itemNo}
+                            </span>
+                            <span
+                              className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                                obs.status === 'Open'
+                                  ? 'bg-red-100 text-red-700'
+                                  : obs.status === 'Closed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
+                              {obs.status}
+                            </span>
                           </div>
+                          <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                            {obs.categoryName} - {obs.itemName}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-2">
+                            <span className="font-medium">Location:</span> {obs.location || 'N/A'}
+                          </p>
                         </div>
-                      )}
+                      </div>
 
-                      <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                      <div className="space-y-3 text-sm">
                         <div>
-                          <p className="text-xs text-gray-500">Prepared By</p>
-                          <p className="text-sm font-medium text-gray-700">{obs.preparedBy || 'N/A'}</p>
-                          <p className="text-xs text-gray-500">{obs.preparedByDate ? new Date(obs.preparedByDate).toLocaleDateString() : ''}</p>
+                          <p className="font-medium text-gray-700 mb-1">Observation:</p>
+                          <p className="text-gray-600 bg-gray-50 p-2 rounded">{obs.observation}</p>
                         </div>
-                        {obs.reviewedBy && (
+
+                        {obs.actionNeeded && (
                           <div>
-                            <p className="text-xs text-gray-500">Reviewed By</p>
-                            <p className="text-sm font-medium text-gray-700">{obs.reviewedBy}</p>
-                            <p className="text-xs text-gray-500">{obs.reviewedByDate ? new Date(obs.reviewedByDate).toLocaleDateString() : ''}</p>
+                            <p className="font-medium text-gray-700 mb-1">Action Needed:</p>
+                            <p className="text-gray-600 bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+                              {obs.actionNeeded}
+                            </p>
                           </div>
                         )}
+
+                        {obs.hazards && (
+                          <div>
+                            <p className="font-medium text-gray-700 mb-1">Hazards Identified:</p>
+                            <p className="text-gray-600 bg-red-50 p-2 rounded border-l-4 border-red-400">
+                              {obs.hazards}
+                            </p>
+                          </div>
+                        )}
+
+                        {obs.remarks && (
+                          <div>
+                            <p className="font-medium text-gray-700 mb-1">Remarks:</p>
+                            <p className="text-gray-600 bg-gray-50 p-2 rounded">{obs.remarks}</p>
+                          </div>
+                        )}
+
+                        {obs.photos && obs.photos.length > 0 && (
+                          <div>
+                            <p className="font-medium text-gray-700 mb-2">
+                              Photos ({obs.photos.length}):
+                            </p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {obs.photos.map((photo: string, photoIndex: number) => (
+                                <div
+                                  key={photoIndex}
+                                  className="relative aspect-video bg-gray-100 rounded overflow-hidden border"
+                                >
+                                  <img
+                                    src={photo}
+                                    alt={`Observation photo ${photoIndex + 1}`}
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                                    onClick={() => window.open(photo, '_blank')}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                          <div>
+                            <p className="text-xs text-gray-500">Prepared By</p>
+                            <p className="text-sm font-medium text-gray-700">
+                              {obs.preparedBy || 'N/A'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {obs.preparedByDate
+                                ? new Date(obs.preparedByDate).toLocaleDateString()
+                                : ''}
+                            </p>
+                          </div>
+                          {obs.reviewedBy && (
+                            <div>
+                              <p className="text-xs text-gray-500">Reviewed By</p>
+                              <p className="text-sm font-medium text-gray-700">{obs.reviewedBy}</p>
+                              <p className="text-xs text-gray-500">
+                                {obs.reviewedByDate
+                                  ? new Date(obs.reviewedByDate).toLocaleDateString()
+                                  : ''}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Preview - Mobile / PDF / Excel */}
           <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -1569,7 +1689,12 @@ const InspectionReview: React.FC = () => {
                 >
                   <span className="flex items-center gap-1 md:gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Mobile</span>
                   </span>
@@ -1585,7 +1710,12 @@ const InspectionReview: React.FC = () => {
                 >
                   <span className="flex items-center gap-1 md:gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                      />
                     </svg>
                     <span className="hidden sm:inline">PDF Preview</span>
                     <span className="sm:hidden">PDF</span>
@@ -1605,8 +1735,18 @@ const InspectionReview: React.FC = () => {
                 >
                   <span className="flex items-center gap-1 md:gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
                     </svg>
                     <span className="hidden sm:inline">Alt View</span>
                     <span className="sm:hidden">Alt</span>
@@ -1623,24 +1763,33 @@ const InspectionReview: React.FC = () => {
                   {inspectionType === 'fire_extinguisher' && inspection?.extinguishers && (
                     <div className="space-y-3">
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <h3 className="text-sm font-semibold text-red-900 mb-1">Fire Extinguisher Inspection</h3>
-                        <p className="text-xs text-red-700">Total Items: {inspection.extinguishers.length}</p>
+                        <h3 className="text-sm font-semibold text-red-900 mb-1">
+                          Fire Extinguisher Inspection
+                        </h3>
+                        <p className="text-xs text-red-700">
+                          Total Items: {inspection.extinguishers.length}
+                        </p>
                       </div>
                       {inspection.extinguishers.map((item: any, index: number) => (
-                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                        <div
+                          key={index}
+                          className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                        >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
                                   #{index + 1}
                                 </span>
-                                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                                  item.rating === 'PASS'
-                                    ? 'bg-green-100 text-green-800'
-                                    : item.rating === 'FAIL'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}>
+                                <span
+                                  className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                                    item.rating === 'PASS'
+                                      ? 'bg-green-100 text-green-800'
+                                      : item.rating === 'FAIL'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
                                   {item.rating || 'N/A'}
                                 </span>
                               </div>
@@ -1650,7 +1799,9 @@ const InspectionReview: React.FC = () => {
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <p className="text-xs text-gray-500">Location</p>
-                                <p className="font-medium text-gray-900">{item.location || 'N/A'}</p>
+                                <p className="font-medium text-gray-900">
+                                  {item.location || 'N/A'}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">Type</p>
@@ -1660,17 +1811,23 @@ const InspectionReview: React.FC = () => {
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <p className="text-xs text-gray-500">Capacity</p>
-                                <p className="font-medium text-gray-900">{item.capacity || 'N/A'}</p>
+                                <p className="font-medium text-gray-900">
+                                  {item.capacity || 'N/A'}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-xs text-gray-500">Manufacturer</p>
-                                <p className="font-medium text-gray-900">{item.manufacturer || 'N/A'}</p>
+                                <p className="font-medium text-gray-900">
+                                  {item.manufacturer || 'N/A'}
+                                </p>
                               </div>
                             </div>
                             {item.remarks && (
                               <div className="pt-2 border-t border-gray-100">
                                 <p className="text-xs text-gray-500 mb-1">Remarks</p>
-                                <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">{item.remarks}</p>
+                                <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">
+                                  {item.remarks}
+                                </p>
                               </div>
                             )}
                           </div>
@@ -1679,125 +1836,183 @@ const InspectionReview: React.FC = () => {
                     </div>
                   )}
 
-                  {inspectionType === 'first_aid' && (inspection?.kits || inspection?.kitInspections) && (
-                    <div className="space-y-3">
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <h3 className="text-sm font-semibold text-green-900 mb-1">First Aid Kit Inspection</h3>
-                        <p className="text-xs text-green-700">Total Kits: {(inspection.kits || inspection.kitInspections || []).length}</p>
+                  {inspectionType === 'first_aid' &&
+                    (inspection?.kits || inspection?.kitInspections) && (
+                      <div className="space-y-3">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <h3 className="text-sm font-semibold text-green-900 mb-1">
+                            First Aid Kit Inspection
+                          </h3>
+                          <p className="text-xs text-green-700">
+                            Total Kits:{' '}
+                            {(inspection.kits || inspection.kitInspections || []).length}
+                          </p>
+                        </div>
+                        {(inspection.kits || inspection.kitInspections || []).map(
+                          (kit: any, kitIndex: number) => (
+                            <div
+                              key={kitIndex}
+                              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                            >
+                              <div className="mb-3 pb-3 border-b border-gray-100">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                                    Kit #{kitIndex + 1}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>
+                                    <p className="text-xs text-gray-500">Location</p>
+                                    <p className="font-medium text-gray-900">
+                                      {kit.location || 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-500">Kit ID</p>
+                                    <p className="font-medium text-gray-900">
+                                      {kit.kitId || kit.id || 'N/A'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              {kit.items && kit.items.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-gray-700">Items:</p>
+                                  {kit.items.map((item: any, itemIndex: number) => (
+                                    <div
+                                      key={itemIndex}
+                                      className="bg-gray-50 p-2 rounded border border-gray-100"
+                                    >
+                                      <div className="flex items-start justify-between gap-2">
+                                        <p className="text-sm font-medium text-gray-900 flex-1">
+                                          {item.name || item.itemName}
+                                        </p>
+                                        <span
+                                          className={`inline-block px-2 py-0.5 text-xs font-semibold rounded ${
+                                            item.status === 'GOOD'
+                                              ? 'bg-green-100 text-green-800'
+                                              : item.status === 'EXPIRED'
+                                              ? 'bg-red-100 text-red-800'
+                                              : item.status === 'MISSING'
+                                              ? 'bg-orange-100 text-orange-800'
+                                              : item.status === 'DAMAGED'
+                                              ? 'bg-red-100 text-red-800'
+                                              : 'bg-gray-100 text-gray-800'
+                                          }`}
+                                        >
+                                          {item.status || 'N/A'}
+                                        </span>
+                                      </div>
+                                      {item.quantity && (
+                                        <p className="text-xs text-gray-600 mt-1">
+                                          Qty: {item.quantity}
+                                        </p>
+                                      )}
+                                      {item.expiryDate && (
+                                        <p className="text-xs text-gray-600">
+                                          Expiry: {item.expiryDate}
+                                        </p>
+                                      )}
+                                      {item.remarks && (
+                                        <p className="text-xs text-gray-700 mt-1 bg-white p-1 rounded">
+                                          {item.remarks}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ),
+                        )}
                       </div>
-                      {(inspection.kits || inspection.kitInspections || []).map((kit: any, kitIndex: number) => (
-                        <div key={kitIndex} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                          <div className="mb-3 pb-3 border-b border-gray-100">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
-                                Kit #{kitIndex + 1}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <p className="text-xs text-gray-500">Location</p>
-                                <p className="font-medium text-gray-900">{kit.location || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500">Kit ID</p>
-                                <p className="font-medium text-gray-900">{kit.kitId || kit.id || 'N/A'}</p>
-                              </div>
-                            </div>
-                          </div>
-                          {kit.items && kit.items.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-xs font-semibold text-gray-700">Items:</p>
-                              {kit.items.map((item: any, itemIndex: number) => (
-                                <div key={itemIndex} className="bg-gray-50 p-2 rounded border border-gray-100">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="text-sm font-medium text-gray-900 flex-1">{item.name || item.itemName}</p>
-                                    <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded ${
-                                      item.status === 'GOOD'
-                                        ? 'bg-green-100 text-green-800'
-                                        : item.status === 'EXPIRED'
-                                        ? 'bg-red-100 text-red-800'
-                                        : item.status === 'MISSING'
-                                        ? 'bg-orange-100 text-orange-800'
-                                        : item.status === 'DAMAGED'
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {item.status || 'N/A'}
+                    )}
+
+                  {inspectionType === 'hse' &&
+                    (inspection?.items || inspection?.formData?.inspectionItems) && (
+                      <div className="space-y-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                            HSE Inspection
+                          </h3>
+                          <p className="text-xs text-blue-700">
+                            Total Items:{' '}
+                            {
+                              (inspection.items || inspection.formData?.inspectionItems || [])
+                                .length
+                            }
+                          </p>
+                        </div>
+                        {(inspection.items || inspection.formData?.inspectionItems || []).map(
+                          (item: any, index: number) => (
+                            <div
+                              key={index}
+                              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
+                                      #{index + 1}
+                                    </span>
+                                    <span
+                                      className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                                        item.rating === 'G'
+                                          ? 'bg-green-100 text-green-800'
+                                          : item.rating === 'A'
+                                          ? 'bg-blue-100 text-blue-800'
+                                          : item.rating === 'P'
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : ['SIN', 'SPS', 'SWO', 'X'].includes(item.rating)
+                                          ? 'bg-red-100 text-red-800'
+                                          : 'bg-gray-100 text-gray-800'
+                                      }`}
+                                    >
+                                      {item.rating || 'N/A'}
                                     </span>
                                   </div>
-                                  {item.quantity && (
-                                    <p className="text-xs text-gray-600 mt-1">Qty: {item.quantity}</p>
-                                  )}
-                                  {item.expiryDate && (
-                                    <p className="text-xs text-gray-600">Expiry: {item.expiryDate}</p>
-                                  )}
-                                  {item.remarks && (
-                                    <p className="text-xs text-gray-700 mt-1 bg-white p-1 rounded">{item.remarks}</p>
-                                  )}
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {item.category || item.categoryName}
+                                  </p>
+                                  <p className="text-xs text-gray-600 mt-1">
+                                    {item.item || item.itemName}
+                                  </p>
                                 </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {inspectionType === 'hse' && (inspection?.items || inspection?.formData?.inspectionItems) && (
-                    <div className="space-y-3">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <h3 className="text-sm font-semibold text-blue-900 mb-1">HSE Inspection</h3>
-                        <p className="text-xs text-blue-700">Total Items: {(inspection.items || inspection.formData?.inspectionItems || []).length}</p>
-                      </div>
-                      {(inspection.items || inspection.formData?.inspectionItems || []).map((item: any, index: number) => (
-                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
-                                  #{index + 1}
-                                </span>
-                                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                                  item.rating === 'G'
-                                    ? 'bg-green-100 text-green-800'
-                                    : item.rating === 'A'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : item.rating === 'P'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : ['SIN', 'SPS', 'SWO', 'X'].includes(item.rating)
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {item.rating || 'N/A'}
-                                </span>
                               </div>
-                              <p className="text-sm font-medium text-gray-900">{item.category || item.categoryName}</p>
-                              <p className="text-xs text-gray-600 mt-1">{item.item || item.itemName}</p>
+                              {item.remarks && (
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                  <p className="text-xs text-gray-500 mb-1">Remarks</p>
+                                  <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">
+                                    {item.remarks}
+                                  </p>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                          {item.remarks && (
-                            <div className="mt-2 pt-2 border-t border-gray-100">
-                              <p className="text-xs text-gray-500 mb-1">Remarks</p>
-                              <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">{item.remarks}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                          ),
+                        )}
+                      </div>
+                    )}
 
                   {inspectionType === 'hse_observation' && inspection && (
                     <div className="space-y-4">
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <h3 className="text-lg font-semibold text-orange-900 mb-2">HSE Observation</h3>
+                        <h3 className="text-lg font-semibold text-orange-900 mb-2">
+                          HSE Observation
+                        </h3>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <p className="text-orange-700 font-medium">Observed By:</p>
-                            <p className="text-gray-900">{inspection.observedBy || inspection.inspectedBy}</p>
+                            <p className="text-gray-900">
+                              {inspection.observedBy || inspection.inspectedBy}
+                            </p>
                           </div>
                           <div>
                             <p className="text-orange-700 font-medium">Date:</p>
-                            <p className="text-gray-900">{new Date(inspection.date || inspection.inspectionDate).toLocaleDateString()}</p>
+                            <p className="text-gray-900">
+                              {new Date(
+                                inspection.date || inspection.inspectionDate,
+                              ).toLocaleDateString()}
+                            </p>
                           </div>
                           <div>
                             <p className="text-orange-700 font-medium">Location:</p>
@@ -1806,11 +2021,15 @@ const InspectionReview: React.FC = () => {
                           {inspection.status && (
                             <div>
                               <p className="text-orange-700 font-medium">Status:</p>
-                              <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                                inspection.status === 'Open' ? 'bg-red-100 text-red-700' :
-                                inspection.status === 'Closed' ? 'bg-green-100 text-green-700' :
-                                'bg-yellow-100 text-yellow-700'
-                              }`}>
+                              <span
+                                className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                                  inspection.status === 'Open'
+                                    ? 'bg-red-100 text-red-700'
+                                    : inspection.status === 'Closed'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-yellow-100 text-yellow-700'
+                                }`}
+                              >
                                 {inspection.status}
                               </span>
                             </div>
@@ -1821,33 +2040,47 @@ const InspectionReview: React.FC = () => {
                       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
                         <div>
                           <p className="text-sm font-semibold text-gray-700 mb-1">Observation:</p>
-                          <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">{inspection.observation || 'N/A'}</p>
+                          <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+                            {inspection.observation || 'N/A'}
+                          </p>
                         </div>
 
                         {inspection.actionNeeded && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-1">Action Needed:</p>
-                            <p className="text-sm text-gray-900 bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">{inspection.actionNeeded}</p>
+                            <p className="text-sm font-semibold text-gray-700 mb-1">
+                              Action Needed:
+                            </p>
+                            <p className="text-sm text-gray-900 bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
+                              {inspection.actionNeeded}
+                            </p>
                           </div>
                         )}
 
                         {inspection.hazards && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-1">Hazards Identified:</p>
-                            <p className="text-sm text-gray-900 bg-red-50 p-3 rounded border-l-4 border-red-400">{inspection.hazards}</p>
+                            <p className="text-sm font-semibold text-gray-700 mb-1">
+                              Hazards Identified:
+                            </p>
+                            <p className="text-sm text-gray-900 bg-red-50 p-3 rounded border-l-4 border-red-400">
+                              {inspection.hazards}
+                            </p>
                           </div>
                         )}
 
                         {inspection.remarks && (
                           <div>
                             <p className="text-sm font-semibold text-gray-700 mb-1">Remarks:</p>
-                            <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">{inspection.remarks}</p>
+                            <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+                              {inspection.remarks}
+                            </p>
                           </div>
                         )}
 
                         {inspection.photos && inspection.photos.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-700 mb-2">Photos ({inspection.photos.length}):</p>
+                            <p className="text-sm font-semibold text-gray-700 mb-2">
+                              Photos ({inspection.photos.length}):
+                            </p>
                             <div className="grid grid-cols-2 gap-2">
                               {inspection.photos.map((photo: string, index: number) => (
                                 <img
@@ -1868,19 +2101,29 @@ const InspectionReview: React.FC = () => {
                   {inspectionType === 'manhours' && inspection && (
                     <div className="space-y-4">
                       <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                        <h3 className="text-lg font-semibold text-purple-900 mb-2">Monthly Manhours Report</h3>
+                        <h3 className="text-lg font-semibold text-purple-900 mb-2">
+                          Monthly Manhours Report
+                        </h3>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <p className="text-purple-700 font-medium">Prepared By:</p>
-                            <p className="text-gray-900">{inspection.preparedBy || inspection.inspectedBy}</p>
+                            <p className="text-gray-900">
+                              {inspection.preparedBy || inspection.inspectedBy}
+                            </p>
                           </div>
                           <div>
                             <p className="text-purple-700 font-medium">Report Period:</p>
-                            <p className="text-gray-900">{inspection.reportMonth} {inspection.reportYear}</p>
+                            <p className="text-gray-900">
+                              {inspection.reportMonth} {inspection.reportYear}
+                            </p>
                           </div>
                           <div>
                             <p className="text-purple-700 font-medium">Date Prepared:</p>
-                            <p className="text-gray-900">{new Date(inspection.preparedDate || inspection.createdAt).toLocaleDateString()}</p>
+                            <p className="text-gray-900">
+                              {new Date(
+                                inspection.preparedDate || inspection.createdAt,
+                              ).toLocaleDateString()}
+                            </p>
                           </div>
                           {inspection.reviewedBy && (
                             <div>
@@ -1896,50 +2139,78 @@ const InspectionReview: React.FC = () => {
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div className="bg-blue-50 p-2 rounded">
                             <p className="text-gray-600 text-xs">Employees</p>
-                            <p className="text-lg font-bold text-blue-900">{inspection.numEmployees || '0'}</p>
+                            <p className="text-lg font-bold text-blue-900">
+                              {inspection.numEmployees || '0'}
+                            </p>
                           </div>
                           <div className="bg-green-50 p-2 rounded">
                             <p className="text-gray-600 text-xs">Monthly Hours</p>
-                            <p className="text-lg font-bold text-green-900">{inspection.monthlyManHours || '0'}</p>
+                            <p className="text-lg font-bold text-green-900">
+                              {inspection.monthlyManHours || '0'}
+                            </p>
                           </div>
                           <div className="bg-yellow-50 p-2 rounded">
                             <p className="text-gray-600 text-xs">LTI Cases</p>
-                            <p className="text-lg font-bold text-yellow-900">{inspection.ltiCases || '0'}</p>
+                            <p className="text-lg font-bold text-yellow-900">
+                              {inspection.ltiCases || '0'}
+                            </p>
                           </div>
                           <div className="bg-purple-50 p-2 rounded">
                             <p className="text-gray-600 text-xs">Near Miss</p>
-                            <p className="text-lg font-bold text-purple-900">{inspection.nearMissAccidents || '0'}</p>
+                            <p className="text-lg font-bold text-purple-900">
+                              {inspection.nearMissAccidents || '0'}
+                            </p>
                           </div>
                         </div>
 
                         {inspection.remarks && (
                           <div className="mt-3 pt-3 border-t">
                             <p className="text-sm font-semibold text-gray-700 mb-1">Remarks:</p>
-                            <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">{inspection.remarks}</p>
+                            <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+                              {inspection.remarks}
+                            </p>
                           </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {!inspection?.extinguishers && !inspection?.kits && !inspection?.kitInspections && !inspection?.items && !inspection?.formData?.inspectionItems && inspectionType !== 'hse_observation' && inspectionType !== 'manhours' && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="mt-3 text-sm text-gray-500">No inspection data available</p>
-                      <p className="text-xs text-gray-400 mt-1">Try viewing in Excel or PDF mode</p>
-                    </div>
-                  )}
+                  {!inspection?.extinguishers &&
+                    !inspection?.kits &&
+                    !inspection?.kitInspections &&
+                    !inspection?.items &&
+                    !inspection?.formData?.inspectionItems &&
+                    inspectionType !== 'hse_observation' &&
+                    inspectionType !== 'manhours' && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
+                        <svg
+                          className="mx-auto h-12 w-12 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <p className="mt-3 text-sm text-gray-500">No inspection data available</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Try viewing in Excel or PDF mode
+                        </p>
+                      </div>
+                    )}
                 </div>
               ) : viewMode === 'excel' ? (
                 excelPdfUrl ? (
                   <PDFJSViewer
                     pdfUrl={excelPdfUrl}
                     viewerPath="/pdf-viewer/web/viewer.html"
-                    enablePrint={true}
-                    enableDownload={true}
-                    showToolbar={true}
+                    enablePrint
+                    enableDownload
+                    showToolbar
                     height="700px"
                     onError={(error) => {
                       console.error('PDF.js viewer error:', error);
@@ -1947,61 +2218,83 @@ const InspectionReview: React.FC = () => {
                     }}
                     onLoad={() => console.log('PDF loaded successfully in Excel tab')}
                   />
-                ) : (inspectionType === 'fire_extinguisher' || inspectionType === 'first_aid' || inspectionType === 'hse') ? (
+                ) : inspectionType === 'fire_extinguisher' ||
+                  inspectionType === 'first_aid' ||
+                  inspectionType === 'hse' ? (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                     <div className="flex items-start gap-3">
-                      <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <div className="flex-1">
                         <h3 className="font-semibold text-blue-900 mb-2">Loading PDF Preview...</h3>
                         <p className="text-sm text-blue-800 mb-3">
-                          Generating PDF preview from template. If this takes too long, you can use the download buttons above or switch to Mobile view.
+                          Generating PDF preview from template. If this takes too long, you can use
+                          the download buttons above or switch to Mobile view.
                         </p>
                         <div className="animate-pulse flex gap-2 mt-4">
-                          <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
-                          <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-200"></div>
-                          <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-400"></div>
+                          <div className="h-2 w-2 bg-blue-600 rounded-full" />
+                          <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-200" />
+                          <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-400" />
                         </div>
                       </div>
                     </div>
                   </div>
                 ) : null
+              ) : pdfUrl ? (
+                <PDFJSViewer
+                  pdfUrl={pdfUrl}
+                  viewerPath="/pdf-viewer/web/viewer.html"
+                  enablePrint
+                  enableDownload
+                  showToolbar
+                  height="700px"
+                  onError={(error) => {
+                    console.error('PDF.js viewer error:', error);
+                    alert('Error loading PDF viewer. Please try downloading the PDF instead.');
+                  }}
+                  onLoad={() => console.log('PDF loaded successfully')}
+                />
               ) : (
-                pdfUrl ? (
-                  <PDFJSViewer
-                    pdfUrl={pdfUrl}
-                    viewerPath="/pdf-viewer/web/viewer.html"
-                    enablePrint={true}
-                    enableDownload={true}
-                    showToolbar={true}
-                    height="700px"
-                    onError={(error) => {
-                      console.error('PDF.js viewer error:', error);
-                      alert('Error loading PDF viewer. Please try downloading the PDF instead.');
-                    }}
-                    onLoad={() => console.log('PDF loaded successfully')}
-                  />
-                ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-blue-900 mb-2">Loading PDF Preview...</h3>
-                        <p className="text-sm text-blue-800 mb-3">
-                          Generating PDF preview from template. If this takes too long, you can use the download buttons above or switch to Excel view.
-                        </p>
-                        <div className="animate-pulse flex gap-2 mt-4">
-                          <div className="h-2 w-2 bg-blue-600 rounded-full"></div>
-                          <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-200"></div>
-                          <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-400"></div>
-                        </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-start gap-3">
+                    <svg
+                      className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-blue-900 mb-2">Loading PDF Preview...</h3>
+                      <p className="text-sm text-blue-800 mb-3">
+                        Generating PDF preview from template. If this takes too long, you can use
+                        the download buttons above or switch to Excel view.
+                      </p>
+                      <div className="animate-pulse flex gap-2 mt-4">
+                        <div className="h-2 w-2 bg-blue-600 rounded-full" />
+                        <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-200" />
+                        <div className="h-2 w-2 bg-blue-600 rounded-full animation-delay-400" />
                       </div>
                     </div>
                   </div>
-                )
+                </div>
               )}
             </div>
           </div>
@@ -2024,7 +2317,8 @@ const InspectionReview: React.FC = () => {
               Supervisor Signature <span className="text-red-500">*</span>
             </h2>
             <p className="text-sm text-gray-600 mb-4">
-              Please sign to approve this inspection. Your signature and details will be added to the exported documents.
+              Please sign to approve this inspection. Your signature and details will be added to
+              the exported documents.
             </p>
             <div className="space-y-4">
               <div>
@@ -2145,7 +2439,9 @@ const InspectionReview: React.FC = () => {
                         if (supervisorSignature) {
                           const success = await updateSignature(supervisorSignature);
                           if (success) {
-                            alert('Signature saved! It will be automatically loaded next time you login.');
+                            alert(
+                              'Signature saved! It will be automatically loaded next time you login.',
+                            );
                             setHasDrawnSignature(false);
                           } else {
                             alert('Failed to save signature. Please try again.');
@@ -2167,7 +2463,11 @@ const InspectionReview: React.FC = () => {
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800 flex items-center">
                       <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       Using your saved signature. Clear and redraw to use a new signature.
                     </p>

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/router';
+import { useAuth } from '@/hooks/useAuth';
 import ProtectedRoute from '../components/ProtectedRoute';
 import InspectorLayout from '../roles/inspector/layouts/InspectorLayout';
 import { storage } from '../utils/storage';
-import { useAuth } from '@/hooks/useAuth';
 
 interface ObservationData {
   id: string;
@@ -99,8 +99,8 @@ const HSEObservationForm: React.FC = () => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+        let { width } = img;
+        let { height } = img;
 
         // Calculate new dimensions while maintaining aspect ratio
         if (width > maxWidth) {
@@ -117,7 +117,11 @@ const HSEObservationForm: React.FC = () => {
           const compressed = canvas.toDataURL('image/jpeg', quality);
           const originalKB = (base64.length / 1024).toFixed(0);
           const compressedKB = (compressed.length / 1024).toFixed(0);
-          console.log(`[Image Compression] ${originalKB}KB → ${compressedKB}KB (${Math.round((1 - compressed.length / base64.length) * 100)}% reduction)`);
+          console.log(
+            `[Image Compression] ${originalKB}KB → ${compressedKB}KB (${Math.round(
+              (1 - compressed.length / base64.length) * 100,
+            )}% reduction)`,
+          );
           resolve(compressed);
         } else {
           console.warn('[Image Compression] Failed - using original');
@@ -352,7 +356,7 @@ const HSEObservationForm: React.FC = () => {
         existingObservations[index] = {
           ...existingObservations[index],
           itemNo: formData.itemNo,
-          photos: photos,
+          photos,
           observation: formData.observation,
           location: formData.location,
           actionNeeded: formData.actionNeeded,
@@ -374,7 +378,7 @@ const HSEObservationForm: React.FC = () => {
         categoryId: Number(categoryId),
         categoryName: String(categoryName),
         itemName: String(itemName),
-        photos: photos,
+        photos,
         observation: formData.observation,
         location: formData.location,
         actionNeeded: formData.actionNeeded,
@@ -414,7 +418,7 @@ const HSEObservationForm: React.FC = () => {
       actionNeeded: formData.actionNeeded,
       hazards: formData.hazards,
       remarks: formData.remarks,
-      photos: photos,
+      photos,
       status: 'draft',
       createdAt: new Date().toISOString(),
       savedAt: new Date().toISOString(),
@@ -455,9 +459,15 @@ const HSEObservationForm: React.FC = () => {
         storage.save('hse_observations', allObservations);
 
         if (response.status === 413) {
-          alert(`Photos are too large for database (${Math.round(JSON.stringify(observationRecord.photos).length / 1024)}KB).\n\nObservation saved locally only. It will appear in your Saved section.`);
+          alert(
+            `Photos are too large for database (${Math.round(
+              JSON.stringify(observationRecord.photos).length / 1024,
+            )}KB).\n\nObservation saved locally only. It will appear in your Saved section.`,
+          );
         } else {
-          alert(`Could not save to server (Error ${response.status}).\n\nObservation saved locally. It will appear in your Saved section.`);
+          alert(
+            `Could not save to server (Error ${response.status}).\n\nObservation saved locally. It will appear in your Saved section.`,
+          );
         }
 
         router.push('/saved');
@@ -482,7 +492,9 @@ const HSEObservationForm: React.FC = () => {
       allObservations.push(observationRecord);
       storage.save('hse_observations', allObservations);
 
-      alert(`Network Error: Could not connect to server.\n\nThe observation has been saved locally and will appear in your Saved section.`);
+      alert(
+        `Network Error: Could not connect to server.\n\nThe observation has been saved locally and will appear in your Saved section.`,
+      );
       router.push('/saved');
     }
   };
@@ -513,7 +525,7 @@ const HSEObservationForm: React.FC = () => {
       actionNeeded: formData.actionNeeded,
       hazards: formData.hazards,
       remarks: formData.remarks,
-      photos: photos,
+      photos,
       status: 'pending_review',
       createdAt: new Date().toISOString(),
       savedAt: new Date().toISOString(),
@@ -521,7 +533,9 @@ const HSEObservationForm: React.FC = () => {
     };
 
     console.log('Observation Record:', observationRecord);
-    alert(`DEBUG: About to save observation\n\nID: ${observationRecord.id}\nLocation: ${observationRecord.location}\nObserver: ${observationRecord.observedBy}\nInspector ID: ${observationRecord.inspectorId}\nPhotos: ${observationRecord.photos.length}`);
+    alert(
+      `DEBUG: About to save observation\n\nID: ${observationRecord.id}\nLocation: ${observationRecord.location}\nObserver: ${observationRecord.observedBy}\nInspector ID: ${observationRecord.inspectorId}\nPhotos: ${observationRecord.photos.length}`,
+    );
 
     try {
       // Save to database via API
@@ -553,7 +567,9 @@ const HSEObservationForm: React.FC = () => {
         let errorMessage = 'Failed to submit observation.';
 
         if (response.status === 413) {
-          errorMessage = `Payload Too Large: Your observation has too much data (${Math.round(JSON.stringify(observationRecord.photos).length / 1024)}KB of photos).\n\nThe photos are too large for the database. Try:\n1. Reducing the number of photos\n2. Using compressed images\n\nThe observation will be saved locally only.`;
+          errorMessage = `Payload Too Large: Your observation has too much data (${Math.round(
+            JSON.stringify(observationRecord.photos).length / 1024,
+          )}KB of photos).\n\nThe photos are too large for the database. Try:\n1. Reducing the number of photos\n2. Using compressed images\n\nThe observation will be saved locally only.`;
 
           // Save to localStorage as fallback
           const allObservations = storage.load<any[]>('hse_observations', []);
@@ -563,14 +579,19 @@ const HSEObservationForm: React.FC = () => {
           alert(errorMessage);
           router.push('/saved');
           return;
-        } else if (response.status === 401) {
+        }
+        if (response.status === 401) {
           errorMessage = 'Authentication Error: Your session has expired. Please log in again.';
         } else if (response.status === 403) {
           errorMessage = 'Permission Error: You do not have permission to submit observations.';
         } else if (response.status === 500) {
-          errorMessage = `Server Error: ${errorData.error || errorData.details || 'Internal server error'}`;
+          errorMessage = `Server Error: ${
+            errorData.error || errorData.details || 'Internal server error'
+          }`;
         } else {
-          errorMessage = `${errorData.error || errorData.details || 'Unknown error'}\n\nStatus: ${response.status}`;
+          errorMessage = `${errorData.error || errorData.details || 'Unknown error'}\n\nStatus: ${
+            response.status
+          }`;
         }
 
         console.error('Observation submission error:', errorMessage, errorData);
@@ -597,7 +618,11 @@ const HSEObservationForm: React.FC = () => {
       const verifyObservations = storage.load<any[]>('hse_observations', []);
       console.log('✅ FALLBACK VERIFIED:', verifyObservations.length, 'observations');
 
-      alert(`⚠️ Network Error: Could not connect to server.\n\nThe observation has been saved locally (${verifyObservations.length} total).\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(
+        `⚠️ Network Error: Could not connect to server.\n\nThe observation has been saved locally (${
+          verifyObservations.length
+        } total).\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
       router.push('/saved');
     }
   };

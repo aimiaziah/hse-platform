@@ -125,8 +125,9 @@ async function updateInspection(
     }
 
     // Perform the update
-    const { data: updatedInspection, error: updateError } = await (supabase
-      .from('inspections') as any)
+    const { data: updatedInspection, error: updateError } = await (
+      supabase.from('inspections') as any
+    )
       .update(updateData)
       .eq('id', inspectionId)
       .select()
@@ -134,7 +135,9 @@ async function updateInspection(
 
     if (updateError) {
       console.error('Supabase update error:', updateError);
-      return res.status(500).json({ error: 'Failed to update inspection', details: updateError.message });
+      return res
+        .status(500)
+        .json({ error: 'Failed to update inspection', details: updateError.message });
     }
 
     // Log update
@@ -145,7 +148,9 @@ async function updateInspection(
       action: 'UPDATE',
       entityType: 'inspection',
       entityId: inspectionId,
-      description: `Updated inspection status to ${updateData.status || (existingInspection as any).status}`,
+      description: `Updated inspection status to ${
+        updateData.status || (existingInspection as any).status
+      }`,
       oldValues: existingInspection,
       newValues: updateData,
     });
@@ -201,7 +206,9 @@ async function deleteInspection(
 
     if (deleteError) {
       console.error('Supabase delete error:', deleteError);
-      return res.status(500).json({ error: 'Failed to delete inspection', details: deleteError.message });
+      return res
+        .status(500)
+        .json({ error: 'Failed to delete inspection', details: deleteError.message });
     }
 
     // Log deletion

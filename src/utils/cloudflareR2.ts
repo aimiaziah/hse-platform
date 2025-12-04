@@ -1,5 +1,10 @@
 // src/utils/cloudflareR2.ts - Cloudflare R2 Storage Client
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 /**
@@ -66,9 +71,7 @@ function createR2Client(): S3Client | null {
  */
 function base64ToBuffer(base64Data: string): Buffer {
   // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
-  const base64String = base64Data.includes(',')
-    ? base64Data.split(',')[1]
-    : base64Data;
+  const base64String = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
 
   return Buffer.from(base64String, 'base64');
 }
@@ -113,7 +116,7 @@ function generateFileKey(prefix: string, mimeType: string): string {
  */
 export async function uploadImageToR2(
   base64Data: string,
-  folder: string = 'inspections'
+  folder = 'inspections',
 ): Promise<UploadResult> {
   try {
     const client = createR2Client();
@@ -174,9 +177,9 @@ export async function uploadImageToR2(
  */
 export async function uploadImagesToR2(
   images: string[],
-  folder: string = 'inspections'
+  folder = 'inspections',
 ): Promise<UploadResult[]> {
-  const uploadPromises = images.map(image => uploadImageToR2(image, folder));
+  const uploadPromises = images.map((image) => uploadImageToR2(image, folder));
   return Promise.all(uploadPromises);
 }
 
@@ -215,10 +218,7 @@ export async function deleteImageFromR2(key: string): Promise<boolean> {
  * @param expiresIn - URL expiration time in seconds (default: 1 hour)
  * @returns Signed URL
  */
-export async function getSignedUrlForR2(
-  key: string,
-  expiresIn: number = 3600
-): Promise<string | null> {
+export async function getSignedUrlForR2(key: string, expiresIn = 3600): Promise<string | null> {
   try {
     const client = createR2Client();
     const config = getR2Config();

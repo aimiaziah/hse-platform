@@ -100,24 +100,26 @@ export function generateFireExtinguisherPDF(data: FireExtinguisherData): jsPDF {
   // Generate table
   autoTable(doc, {
     startY: yPosition,
-    head: [[
-      'No',
-      'Serial No',
-      'Location',
-      'Type/Size',
-      'Shell',
-      'Hose',
-      'Nozzle',
-      'Pressure\nGauge',
-      'Safety\nPin',
-      'Pin\nSeal',
-      'Access-\nible',
-      'Missing',
-      'Empty/\nLow',
-      'Servicing/\nTags',
-      'Expiry\nDate',
-      'Remarks',
-    ]],
+    head: [
+      [
+        'No',
+        'Serial No',
+        'Location',
+        'Type/Size',
+        'Shell',
+        'Hose',
+        'Nozzle',
+        'Pressure\nGauge',
+        'Safety\nPin',
+        'Pin\nSeal',
+        'Access-\nible',
+        'Missing',
+        'Empty/\nLow',
+        'Servicing/\nTags',
+        'Expiry\nDate',
+        'Remarks',
+      ],
+    ],
     body: tableData,
     theme: 'grid',
     styles: {
@@ -249,16 +251,11 @@ export function generateFirstAidPDF(data: FirstAidData): jsPDF {
 
     // Create table for this kit
     const tableData = kit.items.map((item: any, idx: number) => {
-      const expiryDate = item.expiryDateOption === 'date' && item.expiryDate
-        ? new Date(item.expiryDate).toLocaleDateString('en-GB')
-        : 'N/A';
-      return [
-        (idx + 1).toString(),
-        item.name,
-        item.status || '',
-        expiryDate,
-        item.quantity || '',
-      ];
+      const expiryDate =
+        item.expiryDateOption === 'date' && item.expiryDate
+          ? new Date(item.expiryDate).toLocaleDateString('en-GB')
+          : 'N/A';
+      return [(idx + 1).toString(), item.name, item.status || '', expiryDate, item.quantity || ''];
     });
 
     // Add remarks row

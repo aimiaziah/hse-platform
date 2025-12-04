@@ -2,7 +2,14 @@
 // Excel Viewer Component for displaying inspection Excel files in a table format
 
 import React, { useEffect, useState } from 'react';
-import { FileSpreadsheet, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  FileSpreadsheet,
+  Download,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import ExcelJS from 'exceljs';
 
 interface ExcelViewerProps {

@@ -57,9 +57,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
       // Validate required fields
       if (!name || !inspection_type || !fields) {
-        return res
-          .status(400)
-          .json({ error: 'Name, inspection_type, and fields are required' });
+        return res.status(400).json({ error: 'Name, inspection_type, and fields are required' });
       }
 
       // Validate inspection type
@@ -78,8 +76,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Create form template
-      const { data: template, error: createError } = await (supabase
-        .from('form_templates') as any)
+      const { data: template, error: createError } = await (supabase.from('form_templates') as any)
         .insert({
           name,
           inspection_type,

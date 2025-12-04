@@ -3,7 +3,12 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { withRBAC } from '@/lib/rbac';
 import { User } from '@/hooks/useAuth';
 import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
-import { validateBody, validateQuery, ManhoursReportSchema, ListQuerySchema } from '@/lib/validation';
+import {
+  validateBody,
+  validateQuery,
+  ManhoursReportSchema,
+  ListQuerySchema,
+} from '@/lib/validation';
 import { logger } from '@/lib/logger';
 
 export interface ManhoursReport {
@@ -91,7 +96,9 @@ async function getManhoursReports(req: NextApiRequest, res: NextApiResponse, use
     }
 
     // Debug logging
-    console.log(`[API] Query params: year=${year}, status=${status}, month=${month}, limit=${limit}`);
+    console.log(
+      `[API] Query params: year=${year}, status=${status}, month=${month}, limit=${limit}`,
+    );
     console.log(`[API] Found ${reports?.length || 0} manhours reports before filtering`);
 
     // Apply year and month filters on the server side after fetching
@@ -120,7 +127,9 @@ async function getManhoursReports(req: NextApiRequest, res: NextApiResponse, use
     // Log what we're returning
     filteredReports.forEach((report: any) => {
       const formData = report.form_data;
-      console.log(`[API] Returning report: ${formData?.reportMonth} ${formData?.reportYear}, status=${report.status}`);
+      console.log(
+        `[API] Returning report: ${formData?.reportMonth} ${formData?.reportYear}, status=${report.status}`,
+      );
     });
 
     return res.status(200).json({
@@ -140,19 +149,22 @@ async function createManhoursReport(req: NextApiRequest, res: NextApiResponse, u
   // Validate request body
   const validation = validateBody(ManhoursReportSchema, req.body);
   if (!validation.success) {
-    logger.warn('Manhours report validation failed', { errors: validation.details, userId: user.id });
+    logger.warn('Manhours report validation failed', {
+      errors: validation.details,
+      userId: user.id,
+    });
     return res.status(400).json(validation);
   }
 
   const reportData = validation.data as ManhoursReport;
 
   try {
-
     const supabase = getServiceSupabase();
     const now = new Date().toISOString();
 
     // Map status from old format to new format
-    let inspectionStatus: 'draft' | 'pending_review' | 'completed' | 'approved' | 'rejected' = 'draft';
+    let inspectionStatus: 'draft' | 'pending_review' | 'completed' | 'approved' | 'rejected' =
+      'draft';
     if (reportData.status === 'completed') {
       inspectionStatus = 'completed';
     } else if (reportData.status === 'pending_review') {
@@ -170,27 +182,29 @@ async function createManhoursReport(req: NextApiRequest, res: NextApiResponse, u
       form_data: reportData,
       signature: null,
       status: inspectionStatus,
-      submitted_at: (inspectionStatus === 'completed' || inspectionStatus === 'pending_review') ? now : null,
+      submitted_at:
+        inspectionStatus === 'completed' || inspectionStatus === 'pending_review' ? now : null,
       inspection_date: reportData.preparedDate,
       remarks: reportData.remarks || null,
     };
 
-    const { data: newReport, error } = await (supabase
-      .from('inspections') as any)
+    const { data: newReport, error } = await (supabase.from('inspections') as any)
       .insert(inspectionData)
       .select()
       .single();
 
     if (error) {
       logger.error('Create manhours report error', error, { userId: user.id });
-      return res.status(500).json({ error: 'Failed to create manhours report', details: error.message });
+      return res
+        .status(500)
+        .json({ error: 'Failed to create manhours report', details: error.message });
     }
 
     logger.info('Manhours report created', {
       reportId: newReport.id,
       month: reportData.reportMonth,
       year: reportData.reportYear,
-      userId: user.id
+      userId: user.id,
     });
 
     // Log report creation

@@ -46,7 +46,7 @@ export function generateInspectionPDF(inspection: InspectionData): jsPDF {
       designation: inspection.designation || 'HSE',
       inspectionDate: inspection.inspection_date,
       signature: inspection.signature || undefined,
-      kits: inspection.form_data.kits || []
+      kits: inspection.form_data.kits || [],
     });
   }
 
@@ -63,7 +63,9 @@ export function generateInspectionPDF(inspection: InspectionData): jsPDF {
   yPosition += 10;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(getInspectionTypeName(inspection.inspection_type), pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(getInspectionTypeName(inspection.inspection_type), pageWidth / 2, yPosition, {
+    align: 'center',
+  });
 
   yPosition += 15;
 
@@ -79,7 +81,10 @@ export function generateInspectionPDF(inspection: InspectionData): jsPDF {
     ['Inspector:', inspection.inspected_by],
     ['Designation:', inspection.designation || 'N/A'],
     ['Inspection Date:', formatDate(inspection.inspection_date)],
-    ['Submitted At:', inspection.submitted_at ? formatDate(inspection.submitted_at) : 'Not submitted'],
+    [
+      'Submitted At:',
+      inspection.submitted_at ? formatDate(inspection.submitted_at) : 'Not submitted',
+    ],
     ['Status:', inspection.status.toUpperCase().replace('_', ' ')],
   ];
 
@@ -99,7 +104,7 @@ export function generateInspectionPDF(inspection: InspectionData): jsPDF {
     styles: { fontSize: 10 },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 45 },
-      1: { cellWidth: 'auto' }
+      1: { cellWidth: 'auto' },
     },
   });
 
@@ -164,7 +169,9 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
   doc.text(`Generated for: ${data.supervisorName}`, pageWidth / 2, yPosition, { align: 'center' });
 
   yPosition += 5;
-  doc.text(`Generated on: ${formatDate(data.generatedDate)}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Generated on: ${formatDate(data.generatedDate)}`, pageWidth / 2, yPosition, {
+    align: 'center',
+  });
 
   yPosition += 15;
 
@@ -177,18 +184,28 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
     doc.setFont('helvetica', 'normal');
 
     if (data.filterCriteria.startDate || data.filterCriteria.endDate) {
-      const dateRange = `${data.filterCriteria.startDate ? formatDate(data.filterCriteria.startDate) : 'Start'} - ${data.filterCriteria.endDate ? formatDate(data.filterCriteria.endDate) : 'End'}`;
+      const dateRange = `${
+        data.filterCriteria.startDate ? formatDate(data.filterCriteria.startDate) : 'Start'
+      } - ${data.filterCriteria.endDate ? formatDate(data.filterCriteria.endDate) : 'End'}`;
       doc.text(`Date Range: ${dateRange}`, 14, yPosition);
       yPosition += 5;
     }
 
     if (data.filterCriteria.inspectionType) {
-      doc.text(`Type: ${getInspectionTypeName(data.filterCriteria.inspectionType as any)}`, 14, yPosition);
+      doc.text(
+        `Type: ${getInspectionTypeName(data.filterCriteria.inspectionType as any)}`,
+        14,
+        yPosition,
+      );
       yPosition += 5;
     }
 
     if (data.filterCriteria.status) {
-      doc.text(`Status: ${data.filterCriteria.status.toUpperCase().replace('_', ' ')}`, 14, yPosition);
+      doc.text(
+        `Status: ${data.filterCriteria.status.toUpperCase().replace('_', ' ')}`,
+        14,
+        yPosition,
+      );
       yPosition += 5;
     }
 
@@ -221,7 +238,7 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
     styles: { fontSize: 10 },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 50 },
-      1: { cellWidth: 'auto' }
+      1: { cellWidth: 'auto' },
     },
   });
 
@@ -233,7 +250,7 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
   doc.text('Inspections List', 14, yPosition);
   yPosition += 8;
 
-  const tableData = data.inspections.map(inspection => [
+  const tableData = data.inspections.map((inspection) => [
     inspection.inspection_number,
     getInspectionTypeName(inspection.inspection_type),
     inspection.inspected_by,
@@ -266,7 +283,7 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
         `Page ${currentPage} of ${pageCount}`,
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 10,
-        { align: 'center' }
+        { align: 'center' },
       );
     },
   });
@@ -319,7 +336,7 @@ function addFireExtinguisherDetails(doc: jsPDF, formData: any, yPosition: number
       ext.typeSize || 'N/A',
       ext.expiryDate || 'N/A',
       issues.length > 0 ? issues.join(', ') : 'OK',
-      ext.remarks || '-'
+      ext.remarks || '-',
     ];
   });
 
@@ -345,12 +362,9 @@ function addFireExtinguisherDetails(doc: jsPDF, formData: any, yPosition: number
         const pageCount = doc.getNumberOfPages();
         const currentPage = (doc as any).internal.getCurrentPageInfo().pageNumber;
         doc.setFontSize(8);
-        doc.text(
-          `Page ${currentPage}`,
-          pageWidth / 2,
-          doc.internal.pageSize.getHeight() - 10,
-          { align: 'center' }
-        );
+        doc.text(`Page ${currentPage}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, {
+          align: 'center',
+        });
       }
     },
   });
@@ -398,7 +412,7 @@ function addFirstAidDetails(doc: jsPDF, formData: any, yPosition: number): numbe
       item.itemName || 'N/A',
       item.quantity?.toString() || '0',
       item.expiryDate || 'N/A',
-      item.status || 'OK'
+      item.status || 'OK',
     ]);
 
     autoTable(doc, {
@@ -453,7 +467,7 @@ function addHSEInspectionDetails(doc: jsPDF, formData: any, yPosition: number): 
       styles: { fontSize: 9 },
       columnStyles: {
         0: { fontStyle: 'bold', cellWidth: 40 },
-        1: { cellWidth: 'auto' }
+        1: { cellWidth: 'auto' },
       },
     });
 
@@ -479,7 +493,7 @@ function addHSEInspectionDetails(doc: jsPDF, formData: any, yPosition: number): 
       const tableData = items.map((item: any) => [
         item.question || item.label || 'N/A',
         item.answer || item.rating || 'N/A',
-        item.notes || item.remarks || '-'
+        item.notes || item.remarks || '-',
       ]);
 
       if (tableData.length > 0) {
@@ -516,7 +530,7 @@ function addHSEInspectionDetails(doc: jsPDF, formData: any, yPosition: number): 
 
     const obsData = formData.observations.map((obs: any, idx: number) => [
       (idx + 1).toString(),
-      obs.observation || obs.note || 'N/A'
+      obs.observation || obs.note || 'N/A',
     ]);
 
     autoTable(doc, {
@@ -544,12 +558,12 @@ function addHSEInspectionDetails(doc: jsPDF, formData: any, yPosition: number): 
 function calculateStatistics(inspections: InspectionData[]) {
   return {
     total: inspections.length,
-    pending: inspections.filter(i => i.status === 'pending_review').length,
-    approved: inspections.filter(i => i.status === 'approved').length,
-    rejected: inspections.filter(i => i.status === 'rejected').length,
-    fireExtinguisher: inspections.filter(i => i.inspection_type === 'fire_extinguisher').length,
-    firstAid: inspections.filter(i => i.inspection_type === 'first_aid').length,
-    hseGeneral: inspections.filter(i => i.inspection_type === 'hse_general').length,
+    pending: inspections.filter((i) => i.status === 'pending_review').length,
+    approved: inspections.filter((i) => i.status === 'approved').length,
+    rejected: inspections.filter((i) => i.status === 'rejected').length,
+    fireExtinguisher: inspections.filter((i) => i.inspection_type === 'fire_extinguisher').length,
+    firstAid: inspections.filter((i) => i.inspection_type === 'first_aid').length,
+    hseGeneral: inspections.filter((i) => i.inspection_type === 'hse_general').length,
   };
 }
 
@@ -570,7 +584,7 @@ function addFooter(doc: jsPDF) {
       `Generated by PWA Inspection Platform - ${new Date().toLocaleString()}`,
       pageWidth / 2,
       pageHeight - 10,
-      { align: 'center' }
+      { align: 'center' },
     );
   }
 }
@@ -584,7 +598,7 @@ function formatDate(dateString: string): string {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   } catch {
     return dateString;
@@ -626,7 +640,9 @@ export function downloadPDF(doc: jsPDF, filename: string) {
  */
 export function generateAndDownloadInspectionPDF(inspection: InspectionData) {
   const pdf = generateInspectionPDF(inspection);
-  const filename = `Inspection_${inspection.inspection_number}_${formatDate(inspection.inspection_date)}.pdf`;
+  const filename = `Inspection_${inspection.inspection_number}_${formatDate(
+    inspection.inspection_date,
+  )}.pdf`;
   downloadPDF(pdf, filename);
 }
 

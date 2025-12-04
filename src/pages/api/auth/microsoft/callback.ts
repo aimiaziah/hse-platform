@@ -1,6 +1,10 @@
 // API route to handle Microsoft OAuth callback
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { exchangeCodeForToken, getMicrosoftUserInfo, mapMicrosoftUserToRole } from '@/utils/microsoft-auth';
+import {
+  exchangeCodeForToken,
+  getMicrosoftUserInfo,
+  mapMicrosoftUserToRole,
+} from '@/utils/microsoft-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { generateToken } from '@/lib/jwt';
@@ -31,7 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Handle OAuth errors
     if (error) {
       console.error('Microsoft OAuth error:', error, error_description);
-      return res.redirect(`/login?error=${encodeURIComponent(error_description as string || 'Authentication failed')}`);
+      return res.redirect(
+        `/login?error=${encodeURIComponent(
+          (error_description as string) || 'Authentication failed',
+        )}`,
+      );
     }
 
     if (!code || typeof code !== 'string') {
@@ -49,8 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.warn(`Login attempt from unauthorized domain: ${userInfo.mail}`);
       return res.redirect(
         `/login?error=${encodeURIComponent(
-          'Your email domain is not authorized. Please contact your administrator.'
-        )}`
+          'Your email domain is not authorized. Please contact your administrator.',
+        )}`,
       );
     }
 
@@ -69,8 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (existingUser) {
       // Update existing user
-      const { data: updatedUser, error: updateError } = await (supabase
-        .from('users') as any)
+      const { data: updatedUser, error: updateError } = await (supabase.from('users') as any)
         .update({
           name: userInfo.displayName,
           microsoft_id: userInfo.id,
@@ -80,7 +87,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           last_login: new Date().toISOString(),
         })
         .eq('id', existingUser.id)
-        .select(`
+        .select(
+          `
           *,
           user_permissions (
             can_manage_users,
@@ -93,7 +101,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             can_view_pending_inspections,
             can_view_analytics
           )
-        `)
+        `,
+        )
         .single();
 
       if (updateError) {
@@ -104,14 +113,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Create new user with Microsoft account
       // NO automatic PIN generation - Microsoft users can only login via Microsoft
-      const { data: newUser, error: createError } = await (supabase
-        .from('users') as any)
+      const { data: newUser, error: createError } = await (supabase.from('users') as any)
         .insert([
           {
             name: userInfo.displayName,
             email: userInfo.mail,
             pin: null, // No PIN for Microsoft-only users
-            role: role,
+            role,
             microsoft_id: userInfo.id,
             microsoft_access_token: accessToken,
             microsoft_refresh_token: refreshToken,
@@ -119,7 +127,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             is_active: true,
           },
         ])
-        .select(`
+        .select(
+          `
           *,
           user_permissions (
             can_manage_users,
@@ -132,7 +141,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             can_view_pending_inspections,
             can_view_analytics
           )
-        `)
+        `,
+        )
         .single();
 
       if (createError) {
@@ -196,7 +206,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Microsoft OAuth callback error:', error);
     return res.redirect(
-      `/login?error=${encodeURIComponent(error instanceof Error ? error.message : 'Authentication failed')}`
+      `/login?error=${encodeURIComponent(
+        error instanceof Error ? error.message : 'Authentication failed',
+      )}`,
     );
   }
 }

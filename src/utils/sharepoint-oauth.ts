@@ -65,7 +65,7 @@ const getAccessToken = async (): Promise<string> => {
 
   // Token expired or not found - need to re-authenticate
   // Note: Implicit flow doesn't provide refresh tokens
-  return await authenticateUser();
+  return authenticateUser();
 };
 
 /**
@@ -88,7 +88,7 @@ const authenticateUser = async (): Promise<string> => {
       response_type: 'token', // Use implicit flow (token directly)
       redirect_uri: SHAREPOINT_CONFIG.redirectUri,
       scope: SCOPES,
-      state: state,
+      state,
       nonce: Math.random().toString(36).substring(7), // Required for implicit flow
       prompt: 'select_account', // Allow user to select account (admin consent should be pre-granted)
     });
@@ -104,7 +104,7 @@ const authenticateUser = async (): Promise<string> => {
     const popup = window.open(
       authUrl,
       'SharePoint OAuth',
-      `width=${width},height=${height},left=${left},top=${top}`
+      `width=${width},height=${height},left=${left},top=${top}`,
     );
 
     if (!popup) {
@@ -123,7 +123,13 @@ const authenticateUser = async (): Promise<string> => {
         window.removeEventListener('message', handleMessage);
         popup.close();
 
-        const { access_token, state: returnedState, error, error_description, expires_in } = event.data;
+        const {
+          access_token,
+          state: returnedState,
+          error,
+          error_description,
+          expires_in,
+        } = event.data;
 
         if (error) {
           // Provide helpful error messages for common consent issues
@@ -134,9 +140,11 @@ const authenticateUser = async (): Promise<string> => {
 
           // Check for common admin consent errors
           if (error === 'admin_consent_required' || error_description?.includes('admin consent')) {
-            errorMessage = 'This application requires permissions that need user consent. Please contact your IT administrator or use a different Microsoft account.';
+            errorMessage =
+              'This application requires permissions that need user consent. Please contact your IT administrator or use a different Microsoft account.';
           } else if (error === 'consent_required') {
-            errorMessage = 'You need to grant permissions to this application. Please try again and click "Accept" on the consent screen.';
+            errorMessage =
+              'You need to grant permissions to this application. Please try again and click "Accept" on the consent screen.';
           } else if (error === 'invalid_grant') {
             errorMessage = 'The authorization was denied or expired. Please try logging in again.';
           }
@@ -184,7 +192,7 @@ const authenticateUser = async (): Promise<string> => {
 const exchangeCodeForToken = async (code: string): Promise<string> => {
   const tokenParams = new URLSearchParams({
     client_id: SHAREPOINT_CONFIG.clientId,
-    code: code,
+    code,
     redirect_uri: SHAREPOINT_CONFIG.redirectUri,
     grant_type: 'authorization_code',
     scope: SCOPES,
@@ -258,7 +266,7 @@ const refreshAccessToken = async (refreshToken: string): Promise<string> => {
 const uploadToSharePoint = async (
   file: Blob,
   filename: string,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<{ id: string; webUrl: string }> => {
   const accessToken = await getAccessToken();
 
@@ -271,7 +279,7 @@ const uploadToSharePoint = async (
     try {
       // Extract hostname and site path from URL
       const url = new URL(siteUrl);
-      const hostname = url.hostname;
+      const { hostname } = url;
       const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/'); // e.g., "sites/ThetaEdge"
 
       // Get site ID
@@ -279,7 +287,7 @@ const uploadToSharePoint = async (
         `https://graph.microsoft.com/v1.0/sites/${hostname}:/${sitePath}`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        },
       );
 
       if (!siteResponse.ok) {
@@ -294,7 +302,7 @@ const uploadToSharePoint = async (
         `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        },
       );
 
       if (!drivesResponse.ok) {
@@ -378,7 +386,7 @@ const createSharePointFolder = async (
   accessToken: string,
   siteId: string,
   driveId: string,
-  folderPath: string
+  folderPath: string,
 ): Promise<void> => {
   const pathParts = folderPath.split('/').filter(Boolean);
   let currentPath = '';
@@ -392,7 +400,7 @@ const createSharePointFolder = async (
         `https://graph.microsoft.com/v1.0/sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        },
       );
 
       if (checkResponse.ok) {
@@ -409,21 +417,18 @@ const createSharePointFolder = async (
         ? `/sites/${siteId}/drives/${driveId}/root:/${currentPath}:/children`
         : `/sites/${siteId}/drives/${driveId}/root/children`;
 
-      const createResponse = await fetch(
-        `https://graph.microsoft.com/v1.0${createPath}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: folderName,
-            folder: {},
-            '@microsoft.graph.conflictBehavior': 'rename',
-          }),
-        }
-      );
+      const createResponse = await fetch(`https://graph.microsoft.com/v1.0${createPath}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: folderName,
+          folder: {},
+          '@microsoft.graph.conflictBehavior': 'rename',
+        }),
+      });
 
       if (!createResponse.ok) {
         const errorData = await createResponse.json();
@@ -449,14 +454,14 @@ const createFolder = async (folderPath: string): Promise<void> => {
   if (siteUrl) {
     try {
       const url = new URL(siteUrl);
-      const hostname = url.hostname;
+      const { hostname } = url;
       const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/');
 
       const siteResponse = await fetch(
         `https://graph.microsoft.com/v1.0/sites/${hostname}:/${sitePath}`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        },
       );
 
       if (siteResponse.ok) {
@@ -467,7 +472,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
           `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
-          }
+          },
         );
 
         if (drivesResponse.ok) {
@@ -495,7 +500,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
         `https://graph.microsoft.com/v1.0${currentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
-        }
+        },
       );
 
       if (checkResponse.ok) {
@@ -519,7 +524,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
             folder: {},
             '@microsoft.graph.conflictBehavior': 'rename',
           }),
-        }
+        },
       );
 
       if (!createResponse.ok) {
@@ -539,7 +544,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
 export const exportToSharePoint = async (
   excelBlob: Blob,
   pdfBlob: Blob,
-  inspection: any
+  inspection: any,
 ): Promise<{ excel: { id: string; webUrl: string }; pdf: { id: string; webUrl: string } }> => {
   try {
     // Initialize OAuth if needed
@@ -548,8 +553,18 @@ export const exportToSharePoint = async (
     // Determine folder structure
     const date = new Date(inspection.inspectionDate || Date.now());
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     // Get base folder from environment or use default
@@ -581,7 +596,10 @@ export const exportToSharePoint = async (
 
     // Generate filenames
     const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
-    const typePrefix = inspection.type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace(/ /g, '_');
+    const typePrefix = inspection.type
+      .replace('_', ' ')
+      .replace(/\b\w/g, (l: string) => l.toUpperCase())
+      .replace(/ /g, '_');
     const excelFilename = `${typePrefix}_${monthYear}_${inspection.id}.xlsx`;
     const pdfFilename = `${typePrefix}_${monthYear}_${inspection.id}.pdf`;
 

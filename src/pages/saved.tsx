@@ -79,11 +79,7 @@ const SavedInspections: React.FC = () => {
   useEffect(() => {
     // Extract unique years from inspections
     const years = Array.from(
-      new Set(
-        inspections.map((inspection) =>
-          new Date(inspection.date).getFullYear().toString()
-        )
-      )
+      new Set(inspections.map((inspection) => new Date(inspection.date).getFullYear().toString())),
     ).sort((a, b) => Number(b) - Number(a)); // Sort descending (newest first)
 
     setAvailableYears(years);
@@ -120,18 +116,33 @@ const SavedInspections: React.FC = () => {
 
           dbInspections.forEach((inspection: any) => {
             // Check if this is an observation (hse_general with isObservation flag)
-            const isObservation = inspection.inspection_type === 'hse_general' && inspection.form_data?.isObservation === true;
-            const type = isObservation ? 'hse_observation' : mapDbTypeToLocal(inspection.inspection_type);
-            console.log(`[Saved Page] DB Inspection: ${type} - ${inspection.id} - Status: ${inspection.status} - isObservation: ${isObservation}`);
+            const isObservation =
+              inspection.inspection_type === 'hse_general' &&
+              inspection.form_data?.isObservation === true;
+            const type = isObservation
+              ? 'hse_observation'
+              : mapDbTypeToLocal(inspection.inspection_type);
+            console.log(
+              `[Saved Page] DB Inspection: ${type} - ${inspection.id} - Status: ${inspection.status} - isObservation: ${isObservation}`,
+            );
             allInspections.push({
               id: inspection.id,
-              type: type,
+              type,
               title: isObservation ? 'HSE Observation' : getInspectionTypeName(type),
-              location: inspection.form_data?.location || inspection.form_data?.contractor || inspection.form_data?.department || 'N/A',
+              location:
+                inspection.form_data?.location ||
+                inspection.form_data?.contractor ||
+                inspection.form_data?.department ||
+                'N/A',
               inspector: inspection.inspected_by || user.name,
               date: inspection.inspection_date || inspection.created_at?.split('T')[0],
               status: inspection.status || 'completed',
-              supervisorReview: inspection.status === 'pending_review' ? 'pending' : inspection.status === 'approved' ? 'approved' : 'not_required',
+              supervisorReview:
+                inspection.status === 'pending_review'
+                  ? 'pending'
+                  : inspection.status === 'approved'
+                  ? 'approved'
+                  : 'not_required',
               supervisorName: inspection.reviewed_by,
               reviewedAt: inspection.reviewed_at,
               reviewComments: inspection.review_comments,
@@ -141,7 +152,11 @@ const SavedInspections: React.FC = () => {
             });
           });
         } else {
-          console.error('[Saved Page] ❌ Database fetch failed:', response.status, response.statusText);
+          console.error(
+            '[Saved Page] ❌ Database fetch failed:',
+            response.status,
+            response.statusText,
+          );
           const errorText = await response.text().catch(() => 'Could not read error');
           console.error('[Saved Page] Error details:', errorText);
         }
@@ -152,8 +167,10 @@ const SavedInspections: React.FC = () => {
       // Load Manhours Reports from localStorage (backward compatibility)
       const manhoursReports = storage.load<any[]>('manhours_reports', []);
       manhoursReports.forEach((report: any) => {
-        if ((report.inspectorId === user.id || report.preparedBy === user.name) &&
-            !allInspections.find(i => i.id === report.id)) {
+        if (
+          (report.inspectorId === user.id || report.preparedBy === user.name) &&
+          !allInspections.find((i) => i.id === report.id)
+        ) {
           allInspections.push({
             id: report.id,
             type: 'manhours',
@@ -174,7 +191,7 @@ const SavedInspections: React.FC = () => {
 
       // Filter out drafts - only show completed, pending_review, approved, and rejected inspections
       const completedInspections = allInspections.filter(
-        inspection => inspection.status !== 'draft'
+        (inspection) => inspection.status !== 'draft',
       );
 
       // Sort by creation date (newest first)
@@ -182,8 +199,12 @@ const SavedInspections: React.FC = () => {
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
 
-      console.log(`[Saved Page] Total inspections to display: ${completedInspections.length} (filtered out ${allInspections.length - completedInspections.length} drafts)`);
-      completedInspections.forEach(i => console.log(`  - ${i.type}: ${i.title} (${i.date})`));
+      console.log(
+        `[Saved Page] Total inspections to display: ${completedInspections.length} (filtered out ${
+          allInspections.length - completedInspections.length
+        } drafts)`,
+      );
+      completedInspections.forEach((i) => console.log(`  - ${i.type}: ${i.title} (${i.date})`));
 
       setInspections(completedInspections);
     } catch (error) {
@@ -211,7 +232,8 @@ const SavedInspections: React.FC = () => {
     const failed = items.filter((item) => item.rating === 'FAIL');
 
     return {
-      passRate: completed.length > 0 ? Number(((passed.length / completed.length) * 100).toFixed(2)) : 0,
+      passRate:
+        completed.length > 0 ? Number(((passed.length / completed.length) * 100).toFixed(2)) : 0,
       failures: failed.length,
     };
   };
@@ -224,7 +246,8 @@ const SavedInspections: React.FC = () => {
     );
 
     return {
-      readinessRate: completed.length > 0 ? Number(((ready.length / completed.length) * 100).toFixed(2)) : 0,
+      readinessRate:
+        completed.length > 0 ? Number(((ready.length / completed.length) * 100).toFixed(2)) : 0,
       criticalIssues: critical.length,
     };
   };
@@ -325,9 +348,7 @@ const SavedInspections: React.FC = () => {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h1 className="text-lg font-bold text-gray-900">History</h1>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  View and download submissions
-                </p>
+                <p className="text-xs text-gray-500 mt-0.5">View and download submissions</p>
               </div>
 
               {/* Year Filter - Analytics Dashboard Style */}
@@ -351,18 +372,33 @@ const SavedInspections: React.FC = () => {
           {/* Content */}
           {sortedMonths.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-8 text-center">
-              <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="mx-auto h-10 w-10 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               <p className="mt-3 text-xs text-gray-500">No submissions found</p>
             </div>
           ) : (
             <div className="space-y-4">
               {sortedMonths.map((monthKey) => (
-                <div key={monthKey} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div
+                  key={monthKey}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                >
                   {/* Month Header */}
                   <div className="border-b border-gray-200 px-6 py-3">
-                    <h2 className="text-sm font-semibold text-gray-700">{formatMonthYear(monthKey)}</h2>
+                    <h2 className="text-sm font-semibold text-gray-700">
+                      {formatMonthYear(monthKey)}
+                    </h2>
                   </div>
 
                   {/* Table */}
@@ -385,7 +421,9 @@ const SavedInspections: React.FC = () => {
                         <tr key={inspection.id} className="hover:bg-gray-50/50 transition-colors">
                           {/* Inspection Type */}
                           <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-gray-900">{inspection.title}</div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {inspection.title}
+                            </div>
                             <div className="text-xs text-gray-500 mt-0.5">
                               {new Date(inspection.date).toLocaleDateString('en-GB', {
                                 day: '2-digit',
@@ -400,7 +438,7 @@ const SavedInspections: React.FC = () => {
                             <div>
                               <span
                                 className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${getStatusColor(
-                                  inspection.status
+                                  inspection.status,
                                 )}`}
                               >
                                 {getStatusLabel(inspection.status)}
@@ -420,7 +458,9 @@ const SavedInspections: React.FC = () => {
                           {/* Download */}
                           <td className="px-6 py-4 text-right">
                             <button
-                              onClick={() => exportInspectionOriginalFormat(inspection.id, inspection.type)}
+                              onClick={() =>
+                                exportInspectionOriginalFormat(inspection.id, inspection.type)
+                              }
                               className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors hover:underline"
                             >
                               {inspection.type === 'hse_observation' ? 'PDF' : 'Excel'}
@@ -439,7 +479,12 @@ const SavedInspections: React.FC = () => {
           {sortedMonths.length > 0 && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-2 text-center">
               <p className="text-xs text-gray-600">
-                Showing <span className="font-semibold text-gray-900">{getFilteredInspections().length}</span> submission{getFilteredInspections().length !== 1 ? 's' : ''} {selectedYear ? `in ${selectedYear}` : 'total'}
+                Showing{' '}
+                <span className="font-semibold text-gray-900">
+                  {getFilteredInspections().length}
+                </span>{' '}
+                submission{getFilteredInspections().length !== 1 ? 's' : ''}{' '}
+                {selectedYear ? `in ${selectedYear}` : 'total'}
               </p>
             </div>
           )}

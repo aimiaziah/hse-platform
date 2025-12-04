@@ -21,7 +21,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         .eq('user_id', req.user!.id);
 
       // Filter out expired notifications
-      query = query.or('expires_at.is.null,expires_at.gt.' + new Date().toISOString());
+      query = query.or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
 
       // Apply filters
       if (is_read !== undefined) {
@@ -52,7 +52,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', req.user!.id)
         .eq('is_read', false)
-        .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString());
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
 
       return res.status(200).json({
         success: true,
@@ -72,8 +72,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
       if (mark_all) {
         // Mark all user notifications as read
-        const { error } = await (supabase
-          .from('notifications') as any)
+        const { error } = await (supabase.from('notifications') as any)
           .update({
             is_read: true,
             read_at: new Date().toISOString(),
@@ -97,8 +96,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Mark specific notifications as read
-      const { error } = await (supabase
-        .from('notifications') as any)
+      const { error } = await (supabase.from('notifications') as any)
         .update({
           is_read: true,
           read_at: new Date().toISOString(),

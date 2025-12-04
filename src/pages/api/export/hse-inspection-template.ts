@@ -231,7 +231,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       formData.tablePersons = [];
     }
     if (!Array.isArray(formData.inspectionItems)) {
-      console.error('[HSE Export] inspectionItems is not an array:', typeof formData.inspectionItems);
+      console.error(
+        '[HSE Export] inspectionItems is not an array:',
+        typeof formData.inspectionItems,
+      );
       formData.inspectionItems = [];
     }
     if (formData.observations && !Array.isArray(formData.observations)) {
@@ -288,7 +291,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Fill personnel table (adjust starting row based on your template)
     console.log('[HSE Export] Filling personnel table...');
-    let personnelStartRow = 13; // Example starting row
+    const personnelStartRow = 13; // Example starting row
     formData.tablePersons.forEach((person, index) => {
       if (person.name || person.designation) {
         const row = personnelStartRow + index;
@@ -445,7 +448,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return;
       }
 
-      const rating = item.rating;
+      const { rating } = item;
       const comment = item.comment || '';
 
       // Fill in rating checkmarks (columns G-M)
@@ -486,7 +489,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Add the comments/remarks content if provided
     if (formData.commentsRemarks) {
       worksheet.getCell(`B${commentsRow}`).value = formData.commentsRemarks;
-      worksheet.getCell(`B${commentsRow}`).alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+      worksheet.getCell(`B${commentsRow}`).alignment = {
+        vertical: 'top',
+        horizontal: 'left',
+        wrapText: true,
+      };
       commentsRow++;
     }
 
@@ -534,7 +541,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Add Observations worksheet if observations exist
     console.log('[HSE Export] Checking for observations...');
     if (formData.observations && formData.observations.length > 0) {
-      console.log(`[HSE Export] Adding ${formData.observations.length} observations to worksheet...`);
+      console.log(
+        `[HSE Export] Adding ${formData.observations.length} observations to worksheet...`,
+      );
 
       // Check if worksheet already exists and remove it to avoid conflicts
       const existingObsSheet = workbook.getWorksheet('HSE Observations');
@@ -547,16 +556,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Set column widths
       observationsSheet.columns = [
-        { width: 8 },   // A - Item No
-        { width: 25 },  // B - Category
-        { width: 25 },  // C - Item Name
-        { width: 40 },  // D - Observation
-        { width: 30 },  // E - Action Needed
-        { width: 20 },  // F - Location
-        { width: 15 },  // G - Date/Time
-        { width: 12 },  // H - Status
-        { width: 25 },  // I - Hazards
-        { width: 30 },  // J - Remarks
+        { width: 8 }, // A - Item No
+        { width: 25 }, // B - Category
+        { width: 25 }, // C - Item Name
+        { width: 40 }, // D - Observation
+        { width: 30 }, // E - Action Needed
+        { width: 20 }, // F - Location
+        { width: 15 }, // G - Date/Time
+        { width: 12 }, // H - Status
+        { width: 25 }, // I - Hazards
+        { width: 30 }, // J - Remarks
       ];
 
       // Header row
@@ -570,7 +579,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         'Date/Time',
         'Status',
         'Hazards',
-        'Remarks'
+        'Remarks',
       ]);
 
       // Style header row
@@ -578,7 +587,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF4472C4' }
+        fgColor: { argb: 'FF4472C4' },
       };
       headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       headerRow.height = 25;
@@ -595,7 +604,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           `${obs.date} ${obs.time}`,
           obs.status,
           obs.hazards || '',
-          obs.remarks || ''
+          obs.remarks || '',
         ]);
 
         // Style data rows
@@ -608,21 +617,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           statusCell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FFFFC7CE' } // Light red
+            fgColor: { argb: 'FFFFC7CE' }, // Light red
           };
           statusCell.font = { color: { argb: 'FF9C0006' }, bold: true };
         } else if (obs.status === 'Closed') {
           statusCell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FFC6EFCE' } // Light green
+            fgColor: { argb: 'FFC6EFCE' }, // Light green
           };
           statusCell.font = { color: { argb: 'FF006100' }, bold: true };
         } else {
           statusCell.fill = {
             type: 'pattern',
             pattern: 'solid',
-            fgColor: { argb: 'FFFFF2CC' } // Light yellow
+            fgColor: { argb: 'FFFFF2CC' }, // Light yellow
           };
           statusCell.font = { color: { argb: 'FF9C6500' }, bold: true };
         }
@@ -633,13 +642,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             top: { style: 'thin' },
             left: { style: 'thin' },
             bottom: { style: 'thin' },
-            right: { style: 'thin' }
+            right: { style: 'thin' },
           };
         });
 
         // Try to add photos if they exist
         if (obs.photos && obs.photos.length > 0) {
-          console.log(`[HSE Export] Adding ${obs.photos.length} photos for observation ${obs.itemNo}...`);
+          console.log(
+            `[HSE Export] Adding ${obs.photos.length} photos for observation ${obs.itemNo}...`,
+          );
           obs.photos.slice(0, 3).forEach((photo, photoIndex) => {
             try {
               const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
@@ -652,7 +663,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               const rowNumber = row.number;
               observationsSheet.addImage(imageId, {
                 tl: { col: 10 + photoIndex, row: rowNumber - 1 },
-                ext: { width: 80, height: 60 }
+                ext: { width: 80, height: 60 },
               });
             } catch (error) {
               console.error('Error adding observation photo to Excel:', error);
@@ -676,7 +687,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `Inspection Date: ${formData.date}`,
         '',
         '',
-        `Location: ${formData.location}`
+        `Location: ${formData.location}`,
       ]);
       const summaryRow = observationsSheet.getRow(2);
       summaryRow.font = { size: 10 };
@@ -739,7 +750,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.status(200).send(buffer);
       } catch (bufferError) {
         console.error('[HSE Export] Error writing Excel buffer:', bufferError);
-        throw new Error(`Excel buffer generation failed: ${bufferError instanceof Error ? bufferError.message : 'Unknown error'}`);
+        throw new Error(
+          `Excel buffer generation failed: ${
+            bufferError instanceof Error ? bufferError.message : 'Unknown error'
+          }`,
+        );
       }
     }
   } catch (error) {

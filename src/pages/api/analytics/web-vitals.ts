@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // In production, you would send to a real analytics service or database
     const metricsKey = 'web-vitals-metrics';
     const existingMetrics = JSON.parse(
-      (req.headers.cookie?.match(new RegExp(`${metricsKey}=([^;]+)`)) || [])[1] || '[]'
+      (req.headers.cookie?.match(new RegExp(`${metricsKey}=([^;]+)`)) || [])[1] || '[]',
     );
 
     const newMetric = {

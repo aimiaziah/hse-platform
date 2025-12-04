@@ -8,10 +8,7 @@ type UploadResponse = {
   error?: string;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<UploadResponse>
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse<UploadResponse>) {
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -38,12 +35,11 @@ export default async function handler(
         success: true,
         url: result.url,
       });
-    } else {
-      return res.status(500).json({
-        success: false,
-        error: result.error || 'Upload failed',
-      });
     }
+    return res.status(500).json({
+      success: false,
+      error: result.error || 'Upload failed',
+    });
   } catch (error) {
     console.error('[API] Image upload error:', error);
     return res.status(500).json({

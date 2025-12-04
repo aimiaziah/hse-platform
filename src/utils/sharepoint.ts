@@ -27,7 +27,7 @@ export interface UploadResult {
 export async function uploadToSharePoint(
   fileName: string,
   fileBuffer: Buffer | Blob,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<UploadResult> {
   try {
     // Get SharePoint configuration from environment variables
@@ -62,7 +62,7 @@ export async function uploadToSharePoint(
           scope: 'https://graph.microsoft.com/.default',
           grant_type: 'client_credentials',
         }),
-      }
+      },
     );
 
     if (!tokenResponse.ok) {
@@ -77,9 +77,7 @@ export async function uploadToSharePoint(
     const siteName = siteUrlObj.pathname.split('/').filter(Boolean).pop() || '';
 
     // Prepare file path
-    const fullPath = config.folderPath
-      ? `${config.folderPath}/${fileName}`
-      : fileName;
+    const fullPath = config.folderPath ? `${config.folderPath}/${fileName}` : fileName;
 
     // Upload file to SharePoint using Microsoft Graph API
     const uploadUrl = `https://graph.microsoft.com/v1.0/sites/${siteName}/drive/root:/${config.libraryName}/${fullPath}:/content`;
@@ -119,7 +117,7 @@ export async function uploadToSharePoint(
 async function uploadToSupabaseStorage(
   fileName: string,
   fileBuffer: Buffer | Blob,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<UploadResult> {
   try {
     const supabase = getServiceSupabase();
@@ -139,9 +137,7 @@ async function uploadToSupabaseStorage(
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('inspection-reports')
-      .getPublicUrl(fullPath);
+    const { data: urlData } = supabase.storage.from('inspection-reports').getPublicUrl(fullPath);
 
     return {
       success: true,
@@ -165,12 +161,22 @@ export async function uploadInspectionDocuments(
   inspectionType: 'fire_extinguisher' | 'first_aid' | 'hse' | 'hse_observation' | 'manhours',
   excelBuffer: Buffer,
   pdfBuffer: Buffer,
-  inspectionDate: string
+  inspectionDate: string,
 ): Promise<{ excel: UploadResult; pdf: UploadResult }> {
   const date = new Date(inspectionDate);
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
 
@@ -223,7 +229,7 @@ export async function uploadInspectionDocuments(
  */
 export async function createSharePointShareLink(
   fileId: string,
-  config: SharePointConfig
+  config: SharePointConfig,
 ): Promise<string | null> {
   try {
     // Get access token
@@ -240,7 +246,7 @@ export async function createSharePointShareLink(
           scope: 'https://graph.microsoft.com/.default',
           grant_type: 'client_credentials',
         }),
-      }
+      },
     );
 
     if (!tokenResponse.ok) {
@@ -263,7 +269,7 @@ export async function createSharePointShareLink(
           type: 'view',
           scope: 'organization',
         }),
-      }
+      },
     );
 
     if (!shareResponse.ok) {

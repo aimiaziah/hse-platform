@@ -27,7 +27,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
 async function getManhoursReport(id: string, res: NextApiResponse, user: User) {
   try {
     const supabase = getServiceSupabase();
-    let query = supabase
+    const query = supabase
       .from('inspections')
       .select('*')
       .eq('id', id)
@@ -57,7 +57,12 @@ async function getManhoursReport(id: string, res: NextApiResponse, user: User) {
 }
 
 // PUT /api/manhours/[id]
-async function updateManhoursReport(id: string, req: NextApiRequest, res: NextApiResponse, user: User) {
+async function updateManhoursReport(
+  id: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  user: User,
+) {
   try {
     const reportData = req.body;
     const supabase = getServiceSupabase();
@@ -91,8 +96,7 @@ async function updateManhoursReport(id: string, req: NextApiRequest, res: NextAp
       updated_at: now,
     };
 
-    const { data: updatedReport, error } = await (supabase
-      .from('inspections') as any)
+    const { data: updatedReport, error } = await (supabase.from('inspections') as any)
       .update(updateData)
       .eq('id', id)
       .select()
@@ -149,11 +153,10 @@ async function deleteManhoursReport(id: string, res: NextApiResponse, user: User
     }
 
     // Soft delete - mark as deleted
-    const { error } = await (supabase
-      .from('inspections') as any)
+    const { error } = await (supabase.from('inspections') as any)
       .update({
         status: 'draft',
-        deleted_at: new Date().toISOString()
+        deleted_at: new Date().toISOString(),
       })
       .eq('id', id);
 

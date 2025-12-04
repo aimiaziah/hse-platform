@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import InspectorLayout from '@/roles/inspector/layouts/InspectorLayout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
-import { ArrowLeft, Users, Clock, Save, ChevronRight, Send, CheckCircle2, Download } from 'lucide-react';
+import {
+  ArrowLeft,
+  Users,
+  Clock,
+  Save,
+  ChevronRight,
+  Send,
+  CheckCircle2,
+  Download,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/router';
 import { downloadManhoursExcel } from '@/utils/manhoursExcelExport';
@@ -93,9 +102,12 @@ const ManhoursReport: React.FC = () => {
 
   useEffect(() => {
     const loadPreviousMonthsData = async () => {
-      if (!reportData.reportYear || (hasLoadedData && reportData.reportYear === currentYear)) return;
+      if (!reportData.reportYear || (hasLoadedData && reportData.reportYear === currentYear))
+        return;
       try {
-        const response = await fetch(`/api/manhours?year=${reportData.reportYear}&status=completed&limit=100`);
+        const response = await fetch(
+          `/api/manhours?year=${reportData.reportYear}&status=completed&limit=100`,
+        );
         if (!response.ok) throw new Error('Failed to fetch previous reports');
         const { reports } = await response.json();
         if (reports && reports.length > 0) {
@@ -104,8 +116,16 @@ const ManhoursReport: React.FC = () => {
               const formData = report.form_data;
               if (formData?.monthlyData && Array.isArray(formData.monthlyData)) {
                 const monthData = formData.monthlyData.find((m: MonthlyData) => m.month === month);
-                if (monthData && (monthData.manPower || monthData.manHours || monthData.accidents !== '0')) {
-                  return { month, manPower: monthData.manPower || '', manHours: monthData.manHours || '', accidents: monthData.accidents || '0' };
+                if (
+                  monthData &&
+                  (monthData.manPower || monthData.manHours || monthData.accidents !== '0')
+                ) {
+                  return {
+                    month,
+                    manPower: monthData.manPower || '',
+                    manHours: monthData.manHours || '',
+                    accidents: monthData.accidents || '0',
+                  };
                 }
               }
             }
@@ -157,7 +177,9 @@ const ManhoursReport: React.FC = () => {
   const updateMonthlyData = (index: number, field: keyof MonthlyData, value: string) => {
     setReportData((prev) => ({
       ...prev,
-      monthlyData: prev.monthlyData.map((data, i) => (i === index ? { ...data, [field]: value } : data)),
+      monthlyData: prev.monthlyData.map((data, i) =>
+        i === index ? { ...data, [field]: value } : data,
+      ),
     }));
   };
 
@@ -288,10 +310,14 @@ const ManhoursReport: React.FC = () => {
             <div className="max-w-4xl mx-auto p-4 space-y-6">
               {/* Report Header Section */}
               <div className="bg-white rounded-lg p-6 space-y-4 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Report Information</h2>
+                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  Report Information
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Prepared By *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prepared By *
+                    </label>
                     <input
                       type="text"
                       value={reportData.preparedBy}
@@ -300,7 +326,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Prepared *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date Prepared *
+                    </label>
                     <input
                       type="date"
                       value={reportData.preparedDate}
@@ -309,7 +337,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reviewed By</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reviewed By
+                    </label>
                     <input
                       type="text"
                       value={reportData.reviewedBy}
@@ -319,7 +349,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Reviewed</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date Reviewed
+                    </label>
                     <input
                       type="date"
                       value={reportData.reviewedDate}
@@ -328,7 +360,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Report Month *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Report Month *
+                    </label>
                     <select
                       value={reportData.reportMonth}
                       onChange={(e) => updateField('reportMonth', e.target.value)}
@@ -360,7 +394,8 @@ const ManhoursReport: React.FC = () => {
                   Industrial Accidents Statistics
                 </h2>
                 <p className="text-xs text-gray-600">
-                  As compliance with Regulation 19(2) sub clause (c), OSHA 1994 and Reg.10, NADOPOD 2004
+                  As compliance with Regulation 19(2) sub clause (c), OSHA 1994 and Reg.10, NADOPOD
+                  2004
                 </p>
 
                 <div className="space-y-4">
@@ -391,7 +426,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Year to Date Man-hours</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Year to Date Man-hours
+                    </label>
                     <input
                       type="number"
                       value={reportData.yearToDateManHours}
@@ -401,7 +438,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Accumulated Man-hours</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Total Accumulated Man-hours
+                    </label>
                     <input
                       type="number"
                       value={reportData.totalAccumulatedManHours}
@@ -411,7 +450,9 @@ const ManhoursReport: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Workdays Lost / Year</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Workdays Lost / Year
+                    </label>
                     <input
                       type="number"
                       value={reportData.workdaysLost}
@@ -422,7 +463,9 @@ const ManhoursReport: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">LTI Cases</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        LTI Cases
+                      </label>
                       <input
                         type="number"
                         value={reportData.ltiCases}
@@ -432,7 +475,9 @@ const ManhoursReport: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">No LTI (Minor Injury)</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        No LTI (Minor Injury)
+                      </label>
                       <input
                         type="number"
                         value={reportData.noLTICases}
@@ -442,7 +487,9 @@ const ManhoursReport: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Near Miss Accidents</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Near Miss Accidents
+                      </label>
                       <input
                         type="number"
                         value={reportData.nearMissAccidents}
@@ -452,7 +499,9 @@ const ManhoursReport: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Dangerous Occurrences</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Dangerous Occurrences
+                      </label>
                       <input
                         type="number"
                         value={reportData.dangerousOccurrences}
@@ -463,7 +512,9 @@ const ManhoursReport: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Occupational Disease / Poisoning</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Occupational Disease / Poisoning
+                    </label>
                     <input
                       type="number"
                       value={reportData.occupationalDiseases}
@@ -477,7 +528,9 @@ const ManhoursReport: React.FC = () => {
 
               {/* Calculated Rates Section */}
               <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Calculated Safety Rates</h2>
+                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  Calculated Safety Rates
+                </h2>
                 <div className="bg-white rounded-md border border-gray-200 p-4">
                   <p className="text-sm font-medium text-gray-800 mb-3">LTI Incident Rate</p>
                   <div className="flex flex-col sm:flex-row items-center gap-2 text-sm mb-3">
@@ -505,7 +558,9 @@ const ManhoursReport: React.FC = () => {
                       </div>
                     </div>
                     <span className="text-gray-600 text-sm">× 1000 =</span>
-                    <span className="text-xl font-bold text-blue-600">{calculateLTIIncidentRate()}</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {calculateLTIIncidentRate()}
+                    </span>
                   </div>
                   <p className="text-xs text-gray-600 text-center">per 1,000 employees</p>
                 </div>
@@ -529,14 +584,18 @@ const ManhoursReport: React.FC = () => {
                         <input
                           type="number"
                           value={reportData.formulaAnnualTotalManHours}
-                          onChange={(e) => updateField('formulaAnnualTotalManHours', e.target.value)}
+                          onChange={(e) =>
+                            updateField('formulaAnnualTotalManHours', e.target.value)
+                          }
                           className="w-20 px-2 py-1 text-sm font-medium text-gray-800 text-center rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         <span className="text-gray-600 text-sm">]</span>
                       </div>
                     </div>
                     <span className="text-gray-600 text-sm">× 1M =</span>
-                    <span className="text-xl font-bold text-blue-600">{calculateIncidentFrequencyRate()}</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {calculateIncidentFrequencyRate()}
+                    </span>
                   </div>
                   <p className="text-xs text-gray-600 text-center">per 1,000,000 hours</p>
                 </div>
@@ -560,14 +619,18 @@ const ManhoursReport: React.FC = () => {
                         <input
                           type="number"
                           value={reportData.formulaAnnualTotalManHours}
-                          onChange={(e) => updateField('formulaAnnualTotalManHours', e.target.value)}
+                          onChange={(e) =>
+                            updateField('formulaAnnualTotalManHours', e.target.value)
+                          }
                           className="w-20 px-2 py-1 text-sm font-medium text-gray-800 text-center rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         <span className="text-gray-600 text-sm">]</span>
                       </div>
                     </div>
                     <span className="text-gray-600 text-sm">× 1M =</span>
-                    <span className="text-xl font-bold text-blue-600">{calculateSeverityRate()}</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {calculateSeverityRate()}
+                    </span>
                   </div>
                   <p className="text-xs text-gray-600 text-center">per 1,000,000 hours</p>
                 </div>
@@ -648,31 +711,43 @@ const ManhoursReport: React.FC = () => {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Man Power</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Man Power
+                    </label>
                     <input
                       type="number"
                       value={currentMonthData.manPower}
-                      onChange={(e) => updateMonthlyData(currentReportMonthIndex, 'manPower', e.target.value)}
+                      onChange={(e) =>
+                        updateMonthlyData(currentReportMonthIndex, 'manPower', e.target.value)
+                      }
                       className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Man Hours</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Man Hours
+                    </label>
                     <input
                       type="number"
                       value={currentMonthData.manHours}
-                      onChange={(e) => updateMonthlyData(currentReportMonthIndex, 'manHours', e.target.value)}
+                      onChange={(e) =>
+                        updateMonthlyData(currentReportMonthIndex, 'manHours', e.target.value)
+                      }
                       className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">No. of Accidents</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      No. of Accidents
+                    </label>
                     <input
                       type="number"
                       value={currentMonthData.accidents}
-                      onChange={(e) => updateMonthlyData(currentReportMonthIndex, 'accidents', e.target.value)}
+                      onChange={(e) =>
+                        updateMonthlyData(currentReportMonthIndex, 'accidents', e.target.value)
+                      }
                       className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="0"
                     />
@@ -729,7 +804,9 @@ const ManhoursReport: React.FC = () => {
             <div className="max-w-4xl mx-auto p-4 space-y-6">
               {/* Report Header Review */}
               <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Report Information</h2>
+                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  Report Information
+                </h2>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Prepared By:</p>
@@ -750,7 +827,9 @@ const ManhoursReport: React.FC = () => {
 
               {/* Statistics Review */}
               <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Safety Statistics</h2>
+                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  Safety Statistics
+                </h2>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Employees:</p>
@@ -784,7 +863,9 @@ const ManhoursReport: React.FC = () => {
                 <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
                   Formula Values (Independent)
                 </h2>
-                <p className="text-xs text-gray-600">These values are used in the rate calculations below</p>
+                <p className="text-xs text-gray-600">
+                  These values are used in the rate calculations below
+                </p>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-600">Formula LTI Cases:</p>
@@ -792,22 +873,30 @@ const ManhoursReport: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-gray-600">Formula Avg Employees:</p>
-                    <p className="font-medium text-blue-600">{reportData.formulaAnnualAvgEmployees || 'Not set'}</p>
+                    <p className="font-medium text-blue-600">
+                      {reportData.formulaAnnualAvgEmployees || 'Not set'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-600">Formula Annual Hours:</p>
-                    <p className="font-medium text-blue-600">{reportData.formulaAnnualTotalManHours || 'Not set'}</p>
+                    <p className="font-medium text-blue-600">
+                      {reportData.formulaAnnualTotalManHours || 'Not set'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-gray-600">Formula Workdays Lost:</p>
-                    <p className="font-medium text-blue-600">{reportData.formulaWorkdaysLost || 'Not set'}</p>
+                    <p className="font-medium text-blue-600">
+                      {reportData.formulaWorkdaysLost || 'Not set'}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Rates Review */}
               <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">Safety Rates</h2>
+                <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                  Safety Rates
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="rounded-md border border-gray-200 p-4">
                     <p className="text-sm text-gray-600">LTI Rate</p>
@@ -815,7 +904,9 @@ const ManhoursReport: React.FC = () => {
                   </div>
                   <div className="rounded-md border border-gray-200 p-4">
                     <p className="text-sm text-gray-600">Frequency Rate</p>
-                    <p className="text-2xl font-bold text-blue-600">{calculateIncidentFrequencyRate()}</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {calculateIncidentFrequencyRate()}
+                    </p>
                   </div>
                   <div className="rounded-md border border-gray-200 p-4">
                     <p className="text-sm text-gray-600">Severity Rate</p>
@@ -952,7 +1043,8 @@ const ManhoursReport: React.FC = () => {
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Report Submitted!</h2>
               <p className="text-gray-600 mb-8">
-                Your man-hours report for {reportData.reportMonth} {reportData.reportYear} has been successfully submitted.
+                Your man-hours report for {reportData.reportMonth} {reportData.reportYear} has been
+                successfully submitted.
               </p>
               <div className="space-y-3">
                 <button
@@ -978,9 +1070,9 @@ const ManhoursReport: React.FC = () => {
             </div>
           </div>
         </div>
-        </InspectorLayout>
-      </ProtectedRoute>
-    );
+      </InspectorLayout>
+    </ProtectedRoute>
+  );
 };
 
 export default ManhoursReport;

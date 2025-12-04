@@ -12,10 +12,7 @@ interface HealthResponse {
   error?: string;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<HealthResponse>
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse<HealthResponse>) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({
@@ -30,11 +27,7 @@ export default async function handler(
   try {
     // Check database connection by querying users table
     const supabase = getServiceSupabase();
-    const { data, error } = await supabase
-      .from('users')
-      .select('count')
-      .limit(1)
-      .single();
+    const { data, error } = await supabase.from('users').select('count').limit(1).single();
 
     if (error) {
       throw new Error(`Database error: ${error.message}`);

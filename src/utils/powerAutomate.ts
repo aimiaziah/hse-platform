@@ -26,14 +26,16 @@ interface PowerAutomateResponse {
 export const uploadToSharePointViaPowerAutomate = async (
   excelBlob: Blob,
   pdfBlob: Blob,
-  inspection: any
+  inspection: any,
 ): Promise<PowerAutomateResponse> => {
   try {
     // Get Power Automate webhook URL from environment
     const webhookUrl = process.env.NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL;
 
     if (!webhookUrl) {
-      throw new Error('Power Automate webhook URL not configured. Please set NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL in .env.local');
+      throw new Error(
+        'Power Automate webhook URL not configured. Please set NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL in .env.local',
+      );
     }
 
     // Convert blobs to base64
@@ -43,11 +45,24 @@ export const uploadToSharePointViaPowerAutomate = async (
     // Generate filename
     const date = new Date(inspection.inspectionDate || Date.now());
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
-    const typePrefix = inspection.type.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()).replace(/ /g, '_');
+    const typePrefix = inspection.type
+      .replace('_', ' ')
+      .replace(/\b\w/g, (l: string) => l.toUpperCase())
+      .replace(/ /g, '_');
     const fileName = `${typePrefix}_${monthYear}_${inspection.id}`;
 
     // Prepare webhook payload
@@ -59,7 +74,7 @@ export const uploadToSharePointViaPowerAutomate = async (
       reviewedBy: inspection.reviewedBy || '',
       excelFileBase64: excelBase64.split(',')[1], // Remove data:application/...;base64, prefix
       pdfFileBase64: pdfBase64.split(',')[1], // Remove data:application/...;base64, prefix
-      fileName: fileName,
+      fileName,
     };
 
     console.log('📤 Sending files to Power Automate webhook...');

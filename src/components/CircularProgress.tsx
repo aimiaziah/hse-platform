@@ -73,9 +73,7 @@ const CircularProgress: React.FC<CircularProgressProps> = ({
                 <div className="font-bold text-2xl" style={{ color }}>
                   {completed}/{total}
                 </div>
-                {fractionLabel && (
-                  <div className="text-xs text-gray-600 mt-1">{fractionLabel}</div>
-                )}
+                {fractionLabel && <div className="text-xs text-gray-600 mt-1">{fractionLabel}</div>}
               </div>
             ) : (
               showPercentage && (

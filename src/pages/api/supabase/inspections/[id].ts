@@ -31,10 +31,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Check permissions - inspectors can only view their own
-      if (
-        req.user?.role === 'inspector' &&
-        (inspection as any).inspector_id !== req.user.id
-      ) {
+      if (req.user?.role === 'inspector' && (inspection as any).inspector_id !== req.user.id) {
         return res.status(403).json({ error: 'Forbidden - Cannot view this inspection' });
       }
 
@@ -87,8 +84,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       }
 
       // Update inspection
-      const { data: updated, error: updateError } = await (supabase
-        .from('inspections') as any)
+      const { data: updated, error: updateError } = await (supabase.from('inspections') as any)
         .update(updates)
         .eq('id', id)
         .select()
@@ -122,7 +118,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         await createNotification({
           userId: (existing as any).inspector_id,
           title: `Inspection ${updates.status === 'approved' ? 'Approved' : 'Rejected'}`,
-          message: `Your ${(existing as any).inspection_type} inspection has been ${updates.status} by ${req.user!.name}`,
+          message: `Your ${(existing as any).inspection_type} inspection has been ${
+            updates.status
+          } by ${req.user!.name}`,
           type: updates.status === 'approved' ? 'success' : 'warning',
           relatedEntityType: 'inspection',
           relatedEntityId: id,
@@ -151,7 +149,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       // Only inspectors can delete their own draft inspections
       // Or admins can delete any inspection
       if (req.user?.role === 'inspector') {
-        if ((existing as any).inspector_id !== req.user.id || (existing as any).status !== 'draft') {
+        if (
+          (existing as any).inspector_id !== req.user.id ||
+          (existing as any).status !== 'draft'
+        ) {
           return res.status(403).json({ error: 'Forbidden - Cannot delete this inspection' });
         }
       } else if (req.user?.role !== 'admin') {

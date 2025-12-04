@@ -22,9 +22,8 @@ export interface MicrosoftUserInfo {
 export function getMicrosoftAuthConfig(): MicrosoftAuthConfig {
   const clientId = process.env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID || '';
   const tenantId = process.env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID || 'common';
-  const redirectUri = typeof window !== 'undefined'
-    ? `${window.location.origin}/api/auth/microsoft/callback`
-    : '';
+  const redirectUri =
+    typeof window !== 'undefined' ? `${window.location.origin}/api/auth/microsoft/callback` : '';
 
   return {
     clientId,
@@ -48,7 +47,9 @@ export function getMicrosoftAuthUrl(): string {
     state: generateRandomState(),
   });
 
-  return `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+  return `https://login.microsoftonline.com/${
+    config.tenantId
+  }/oauth2/v2.0/authorize?${params.toString()}`;
 }
 
 /**
@@ -78,11 +79,11 @@ export async function exchangeCodeForToken(code: string): Promise<{
       body: new URLSearchParams({
         client_id: config.clientId,
         scope: 'openid profile email User.Read Files.ReadWrite.All offline_access',
-        code: code,
+        code,
         redirect_uri: config.redirectUri,
         grant_type: 'authorization_code',
       }),
-    }
+    },
   );
 
   if (!tokenResponse.ok) {
@@ -153,11 +154,7 @@ export function mapMicrosoftUserToRole(userInfo: MicrosoftUserInfo): UserRole {
   }
 
   // Inspector mapping
-  if (
-    jobTitle.includes('inspector') ||
-    jobTitle.includes('hse') ||
-    jobTitle.includes('safety')
-  ) {
+  if (jobTitle.includes('inspector') || jobTitle.includes('hse') || jobTitle.includes('safety')) {
     return 'inspector';
   }
 
@@ -172,7 +169,7 @@ export async function uploadToOneDrive(
   accessToken: string,
   fileName: string,
   fileBuffer: ArrayBuffer,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
   try {
     // Construct the upload path
@@ -220,7 +217,7 @@ export async function uploadToSharePointSite(
   libraryName: string,
   fileName: string,
   fileBuffer: ArrayBuffer,
-  folderPath?: string
+  folderPath?: string,
 ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
   try {
     // Extract site path from URL
@@ -234,7 +231,7 @@ export async function uploadToSharePointSite(
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     if (!siteResponse.ok) {

@@ -63,10 +63,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
       <div className="min-h-screen bg-white pb-20 md:pb-0">
         {/* Mobile Header - Shows only on mobile */}
         <div className="md:hidden">
-          <MobileHeader
-            title=""
-            showLogo={true}
-          />
+          <MobileHeader title="" showLogo />
         </div>
 
         {/* Desktop Navigation Header - Hidden on mobile */}

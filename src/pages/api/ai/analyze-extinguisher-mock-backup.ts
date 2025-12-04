@@ -30,7 +30,7 @@ import { AIInspectionResult, AIDetectionResult, AIExtractedData } from '@/types/
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<AIInspectionResult>
+  res: NextApiResponse<AIInspectionResult>,
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -54,7 +54,7 @@ export default async function handler(
     }
 
     // Simulate AI processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // MOCK AI DETECTION LOGIC
     // In production, replace this with actual AI service calls
@@ -71,7 +71,6 @@ export default async function handler(
     };
 
     return res.status(200).json(result);
-
   } catch (error) {
     console.error('AI analysis error:', error);
     return res.status(500).json({
@@ -91,11 +90,11 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
   // Simulate AI analyzing images and detecting various components
   // In production, this would call an actual AI service with the images
 
-  const hasOverallImage = images.some(img => img.stepId === 'overall');
-  const hasPressureImage = images.some(img => img.stepId === 'pressure_gauge');
-  const hasPinSealImage = images.some(img => img.stepId === 'pin_seal');
-  const hasServiceTagImage = images.some(img => img.stepId === 'service_tag');
-  const hasSurroundingImage = images.some(img => img.stepId === 'surrounding');
+  const hasOverallImage = images.some((img) => img.stepId === 'overall');
+  const hasPressureImage = images.some((img) => img.stepId === 'pressure_gauge');
+  const hasPinSealImage = images.some((img) => img.stepId === 'pin_seal');
+  const hasServiceTagImage = images.some((img) => img.stepId === 'service_tag');
+  const hasSurroundingImage = images.some((img) => img.stepId === 'surrounding');
 
   const detections: AIDetectionResult[] = [];
 
@@ -145,7 +144,7 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
     detections.push({
       field: 'safetyPin',
       value: '√',
-      confidence: 0.90,
+      confidence: 0.9,
       reasoning: 'Safety pin is present and properly inserted',
     });
 
@@ -199,7 +198,7 @@ function performMockDataExtraction(images: any[], extinguisherInfo: any): AIExtr
   // - AWS Textract
   // - OpenAI Vision with text extraction
 
-  const hasServiceTag = images.some(img => img.stepId === 'service_tag');
+  const hasServiceTag = images.some((img) => img.stepId === 'service_tag');
 
   const extractedData: AIExtractedData = {};
 
@@ -233,7 +232,7 @@ function generateMockVisualizations(images: any[]) {
   // In production, the AI service would return annotated images with bounding boxes
   // showing detected components (shell, hose, nozzle, gauge, etc.)
 
-  return images.map(img => ({
+  return images.map((img) => ({
     stepId: img.stepId,
     annotatedImage: img.dataUrl, // In production, this would have detection boxes overlaid
     detectedComponents: getExpectedComponents(img.stepId),

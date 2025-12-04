@@ -18,29 +18,29 @@ function sanitizeTextForPDF(text: string): string {
 
   // Map of Unicode characters to ASCII equivalents
   const charMap: { [key: string]: string } = {
-    '\u2713': 'Y',      // Checkmark
-    '\u2717': 'N',      // X mark
-    '\u00D7': 'X',      // Multiplication sign
-    '\u2022': '-',      // Bullet
-    '\u2013': '-',      // En dash
-    '\u2014': '-',      // Em dash
-    '\u2018': "'",      // Smart single quote left
-    '\u2019': "'",      // Smart single quote right
-    '\u201C': '"',      // Smart double quote left
-    '\u201D': '"',      // Smart double quote right
-    '\u2026': '...',    // Ellipsis
-    '\u2122': '(TM)',   // Trademark
-    '\u00A9': '(C)',    // Copyright
-    '\u00AE': '(R)',    // Registered
-    '\u00B0': 'deg',    // Degree symbol
-    '\u00B1': '+/-',    // Plus-minus
-    '\u2264': '<=',     // Less than or equal
-    '\u2265': '>=',     // Greater than or equal
-    '\u2260': '!=',     // Not equal
-    '\u2192': '->',     // Right arrow
-    '\u2190': '<-',     // Left arrow
-    '\u2191': '^',      // Up arrow
-    '\u2193': 'v',      // Down arrow
+    '\u2713': 'Y', // Checkmark
+    '\u2717': 'N', // X mark
+    '\u00D7': 'X', // Multiplication sign
+    '\u2022': '-', // Bullet
+    '\u2013': '-', // En dash
+    '\u2014': '-', // Em dash
+    '\u2018': "'", // Smart single quote left
+    '\u2019': "'", // Smart single quote right
+    '\u201C': '"', // Smart double quote left
+    '\u201D': '"', // Smart double quote right
+    '\u2026': '...', // Ellipsis
+    '\u2122': '(TM)', // Trademark
+    '\u00A9': '(C)', // Copyright
+    '\u00AE': '(R)', // Registered
+    '\u00B0': 'deg', // Degree symbol
+    '\u00B1': '+/-', // Plus-minus
+    '\u2264': '<=', // Less than or equal
+    '\u2265': '>=', // Greater than or equal
+    '\u2260': '!=', // Not equal
+    '\u2192': '->', // Right arrow
+    '\u2190': '<-', // Left arrow
+    '\u2191': '^', // Up arrow
+    '\u2193': 'v', // Down arrow
   };
 
   // Replace special characters
@@ -62,7 +62,7 @@ function sanitizeTextForPDF(text: string): string {
  */
 export async function convertExcelToPDF(
   excelBuffer: Buffer,
-  options: ConversionOptions = {}
+  options: ConversionOptions = {},
 ): Promise<Buffer> {
   const {
     includeImages = true,
@@ -275,7 +275,7 @@ export async function convertExcelToPDF(
 export async function generatePDFFromTemplate(
   templateBuffer: Buffer,
   filledWorkbook: ExcelJS.Workbook,
-  options: ConversionOptions = {}
+  options: ConversionOptions = {},
 ): Promise<Buffer> {
   // Write the filled workbook to buffer
   const excelBuffer = await filledWorkbook.xlsx.writeBuffer();

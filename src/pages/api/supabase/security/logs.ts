@@ -49,7 +49,10 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       // Apply pagination
       query = query
         .order('timestamp', { ascending: false })
-        .range(parseInt(offset as string), parseInt(offset as string) + parseInt(limit as string) - 1);
+        .range(
+          parseInt(offset as string),
+          parseInt(offset as string) + parseInt(limit as string) - 1,
+        );
 
       const { data, error, count } = await query;
 
