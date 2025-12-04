@@ -645,7 +645,7 @@ export const exportInspectionReport = async (
   format: 'excel' | 'pdf',
   reportType: 'individual' | 'summary' | 'compliance' = 'summary',
 ) => {
-  const allInspections = storage.load('inspections') || [];
+  const allInspections = storage.load('inspections', []);
   const inspections =
     inspectionIds === 'all'
       ? allInspections

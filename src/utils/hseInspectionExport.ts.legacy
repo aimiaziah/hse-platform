@@ -1,0 +1,532 @@
+// HSE Inspection Export Utilities
+// Generates two separate documents:
+// 1. Inspection Checklist Document - Shows all inspection items with ratings and comments
+// 2. Observations Report Document - Shows all observations with photos and details
+
+// Note: xlsx dependency removed - use exceljs for Excel generation
+
+interface InspectionItem {
+  key: string;
+  categoryId: number;
+  item: string;
+  rating: string | null;
+  comment: string;
+}
+
+interface TablePerson {
+  no: number;
+  name: string;
+  designation: string;
+  signature: string;
+}
+
+interface Observation {
+  id: string;
+  itemNo: string;
+  categoryId: number;
+  categoryName: string;
+  itemName: string;
+  photos: string[];
+  observation: string;
+  location: string;
+  actionNeeded: string;
+  time: string;
+  date: string;
+  status: string;
+  hazards: string;
+  remarks: string;
+}
+
+interface HSEInspectionData {
+  contractor: string;
+  location: string;
+  date: string;
+  inspectedBy: string;
+  workActivity: string;
+  tablePersons: TablePerson[];
+  inspectionItems: InspectionItem[];
+  observations: Observation[];
+  totalObservations: number;
+}
+
+const categories = [
+  { id: 1, name: 'WORKING AREAS', items: ['Housekeeping', 'Proper barrier/ safety signs', 'Lighting adequacy', 'Site layout arrangement', 'Ventilation', 'Floor/ ground-edge/ opening condition', 'Escape/ working route condition', 'Material storage/ stacking'] },
+  { id: 2, name: 'SITE OFFICE', items: ['Office ergonomics', 'Location and maintenance', 'Fire extinguishers condition', 'First aid box facility', "Worker's legality / age", 'Green card (CIDB)/ NIOSH cert.', 'PMA/ PMT/ JBE/ DOE approval', 'Competent scaffolder'] },
+  { id: 3, name: 'HOT WORK/ ELECTRICAL', items: ['Gas cylinders secured and upright', 'Gauge functionality', 'Flashback arrestors availability', 'Cables insulation/ earthing', 'Wiring condition-plugs, joints, DB'] },
+  { id: 4, name: 'PERSONAL PROTECTIVE EQUIPMENT', items: ['Safety helmets', 'Safety footwear', 'Safety vest', 'Proper attire', 'Other; as per job requirements'] },
+  { id: 5, name: 'EXCAVATIONS', items: ['Safely secured-sign, barrier covered', 'No material at 1m from edge', 'Proper & adequate access & egress', 'Adequate slope protection', 'Check for underground hazard', 'Inspection checklist'] },
+  { id: 6, name: 'SCAFFOLDING', items: ['PE design requirement', 'Access condition', 'Walkways/ platform condition', 'Adequate slope protection', 'Means of fall protection', 'Ground/base condition', 'Inspection checklist'] },
+  { id: 7, name: 'MACHINERY & PLANT', items: ['Machinery guarding', 'Machinery/ plant service record', 'Properly and safely sited', 'Skid tank condition', 'Lifting process/ gear condition', "Vehicle's condition"] },
+  { id: 8, name: 'TRAFFIC MANAGEMENT', items: ['Flagman availability & adequacy', 'Signages availability & adequacy', 'Vehicle route maintenance', 'Public road maintenance', 'Loads protection', 'Method of controlling'] },
+  { id: 9, name: 'HEALTH', items: ['First aid box/ facility', 'First aider availability', 'Vector/ Pest control', 'Washing/ clean water facility', 'Toilet condition / availability'] },
+  { id: 10, name: 'ENVIRONMENTAL', items: ['Control of oil pollution', 'Control of dust pollution / emission', 'Control of noise pollution / emission', 'Control of open burning', 'Control of debris / rubbish', 'Silt trap/drainage/culvert maintenance'] },
+  { id: 11, name: 'SECURITY', items: ['Security personal adequacy', 'Security sign condition/ availability', 'Control of site access/ exit', 'Hoarding/ fencing condition', 'Emergency contact list'] },
+  { id: 12, name: 'PUBLIC SAFETY', items: ['Warning signs', 'Control of public entry', 'Proper work planning toward public safety', 'Communication establishment', 'Training on public safety to worker', 'Catch platform', 'Pedestrian protection'] },
+];
+
+const ratingLabels: { [key: string]: string } = {
+  'G': 'GOOD',
+  'A': 'ACCEPTABLE',
+  'P': 'POOR',
+  'I': 'IRRELEVANT',
+  'SIN': 'SAFETY IMPROVEMENT NOTICE',
+  'SPS': 'SAFETY PENALTY SYSTEM',
+  'SWO': 'STOP WORK ORDER',
+};
+
+/**
+ * Export 1: Inspection Checklist Document
+ * Generates Excel document with all inspection categories, items, ratings, and comments
+ */
+export const generateInspectionChecklistDocument = (inspectionData: HSEInspectionData): void => {
+  try {
+    // Create a new workbook
+    const wb = /* XLSX. */ ({} as any).utils.book_new();
+
+    // Prepare header rows
+    const headerRows: any[][] = [
+      ['HSE INSPECTION CHECKLIST'],
+      ['Theta Edge Berhad'],
+      [],
+      ['Contractor:', inspectionData.contractor],
+      ['Location:', inspectionData.location],
+      ['Date:', inspectionData.date],
+      ['Inspected By:', inspectionData.inspectedBy],
+      ['Work Activity:', inspectionData.workActivity],
+      [],
+      ['LEGEND: G = Good  |  A = Acceptable  |  P = Poor  |  I = Irrelevant  |  SIN = Safety Improvement Notice  |  SPS = Safety Penalty System  |  SWO = Stop Work Order'],
+      [],
+    ];
+
+    // Add personnel section
+    if (inspectionData.tablePersons.length > 0) {
+      headerRows.push(['Personnel Involved:']);
+      headerRows.push(['No.', 'Name', 'Designation']);
+      inspectionData.tablePersons.forEach(person => {
+        if (person.name || person.designation) {
+          headerRows.push([person.no, person.name, person.designation]);
+        }
+      });
+      headerRows.push([]);
+    }
+
+    headerRows.push(['INSPECTION ITEMS']);
+    headerRows.push([]);
+
+    // Build inspection items table
+    const inspectionRows: any[][] = [];
+
+    categories.forEach(category => {
+      // Category header
+      inspectionRows.push([`${category.id}. ${category.name}`]);
+      inspectionRows.push(['Item', 'G', 'A', 'P', 'I', 'SIN', 'SPS', 'SWO', 'Comments']);
+
+      // Category items
+      category.items.forEach(item => {
+        const key = `${category.id}-${item}`;
+        const itemData = inspectionData.inspectionItems.find(i => i.key === key);
+        const selectedRating = itemData?.rating;
+        const comment = itemData?.comment || '';
+
+        // Create row with tick marks in appropriate columns
+        inspectionRows.push([
+          item,
+          selectedRating === 'G' ? '✓' : '',
+          selectedRating === 'A' ? '✓' : '',
+          selectedRating === 'P' ? '✓' : '',
+          selectedRating === 'I' ? '✓' : '',
+          selectedRating === 'SIN' ? '✓' : '',
+          selectedRating === 'SPS' ? '✓' : '',
+          selectedRating === 'SWO' ? '✓' : '',
+          comment
+        ]);
+      });
+
+      // Empty row between categories
+      inspectionRows.push([]);
+    });
+
+    // Combine all rows
+    const allRows = [...headerRows, ...inspectionRows];
+
+    // Create worksheet
+    const ws = /* XLSX. */ ({} as any).utils.aoa_to_sheet(allRows);
+
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 40 },  // Item
+      { wch: 5 },   // G
+      { wch: 5 },   // A
+      { wch: 5 },   // P
+      { wch: 5 },   // I
+      { wch: 6 },   // SIN
+      { wch: 6 },   // SPS
+      { wch: 6 },   // SWO
+      { wch: 40 },  // Comments
+    ];
+
+    // Add worksheet to workbook
+    /* XLSX. */ ({} as any).utils.book_append_sheet(wb, ws, 'HSE Inspection Checklist');
+
+    // Generate filename
+    const filename = `hse-inspection-checklist-${inspectionData.location.replace(/[^a-z0-9]/gi, '_')}-${inspectionData.date}.xlsx`;
+
+    // Download file
+    /* XLSX. */ ({} as any).writeFile(wb, filename);
+  } catch (error) {
+    console.error('Error generating inspection checklist document:', error);
+    alert('Failed to generate inspection checklist document. Please try again.');
+  }
+};
+
+/**
+ * Export 2: Observations Report Document
+ * Generates HTML/PDF document showing all observations with photos and details
+ */
+export const generateObservationsReportDocument = (inspectionData: HSEInspectionData): void => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>HSE Inspection - Observations Report</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          background: #f5f5f5;
+        }
+        .header {
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+          color: white;
+          padding: 30px;
+          border-radius: 10px;
+          margin-bottom: 30px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+          font-size: 28px;
+          margin-bottom: 10px;
+        }
+        .header p {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+        .info-section {
+          background: white;
+          padding: 20px;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 15px;
+        }
+        .info-item {
+          display: flex;
+          flex-direction: column;
+        }
+        .info-label {
+          font-size: 12px;
+          color: #666;
+          font-weight: 600;
+          margin-bottom: 5px;
+          text-transform: uppercase;
+        }
+        .info-value {
+          font-size: 16px;
+          color: #333;
+          font-weight: 500;
+        }
+        .observation-section {
+          background: white;
+          margin-bottom: 30px;
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          page-break-inside: avoid;
+        }
+        .observation-header {
+          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+          color: white;
+          padding: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .observation-title {
+          font-size: 18px;
+          font-weight: 600;
+        }
+        .observation-badge {
+          background: rgba(255,255,255,0.2);
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+        }
+        .observation-content {
+          padding: 20px;
+        }
+        .photos-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+        .photo-card {
+          border: 2px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .photo-img {
+          width: 100%;
+          height: 200px;
+          object-fit: cover;
+        }
+        .details-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          background: #f9fafb;
+          padding: 20px;
+          border-radius: 8px;
+        }
+        .detail-item {
+          display: flex;
+          flex-direction: column;
+        }
+        .detail-label {
+          font-size: 12px;
+          color: #6b7280;
+          font-weight: 600;
+          margin-bottom: 5px;
+          text-transform: uppercase;
+        }
+        .detail-value {
+          font-size: 14px;
+          color: #1f2937;
+          font-weight: 500;
+        }
+        .detail-value.observation-text {
+          font-size: 15px;
+          line-height: 1.6;
+        }
+        .status-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          background: #fef3c7;
+          color: #92400e;
+        }
+        .hazard-badge {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        .no-observations {
+          text-align: center;
+          padding: 60px 20px;
+          color: #9ca3af;
+        }
+        .no-observations svg {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 20px;
+          opacity: 0.5;
+        }
+        .footer {
+          text-align: center;
+          color: #999;
+          font-size: 12px;
+          margin-top: 40px;
+          padding: 20px;
+          border-top: 2px solid #e5e7eb;
+        }
+        @media print {
+          body {
+            background: white;
+            padding: 0;
+          }
+          .observation-section {
+            box-shadow: none;
+            page-break-after: always;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <h1>🛡️ HSE Inspection</h1>
+        <h2 style="font-size: 20px; margin-top: 10px;">Observations Report</h2>
+        <p>Detailed Safety Observations and Action Items</p>
+      </div>
+
+      <!-- General Information -->
+      <div class="info-section">
+        <h3 style="margin-bottom: 15px; color: #333;">Inspection Information</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Contractor</span>
+            <span class="info-value">${inspectionData.contractor}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Location</span>
+            <span class="info-value">${inspectionData.location}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Inspection Date</span>
+            <span class="info-value">${inspectionData.date}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Inspected By</span>
+            <span class="info-value">${inspectionData.inspectedBy}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Work Activity</span>
+            <span class="info-value">${inspectionData.workActivity}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Total Observations</span>
+            <span class="info-value">${inspectionData.observations.length}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Report Generated</span>
+            <span class="info-value">${new Date().toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Observations -->
+      ${inspectionData.observations.length > 0 ? inspectionData.observations.map((obs, index) => `
+        <div class="observation-section">
+          <div class="observation-header">
+            <div>
+              <div class="observation-title">Observation #${index + 1} - ${obs.itemNo}</div>
+              <div style="font-size: 14px; margin-top: 5px; opacity: 0.9;">${obs.categoryName} • ${obs.itemName}</div>
+            </div>
+            <div class="observation-badge">
+              ${obs.photos.length} ${obs.photos.length === 1 ? 'Photo' : 'Photos'}
+            </div>
+          </div>
+
+          <div class="observation-content">
+            <!-- Photos -->
+            ${obs.photos.length > 0 ? `
+              <div class="photos-grid">
+                ${obs.photos.map((photo, photoIndex) => `
+                  <div class="photo-card">
+                    <img src="${photo}" alt="Observation photo ${photoIndex + 1}" class="photo-img" />
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+
+            <!-- Details -->
+            <div class="details-grid">
+              <div class="detail-item" style="grid-column: 1 / -1;">
+                <span class="detail-label">Observation</span>
+                <span class="detail-value observation-text">${obs.observation}</span>
+              </div>
+
+              <div class="detail-item">
+                <span class="detail-label">Location</span>
+                <span class="detail-value">${obs.location}</span>
+              </div>
+
+              <div class="detail-item">
+                <span class="detail-label">Date & Time</span>
+                <span class="detail-value">${obs.date} at ${obs.time}</span>
+              </div>
+
+              ${obs.status ? `
+                <div class="detail-item">
+                  <span class="detail-label">Status</span>
+                  <span class="detail-value"><span class="status-badge">${obs.status}</span></span>
+                </div>
+              ` : ''}
+
+              ${obs.hazards ? `
+                <div class="detail-item">
+                  <span class="detail-label">Hazards Identified</span>
+                  <span class="detail-value"><span class="hazard-badge">${obs.hazards}</span></span>
+                </div>
+              ` : ''}
+
+              ${obs.actionNeeded ? `
+                <div class="detail-item" style="grid-column: 1 / -1;">
+                  <span class="detail-label">Action Needed</span>
+                  <span class="detail-value">${obs.actionNeeded}</span>
+                </div>
+              ` : ''}
+
+              ${obs.remarks ? `
+                <div class="detail-item" style="grid-column: 1 / -1;">
+                  <span class="detail-label">Remarks</span>
+                  <span class="detail-value">${obs.remarks}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('') : `
+        <div class="info-section">
+          <div class="no-observations">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            <p style="font-size: 18px; margin-bottom: 10px; color: #6b7280;">No Observations</p>
+            <p>No safety observations were recorded for this inspection.</p>
+          </div>
+        </div>
+      `}
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>HSE Inspection Observations Report • Generated on ${new Date().toLocaleString()}</p>
+        <p style="margin-top: 5px;">Theta Edge Berhad • Health, Safety & Environment</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Open in new window for printing/saving
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    };
+  }
+};
+
+/**
+ * Combined Export - Generates both documents at once
+ */
+export const generateBothDocuments = (inspectionData: HSEInspectionData): void => {
+  // Generate Observations Report Document first
+  generateObservationsReportDocument(inspectionData);
+
+  // Small delay to ensure print dialog doesn't interfere with file download
+  setTimeout(() => {
+    // Generate Inspection Checklist Document
+    generateInspectionChecklistDocument(inspectionData);
+  }, 1000);
+};

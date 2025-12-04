@@ -1,0 +1,14 @@
+# Python dependencies for local AI model server
+# Install with: pip install -r server-requirements.txt
+
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+ultralytics>=8.0.196
+pillow>=10.4.0
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
+pydantic>=2.4.2
+
+# Optional but recommended for better performance
+python-multipart>=0.0.6
+onnxruntime>=1.16.0  # For ONNX model inference (faster)

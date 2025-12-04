@@ -1,1060 +1,1565 @@
 import React, { useState, useEffect } from 'react';
-import BaseLayout from '@/layouts/BaseLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import SignatureCanvas from '@/components/SignatureCanvas';
-import { storage } from '@/utils/storage';
+import InspectorLayout from '@/roles/inspector/layouts/InspectorLayout';
+import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/router';
+import AICameraCapture from '@/components/AICameraCapture';
+import {
+  AIInspectionResult,
+  CapturedImage,
+  getConfidenceLevel,
+  getConfidenceColor,
+} from '@/types/ai-inspection';
 
-type RatingType = 'PASS' | 'FAIL' | 'N/A' | null;
-type InspectionStatus = 'draft' | 'completed';
-type UserRole = 'inspector' | 'admin';
+type RatingType = '√' | 'X' | 'NA' | null;
 
-interface FireExtinguisherItem {
-  id: string;
-  category: string;
-  item: string;
-  rating: RatingType;
-  comments: string;
-  requiresAction: boolean;
+interface FireExtinguisherRow {
+  no: number;
+  serialNo: string;
+  location: string;
+  typeSize: string;
+  shell: RatingType;
+  hose: RatingType;
+  nozzle: RatingType;
+  pressureGauge: RatingType;
+  safetyPin: RatingType;
+  pinSeal: RatingType;
+  accessible: RatingType;
+  missingNotInPlace: RatingType;
+  emptyPressureLow: RatingType;
+  servicingTags: RatingType;
+  expiryDate: string;
+  remarks: string;
+  aiScanned?: boolean;
+  aiConfidence?: { [field: string]: number };
+  aiCapturedImages?: CapturedImage[];
 }
 
-interface FireExtinguisherData {
+interface ChecklistData {
   id: string;
-  building: string;
-  floor: string;
-  location: string;
-  extinguisherType: string;
-  serialNumber: string;
-  manufacturerDate: string;
-  lastServiceDate: string;
-  nextServiceDue: string;
   inspectedBy: string;
   inspectionDate: string;
-  status: InspectionStatus;
-  items: FireExtinguisherItem[];
-  signature?: string;
-  auditLog: Array<{
-    timestamp: string;
-    user: string;
-    action: string;
-    details: string;
-  }>;
+  designation: string;
+  signature: string;
+  extinguishers: FireExtinguisherRow[];
+  status: 'draft' | 'completed';
   createdAt: string;
-  savedAt?: string;
 }
 
-const FireExtinguisherInspection: React.FC = () => {
-  const { user, hasPermission, isRole } = useAuth();
+const INITIAL_EXTINGUISHERS: FireExtinguisherRow[] = [
+  {
+    no: 1,
+    serialNo: 'FF022018Y002311',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 2,
+    serialNo: 'FF022018Y002640',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 3,
+    serialNo: 'FF022018Y002996',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 4,
+    serialNo: 'FF022018Y002646',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 5,
+    serialNo: 'SR092021Y176423',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 6,
+    serialNo: 'SR092021Y176466',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 7,
+    serialNo: 'FF022018Y002904',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 8,
+    serialNo: 'FF022018Y002555',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 9,
+    serialNo: 'FF022018Y002990',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 10,
+    serialNo: 'SR092021Y176428',
+    location: 'Ground Floor',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 11,
+    serialNo: 'SR092021Y176462',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 12,
+    serialNo: 'FM072018Y213348',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 13,
+    serialNo: 'FF022018Y002932',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 14,
+    serialNo: 'FM072018Y213025',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 15,
+    serialNo: 'FR092021Y176410',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 16,
+    serialNo: 'SR092021Y176461',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 17,
+    serialNo: 'SR092021Y176458',
+    location: 'Level 1',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 18,
+    serialNo: 'FF022018Y002550',
+    location: 'Level 2',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 19,
+    serialNo: 'FF022018Y002513',
+    location: 'Level 2',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 20,
+    serialNo: 'SR092021Y176225',
+    location: 'Level 2',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 21,
+    serialNo: 'FM072018Y213392',
+    location: 'Level 2',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 22,
+    serialNo: 'SR092021Y1776570',
+    location: 'Level 2',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 23,
+    serialNo: 'SR092021Y1762000',
+    location: 'Level 2',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+  {
+    no: 24,
+    serialNo: 'SR092021Y176436',
+    location: 'Level 3',
+    typeSize: '9',
+    shell: null,
+    hose: null,
+    nozzle: null,
+    pressureGauge: null,
+    safetyPin: null,
+    pinSeal: null,
+    accessible: null,
+    missingNotInPlace: null,
+    emptyPressureLow: null,
+    servicingTags: null,
+    expiryDate: '',
+    remarks: '',
+  },
+];
 
-  // Check if user can create inspections and is not an admin
-  const canFillInspection = hasPermission('canCreateInspections') && !isRole('admin');
+const FireExtinguisherChecklist: React.FC = () => {
+  const { hasPermission, user } = useAuth();
+  const router = useRouter();
+  const [checklistData, setChecklistData] = useState<ChecklistData>({
+    id: Date.now().toString(),
+    inspectedBy: user?.name || '',
+    inspectionDate: new Date().toISOString().split('T')[0],
+    designation: user?.role || 'HSE',
+    signature: '',
+    extinguishers: INITIAL_EXTINGUISHERS,
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+  });
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  const [showAIScanner, setShowAIScanner] = useState(false);
+  const [scanningExtinguisherIndex, setScanningExtinguisherIndex] = useState<number | null>(null);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [showAIResults, setShowAIResults] = useState(false);
+  const [currentAIResults, setCurrentAIResults] = useState<AIInspectionResult | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
-  if (!canFillInspection) {
+  useEffect(() => {
+    if (!hasPermission('canCreateInspections')) {
+      router.push('/');
+    }
+  }, [hasPermission, router]);
+
+  // Load existing draft if available
+  useEffect(() => {
+    try {
+      const drafts = JSON.parse(localStorage.getItem('fire-extinguisher-drafts') || '[]');
+      if (drafts.length > 0) {
+        // Load the most recent draft
+        const latestDraft = drafts[drafts.length - 1];
+        setChecklistData(latestDraft);
+        console.log('[Fire Extinguisher] Loaded draft:', latestDraft.id);
+      }
+    } catch (error) {
+      console.error('[Fire Extinguisher] Error loading draft:', error);
+    }
+  }, []);
+
+  if (!hasPermission('canCreateInspections')) {
+    return null;
+  }
+
+  const updateField = (field: keyof ChecklistData, value: any) => {
+    setChecklistData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateExtinguisher = (index: number, field: keyof FireExtinguisherRow, value: any) => {
+    setChecklistData((prev) => ({
+      ...prev,
+      extinguishers: prev.extinguishers.map((ext, i) =>
+        i === index ? { ...ext, [field]: value } : ext,
+      ),
+    }));
+  };
+
+  const checkExpiryDate = (expiryDate: string) => {
+    if (!expiryDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      return { type: 'expired', days: Math.abs(diffDays) };
+    } else if (diffDays <= 30) {
+      return { type: 'warning', days: diffDays };
+    }
+    return { type: 'valid', days: diffDays };
+  };
+
+  const getExpirySummary = () => {
+    let expired = 0;
+    let expiringSoon = 0;
+    checklistData.extinguishers.forEach((ext) => {
+      const status = checkExpiryDate(ext.expiryDate);
+      if (status?.type === 'expired') expired++;
+      else if (status?.type === 'warning') expiringSoon++;
+    });
+    return { expired, expiringSoon };
+  };
+
+  const startAIScanning = (index: number) => {
+    setScanningExtinguisherIndex(index);
+    setShowAIScanner(true);
+  };
+
+  const handleAICaptureComplete = async (images: CapturedImage[]) => {
+    if (scanningExtinguisherIndex === null) return;
+    setShowAIScanner(false);
+    setIsProcessingAI(true);
+    try {
+      const extinguisher = checklistData.extinguishers[scanningExtinguisherIndex];
+      const response = await fetch('/api/ai/analyze-extinguisher', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images,
+          extinguisherInfo: {
+            serialNo: extinguisher.serialNo,
+            location: extinguisher.location,
+            typeSize: extinguisher.typeSize,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      const result: AIInspectionResult = await response.json();
+      if (result.success) {
+        applyAIResults(scanningExtinguisherIndex, result, images);
+        setCurrentAIResults(result);
+        setShowAIResults(true);
+      } else {
+        alert(`AI Analysis failed: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert(
+        `Failed to process images with AI: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+      );
+    } finally {
+      setIsProcessingAI(false);
+    }
+  };
+
+  const applyAIResults = (index: number, result: AIInspectionResult, images: CapturedImage[]) => {
+    const updatedExtinguisher: Partial<FireExtinguisherRow> = {
+      aiScanned: true,
+      aiCapturedImages: images,
+      aiConfidence: {},
+    };
+    result.detections.forEach((detection) => {
+      const fieldMap: { [key: string]: keyof FireExtinguisherRow } = {
+        shell: 'shell',
+        hose: 'hose',
+        nozzle: 'nozzle',
+        pressureGauge: 'pressureGauge',
+        safetyPin: 'safetyPin',
+        pinSeal: 'pinSeal',
+        accessible: 'accessible',
+        missingNotInPlace: 'missingNotInPlace',
+        emptyPressureLow: 'emptyPressureLow',
+        servicingTags: 'servicingTags',
+      };
+      const fieldKey = fieldMap[detection.field];
+      if (fieldKey) {
+        (updatedExtinguisher as any)[fieldKey] = detection.value;
+        if (updatedExtinguisher.aiConfidence) {
+          updatedExtinguisher.aiConfidence[detection.field] = detection.confidence;
+        }
+      }
+    });
+    if (result.extractedData.expiryDate) {
+      updatedExtinguisher.expiryDate = result.extractedData.expiryDate.value;
+      if (updatedExtinguisher.aiConfidence) {
+        updatedExtinguisher.aiConfidence.expiryDate = result.extractedData.expiryDate.confidence;
+      }
+    }
+    setChecklistData((prev) => ({
+      ...prev,
+      extinguishers: prev.extinguishers.map((ext, i) =>
+        i === index ? { ...ext, ...updatedExtinguisher } : ext,
+      ),
+    }));
+  };
+
+  const handleAICaptureCancel = () => {
+    setShowAIScanner(false);
+    setScanningExtinguisherIndex(null);
+  };
+
+  const handleSaveDraft = () => {
+    try {
+      const drafts = JSON.parse(localStorage.getItem('fire-extinguisher-drafts') || '[]');
+      const existingIndex = drafts.findIndex((d: ChecklistData) => d.id === checklistData.id);
+      if (existingIndex >= 0) {
+        drafts[existingIndex] = checklistData;
+      } else {
+        drafts.push(checklistData);
+      }
+      localStorage.setItem('fire-extinguisher-drafts', JSON.stringify(drafts));
+      alert('Draft saved successfully!');
+    } catch (error) {
+      alert('Failed to save draft');
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // Submit to Supabase
+      const response = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formType: 'fire_extinguisher',
+          status: 'pending_review',
+          data: {
+            inspectedBy: checklistData.inspectedBy,
+            inspectionDate: checklistData.inspectionDate,
+            designation: checklistData.designation,
+            signature: checklistData.signature,
+            extinguishers: checklistData.extinguishers,
+            company: 'Theta Edge Berhad',
+            location: 'All Locations',
+          },
+          signature: {
+            dataUrl: checklistData.signature,
+            timestamp: new Date().toISOString(),
+            inspectorId: user?.id || '',
+            inspectorName: checklistData.inspectedBy,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit inspection');
+      }
+
+      // Remove from drafts after successful submission
+      const drafts = JSON.parse(localStorage.getItem('fire-extinguisher-drafts') || '[]');
+      const updatedDrafts = drafts.filter((d: ChecklistData) => d.id !== checklistData.id);
+      localStorage.setItem('fire-extinguisher-drafts', JSON.stringify(updatedDrafts));
+
+      setShowSubmitDialog(false);
+      alert('Fire Extinguisher Checklist submitted successfully!');
+      router.push('/inspector/forms');
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert(`Failed to submit checklist: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const getCompletionStatus = (ext: FireExtinguisherRow) => {
+    const fields: (keyof FireExtinguisherRow)[] = [
+      'shell',
+      'hose',
+      'nozzle',
+      'pressureGauge',
+      'safetyPin',
+      'pinSeal',
+      'accessible',
+      'missingNotInPlace',
+      'emptyPressureLow',
+      'servicingTags',
+    ];
+    const completedFields = fields.filter((field) => ext[field] !== null).length;
+    return { completed: completedFields, total: fields.length };
+  };
+
+  const RatingButton: React.FC<{
+    value: RatingType;
+    current: RatingType;
+    onChange: () => void;
+  }> = ({ value, current, onChange }) => {
+    const isSelected = current === value;
+    let bgColor = 'bg-gray-100 hover:bg-gray-200 border-gray-300';
+    let textColor = 'text-gray-800';
+    if (isSelected) {
+      if (value === '√') (bgColor = 'bg-green-600 border-green-600'), (textColor = 'text-white');
+      else if (value === 'X') (bgColor = 'bg-red-600 border-red-600'), (textColor = 'text-white');
+      else (bgColor = 'bg-blue-600 border-blue-600'), (textColor = 'text-white');
+    }
     return (
-      <BaseLayout title="Fire Extinguisher Inspection">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div className="mb-4">
+      <button
+        onClick={onChange}
+        className={`px-3 py-1.5 text-xs font-medium border rounded-md ${bgColor} ${textColor} transition-colors`}
+      >
+        {value}
+      </button>
+    );
+  };
+
+  return (
+    <ProtectedRoute requiredPermission="canCreateInspections">
+      <InspectorLayout>
+        <div className="min-h-screen bg-gray-50 pb-20">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
+            <button
+              onClick={() => router.push('/inspector/forms')}
+              className="mb-2 text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+            >
               <svg
-                className="mx-auto h-12 w-12 text-red-400"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
                 fill="none"
-                stroke="currentColor"
                 viewBox="0 0 24 24"
+                stroke="currentColor"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0l-8.898 12c-.77.833.192 2.5 1.732 2.5z"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-            </div>
-            <h3 className="text-lg font-medium text-red-800 mb-2">Access Restricted</h3>
-            <p className="text-red-700 mb-4">
-              {isRole('admin')
-                ? 'Administrators cannot fill inspection forms. This is reserved for inspectors.'
-                : 'You do not have permission to create inspections. Please contact your administrator.'}
-            </p>
-            <p className="text-sm text-red-600">
-              Current role: <span className="font-medium">{user?.role}</span>
-            </p>
-          </div>
-        </div>
-      </BaseLayout>
-    );
-  }
-
-  const [inspectionData, setInspectionData] = useState<FireExtinguisherData>({
-    id: Date.now().toString(),
-    building: '',
-    floor: '',
-    location: '',
-    extinguisherType: 'ABC Dry Chemical',
-    serialNumber: '',
-    manufacturerDate: '',
-    lastServiceDate: '',
-    nextServiceDue: '',
-    inspectedBy: user?.name || '',
-    inspectionDate: new Date().toISOString().split('T')[0],
-    status: 'draft',
-    createdAt: new Date().toISOString(),
-    auditLog: [
-      {
-        timestamp: new Date().toISOString(),
-        user: user?.name || 'Unknown',
-        action: 'created',
-        details: 'Fire extinguisher inspection record created',
-      },
-    ],
-    items: [
-      // Physical Condition
-      {
-        id: '1',
-        category: 'PHYSICAL CONDITION',
-        item: 'Fire extinguisher is properly located and visible',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '2',
-        category: 'PHYSICAL CONDITION',
-        item: 'Access to fire extinguisher is unobstructed',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '3',
-        category: 'PHYSICAL CONDITION',
-        item: 'Extinguisher is mounted securely on wall bracket or stand',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '4',
-        category: 'PHYSICAL CONDITION',
-        item: 'Extinguisher shell is free of dents, rust, or corrosion',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '5',
-        category: 'PHYSICAL CONDITION',
-        item: 'Hose and nozzle are in good condition (no cracks or clogs)',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '6',
-        category: 'PHYSICAL CONDITION',
-        item: 'Extinguisher has not been discharged or tampered with',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Labels and Signage
-      {
-        id: '7',
-        category: 'LABELS & SIGNAGE',
-        item: 'Instruction label is present and legible',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '8',
-        category: 'LABELS & SIGNAGE',
-        item: 'NFPA rating label is present and legible',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '9',
-        category: 'LABELS & SIGNAGE',
-        item: 'Maintenance tag/record is current and properly filled out',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '10',
-        category: 'LABELS & SIGNAGE',
-        item: 'Fire extinguisher signage is visible and properly positioned',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Pressure and Weight
-      {
-        id: '11',
-        category: 'PRESSURE & WEIGHT',
-        item: 'Pressure gauge needle is in green zone (if equipped)',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '12',
-        category: 'PRESSURE & WEIGHT',
-        item: 'Extinguisher weight is within acceptable range',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '13',
-        category: 'PRESSURE & WEIGHT',
-        item: 'No signs of leakage around valve or connections',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Safety Pin and Seal
-      {
-        id: '14',
-        category: 'SAFETY PIN & SEAL',
-        item: 'Safety pin is present and secure',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '15',
-        category: 'SAFETY PIN & SEAL',
-        item: 'Tamper seal is intact and not broken',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '16',
-        category: 'SAFETY PIN & SEAL',
-        item: 'Pull pin can be easily removed if needed',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Service Requirements
-      {
-        id: '17',
-        category: 'SERVICE REQUIREMENTS',
-        item: 'Annual service date has not expired',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '18',
-        category: 'SERVICE REQUIREMENTS',
-        item: 'Hydrostatic test is current (if applicable)',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '19',
-        category: 'SERVICE REQUIREMENTS',
-        item: 'Six-year maintenance has been performed (if applicable)',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Environmental Conditions
-      {
-        id: '20',
-        category: 'ENVIRONMENTAL CONDITIONS',
-        item: 'Extinguisher is protected from weather/environmental damage',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '21',
-        category: 'ENVIRONMENTAL CONDITIONS',
-        item: 'Temperature conditions are within operating range',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '22',
-        category: 'ENVIRONMENTAL CONDITIONS',
-        item: 'No exposure to corrosive atmospheres or chemicals',
-        rating: null,
-        comments: '',
-        requiresAction: false,
-      },
-    ],
-  });
-
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [showSignatureModal, setShowSignatureModal] = useState(false);
-
-  // Extinguisher types
-  const extinguisherTypes = [
-    'ABC Dry Chemical',
-    'BC Dry Chemical',
-    'Class A Water',
-    'Class D Metal',
-    'Class K Kitchen',
-    'CO2 Carbon Dioxide',
-    'Foam AFFF',
-    'Halotron',
-    'Other',
-  ];
-
-  // Check if inspection is editable
-  const isEditable = inspectionData.status === 'draft';
-
-  // Handle rating change
-  const handleRatingChange = (itemId: string, rating: RatingType) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) =>
-        item.id === itemId ? { ...item, rating, requiresAction: rating === 'FAIL' } : item,
-      ),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'rating_changed',
-          details: `Rating changed for item ${itemId} to ${rating}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle comment change
-  const handleCommentChange = (itemId: string, comments: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => (item.id === itemId ? { ...item, comments } : item)),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'comment_changed',
-          details: `Comment updated for item ${itemId}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle header data change
-  const handleHeaderChange = (field: string, value: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      [field]: value,
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'header_changed',
-          details: `${field} changed to ${value}`,
-        },
-      ],
-    }));
-  };
-
-  // Calculate next service due date when last service date changes
-  useEffect(() => {
-    if (inspectionData.lastServiceDate && isEditable) {
-      const lastService = new Date(inspectionData.lastServiceDate);
-      const nextService = new Date(lastService);
-      nextService.setFullYear(nextService.getFullYear() + 1);
-
-      setInspectionData((prev) => ({
-        ...prev,
-        nextServiceDue: nextService.toISOString().split('T')[0],
-      }));
-    }
-  }, [inspectionData.lastServiceDate, isEditable]);
-
-  // Save inspection
-  const handleSave = () => {
-    // Validation
-    const missingFields = [];
-    if (!inspectionData.building) missingFields.push('Building');
-    if (!inspectionData.location) missingFields.push('Location');
-    if (!inspectionData.serialNumber) missingFields.push('Serial Number');
-    if (!inspectionData.inspectedBy) missingFields.push('Inspected By');
-
-    const unratedItems = inspectionData.items.filter((item) => item.rating === null).length;
-
-    if (missingFields.length > 0) {
-      setSaveError(`Please fill in required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-
-    if (unratedItems > 0) {
-      setSaveError(`Please rate all items. ${unratedItems} items remaining.`);
-      return;
-    }
-
-    if (!inspectionData.signature) {
-      setSaveError('Please add your digital signature before submitting.');
-      setShowSignatureModal(true);
-      return;
-    }
-
-    setShowSaveConfirmation(true);
-  };
-
-  // Signature handlers
-  const handleSaveSignature = (signatureDataUrl: string) => {
-    setInspectionData((prev) => ({
-      ...prev,
-      signature: signatureDataUrl,
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'signature_added',
-          details: 'Digital signature added to inspection',
-        },
-      ],
-    }));
-    setShowSignatureModal(false);
-    setSaveError(null);
-  };
-
-  const handleClearSignature = () => {
-    setInspectionData((prev) => ({
-      ...prev,
-      signature: undefined,
-    }));
-  };
-
-  // Confirm save
-  const confirmSave = () => {
-    const savedInspection = {
-      ...inspectionData,
-      status: 'completed' as InspectionStatus,
-      savedAt: new Date().toISOString(),
-      auditLog: [
-        ...inspectionData.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'completed',
-          details: 'Fire extinguisher inspection completed and saved',
-        },
-      ],
-    };
-
-    // Save to localStorage
-    const existingInspections = storage.load('fire_extinguisher_inspections') || [];
-    const updatedInspections = [...existingInspections, savedInspection];
-    storage.save('fire_extinguisher_inspections', updatedInspections);
-
-    setInspectionData(savedInspection);
-    setShowSaveConfirmation(false);
-    setSaveError(null);
-  };
-
-  // Clear all ratings
-  const handleClearAll = () => {
-    if (!isEditable) return;
-
-    if (confirm('Are you sure you want to clear all ratings and comments?')) {
-      setInspectionData((prev) => ({
-        ...prev,
-        items: prev.items.map((item) => ({
-          ...item,
-          rating: null,
-          comments: '',
-          requiresAction: false,
-        })),
-        auditLog: [
-          ...prev.auditLog,
-          {
-            timestamp: new Date().toISOString(),
-            user: user?.name || 'Unknown',
-            action: 'cleared_all',
-            details: 'All ratings and comments cleared',
-          },
-        ],
-      }));
-    }
-  };
-
-  // Group items by category
-  const groupedItems = inspectionData.items.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, FireExtinguisherItem[]>);
-
-  // Calculate statistics
-  const stats = {
-    total: inspectionData.items.length,
-    completed: inspectionData.items.filter((item) => item.rating !== null).length,
-    passed: inspectionData.items.filter((item) => item.rating === 'PASS').length,
-    failed: inspectionData.items.filter((item) => item.rating === 'FAIL').length,
-    notApplicable: inspectionData.items.filter((item) => item.rating === 'N/A').length,
-    requiresAction: inspectionData.items.filter((item) => item.requiresAction).length,
-  };
-
-  const overallStatus =
-    stats.failed > 0 ? 'NEEDS ATTENTION' : stats.completed === stats.total ? 'PASS' : 'INCOMPLETE';
-
-  return (
-    <BaseLayout title="Fire Extinguisher Inspection">
-      <div className="max-w-4xl mx-auto">
-        {/* Status Banner */}
-        {!isEditable && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-semibold text-green-800">Record Completed</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  This inspection has been saved and cannot be edited. Status:{' '}
-                  <span className="font-medium capitalize">
-                    {inspectionData.status.replace('_', ' ')}
-                  </span>
-                </p>
-              </div>
+              Back to Dashboard
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">Fire Extinguisher Checklist</h1>
+              <p className="text-gray-500 text-xs">HSEP-08/FEC(F)/RV00-017</p>
             </div>
           </div>
-        )}
 
-        {/* Error Message */}
-        {saveError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{saveError}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Header Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="px-6 py-5 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900">Fire Extinguisher Inspection</h1>
-            <p className="text-sm text-gray-600 mt-1">Equipment Safety Verification</p>
-          </div>
-
-          <div className="p-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Building <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.building}
-                  onChange={(e) => handleHeaderChange('building', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Building name or number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Floor</label>
-                <input
-                  type="text"
-                  value={inspectionData.floor}
-                  onChange={(e) => handleHeaderChange('floor', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Floor number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Specific Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.location}
-                  onChange={(e) => handleHeaderChange('location', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Near elevator, hallway, etc."
-                />
-              </div>
-            </div>
-
-            {/* Extinguisher Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Extinguisher Type
-                </label>
-                <select
-                  value={inspectionData.extinguisherType}
-                  onChange={(e) => handleHeaderChange('extinguisherType', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {extinguisherTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Serial Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.serialNumber}
-                  onChange={(e) => handleHeaderChange('serialNumber', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Serial number from label"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Manufacturer Date
-                </label>
-                <input
-                  type="date"
-                  value={inspectionData.manufacturerDate}
-                  onChange={(e) => handleHeaderChange('manufacturerDate', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Service Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Service Date
-                </label>
-                <input
-                  type="date"
-                  value={inspectionData.lastServiceDate}
-                  onChange={(e) => handleHeaderChange('lastServiceDate', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Next Service Due
-                </label>
-                <input
-                  type="date"
-                  value={inspectionData.nextServiceDue}
-                  onChange={(e) => handleHeaderChange('nextServiceDue', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Inspector Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inspected By <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.inspectedBy}
-                  onChange={(e) => handleHeaderChange('inspectedBy', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Inspector name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inspection Date
-                </label>
-                <input
-                  type="date"
-                  value={inspectionData.inspectionDate}
-                  onChange={(e) => handleHeaderChange('inspectionDate', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Progress Statistics */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Inspection Status</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">
-                    {stats.completed}/{stats.total}
-                  </div>
-                  <div className="text-xs text-gray-600">Completed</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-emerald-600">{stats.passed}</div>
-                  <div className="text-xs text-gray-600">Pass</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-red-600">{stats.failed}</div>
-                  <div className="text-xs text-gray-600">Fail</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-600">{stats.notApplicable}</div>
-                  <div className="text-xs text-gray-600">N/A</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-amber-600">{stats.requiresAction}</div>
-                  <div className="text-xs text-gray-600">Action Req.</div>
-                </div>
-                <div className="text-center">
-                  <div
-                    className={`text-lg font-bold ${
-                      overallStatus === 'PASS'
-                        ? 'text-emerald-600'
-                        : overallStatus === 'NEEDS ATTENTION'
-                        ? 'text-red-600'
-                        : 'text-amber-600'
-                    }`}
-                  >
-                    {overallStatus}
-                  </div>
-                  <div className="text-xs text-gray-600">Overall</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Checklist Items */}
-        <div className="space-y-4">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
-              </div>
-
-              <div className="p-6">
-                <div className="space-y-4">
-                  {items.map((item) => (
-                    <div key={item.id} className="border-b border-gray-100 pb-4 last:border-b-0">
-                      {/* Item Description */}
-                      <div className="mb-3">
-                        <p className="text-sm font-medium text-gray-900">{item.item}</p>
-                      </div>
-
-                      {/* Rating Buttons - Mobile Optimized */}
-                      <div className="grid grid-cols-3 gap-2 mb-3">
-                        {(['PASS', 'FAIL', 'N/A'] as const).map((rating) => (
-                          <button
-                            key={rating}
-                            onClick={() => handleRatingChange(item.id, rating)}
-                            disabled={!isEditable}
-                            className={`
-                              px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 min-h-[48px] touch-manipulation
-                              ${
-                                !isEditable
-                                  ? 'cursor-not-allowed opacity-50'
-                                  : 'cursor-pointer active:scale-95'
-                              }
-                              ${
-                                item.rating === rating
-                                  ? rating === 'PASS'
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                    : rating === 'FAIL'
-                                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                                  : isEditable
-                                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
-                                  : 'bg-gray-50 text-gray-400 border border-gray-200'
-                              }
-                            `}
-                          >
-                            {rating}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Comments */}
-                      <div>
-                        <textarea
-                          placeholder="Comments (optional)"
-                          value={item.comments}
-                          onChange={(e) => handleCommentChange(item.id, e.target.value)}
-                          disabled={!isEditable}
-                          rows={2}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none text-sm ${
-                            !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                          }`}
-                        />
-                      </div>
-
-                      {/* Action Required Badge */}
-                      {item.requiresAction && (
-                        <div className="mt-2">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            Action Required
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Digital Signature Section */}
-        {isEditable && (
-          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Digital Signature</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Please add your digital signature to certify this inspection.
-            </p>
-
-            {inspectionData.signature ? (
-              <div className="space-y-3">
-                <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <img
-                    src={inspectionData.signature}
-                    alt="Inspector Signature"
-                    className="max-w-full h-32 mx-auto"
-                  />
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setShowSignatureModal(true)}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Update Signature
-                  </button>
-                  <button
-                    onClick={handleClearSignature}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowSignatureModal(true)}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                Add Signature
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="mt-8 mb-8">
-          {isEditable ? (
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleSave}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors min-h-[52px] touch-manipulation active:scale-95"
-              >
-                <svg
-                  className="inline w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Save Inspection
-              </button>
-
-              <button
-                onClick={handleClearAll}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors min-h-[52px] touch-manipulation active:scale-95"
-              >
-                <svg
-                  className="inline w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                Clear All
-              </button>
-            </div>
-          ) : (
-            <div className="bg-gray-100 rounded-lg p-4 text-center">
-              <p className="text-gray-600 font-medium">
-                Inspection saved on: {new Date(inspectionData.savedAt!).toLocaleString()}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Save Confirmation Modal */}
-        {showSaveConfirmation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full mx-4">
-              <div className="p-6">
-                <div className="flex items-start mb-4">
-                  <div className="flex-shrink-0 mt-1">
-                    <svg
-                      className="h-6 w-6 text-amber-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0l-8.898 12c-.77.833.192 2.5 1.732 2.5z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-lg font-semibold text-gray-900">Confirm Save</h3>
-                    <p className="text-gray-600 mt-2">
-                      <strong>Once saved, this record cannot be edited.</strong>
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto p-4 space-y-6">
+            {/* Section 1: General Information */}
+            <div className="bg-white rounded-lg p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Section 1: General Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Company: Theta Edge Berhad</p>
+                    <p className="text-gray-600 text-xs mt-1">
+                      Lot 11B, Jalan 223, Seksyen 51A,
                       <br />
-                      The inspection will be completed and saved.
+                      46100 Petaling Jaya, Selangor, Malaysia.
+                      <br />
+                      +60 36043 0000
                     </p>
                   </div>
                 </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                  <button
-                    onClick={() => setShowSaveConfirmation(false)}
-                    className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmSave}
-                    className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Save Inspection
-                  </button>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Inspected by *
+                    </label>
+                    <input
+                      type="text"
+                      value={checklistData.inspectedBy}
+                      onChange={(e) => updateField('inspectedBy', e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Inspection *
+                    </label>
+                    <input
+                      type="date"
+                      value={checklistData.inspectionDate}
+                      onChange={(e) => updateField('inspectionDate', e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Designation *
+                    </label>
+                    <input
+                      type="text"
+                      value={checklistData.designation}
+                      onChange={(e) => updateField('designation', e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., HSE"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Signature Modal */}
-        {showSignatureModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Digital Signature</h3>
-                <SignatureCanvas
-                  onSave={handleSaveSignature}
-                  onClear={() => {}}
-                  existingSignature={inspectionData.signature}
-                />
+            {/* Expiry Summary Banner */}
+            {(() => {
+              const summary = getExpirySummary();
+              if (summary.expired > 0 || summary.expiringSoon > 0) {
+                return (
+                  <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-red-500">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <svg
+                          className="h-6 w-6 text-red-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-bold text-gray-900 mb-1">
+                          Expiry Date Alerts
+                        </h3>
+                        <div className="space-y-1">
+                          {summary.expired > 0 && (
+                            <p className="text-sm text-red-700">
+                              <span className="font-semibold">{summary.expired}</span> fire
+                              extinguisher{summary.expired > 1 ? 's have' : ' has'} expired
+                            </p>
+                          )}
+                          {summary.expiringSoon > 0 && (
+                            <p className="text-sm text-yellow-700">
+                              <span className="font-semibold">{summary.expiringSoon}</span> fire
+                              extinguisher{summary.expiringSoon > 1 ? 's are' : ' is'} expiring
+                              within 30 days
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          Please review and update expired or expiring items immediately
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Section 2: Inspection Details */}
+            <div className="bg-white rounded-lg p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Section 2: Inspection Details
+              </h2>
+              <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 mb-6">
+                <p className="text-sm font-medium text-blue-800 mb-2">LEGEND:</p>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <span className="flex items-center gap-1">
+                    <span className="text-green-600 font-bold">√</span> = OK / Good Condition
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-red-600 font-bold">X</span> = Not in good condition
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-blue-600 font-bold">NA</span> = Not Applicable
+                  </span>
+                </div>
+              </div>
+
+              {/* Mobile View: Card Layout */}
+              <div className="block lg:hidden space-y-4">
+                {checklistData.extinguishers.map((ext, index) => {
+                  const status = getCompletionStatus(ext);
+                  const isExpanded = expandedRow === index;
+                  return (
+                    <div
+                      key={index}
+                      className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"
+                    >
+                      <div
+                        onClick={() => setExpandedRow(isExpanded ? null : index)}
+                        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-200"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="rounded-md border border-blue-600 text-blue-600 px-2 py-0.5 text-xs font-medium">
+                                #{ext.no}
+                              </span>
+                              {status.completed === status.total && (
+                                <span className="text-xs text-green-600 flex items-center gap-1">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  Complete
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium text-gray-800">{ext.serialNo}</p>
+                            <p className="text-sm text-gray-600">{ext.location}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="rounded-md border border-blue-600 text-blue-600 px-2 py-0.5 text-xs font-medium">
+                                {status.completed}/{status.total} items
+                              </div>
+                              <span className="text-xs text-gray-600">Type: {ext.typeSize} kg</span>
+                            </div>
+                          </div>
+                          <span className="text-gray-600">{isExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div className="p-4 space-y-3">
+                          <button
+                            onClick={() => startAIScanning(index)}
+                            className="w-full rounded-md bg-blue-600 text-white py-2 px-4 font-medium hover:bg-blue-700 transition-all"
+                          >
+                            {ext.aiScanned ? 'Re-scan with AI' : 'Scan with AI'}
+                          </button>
+                          {ext.aiScanned && (
+                            <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                              <p className="text-xs text-blue-800 font-medium">AI Scanned</p>
+                              <p className="text-xs text-gray-600">
+                                {Object.keys(ext.aiConfidence || {}).length} fields auto-filled.
+                                Review and adjust as needed.
+                              </p>
+                            </div>
+                          )}
+                          {[
+                            { field: 'shell', label: 'Shell' },
+                            { field: 'hose', label: 'Hose' },
+                            { field: 'nozzle', label: 'Nozzle' },
+                            { field: 'pressureGauge', label: 'Pressure Gauge' },
+                            { field: 'safetyPin', label: 'Safety Pin (Missing?)' },
+                            { field: 'pinSeal', label: 'Pin Seal Broken/Missing?' },
+                            { field: 'accessible', label: 'Accessible (not obstructed)' },
+                            { field: 'missingNotInPlace', label: 'Missing / Not in Place' },
+                            { field: 'emptyPressureLow', label: 'Empty / Pressure Low' },
+                            { field: 'servicingTags', label: 'Servicing / Tags in Place' },
+                          ].map(({ field, label }) => {
+                            const confidence = ext.aiConfidence?.[field];
+                            return (
+                              <div
+                                key={field}
+                                className="bg-white rounded-md border border-gray-200 p-3"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-xs font-medium text-gray-800">{label}</p>
+                                  {confidence !== undefined && (
+                                    <span className="text-[10px] text-gray-600">
+                                      AI: {Math.round(confidence * 100)}%
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  <RatingButton
+                                    value="√"
+                                    current={ext[field as keyof FireExtinguisherRow] as RatingType}
+                                    onChange={() =>
+                                      updateExtinguisher(
+                                        index,
+                                        field as keyof FireExtinguisherRow,
+                                        '√',
+                                      )
+                                    }
+                                  />
+                                  <RatingButton
+                                    value="X"
+                                    current={ext[field as keyof FireExtinguisherRow] as RatingType}
+                                    onChange={() =>
+                                      updateExtinguisher(
+                                        index,
+                                        field as keyof FireExtinguisherRow,
+                                        'X',
+                                      )
+                                    }
+                                  />
+                                  <RatingButton
+                                    value="NA"
+                                    current={ext[field as keyof FireExtinguisherRow] as RatingType}
+                                    onChange={() =>
+                                      updateExtinguisher(
+                                        index,
+                                        field as keyof FireExtinguisherRow,
+                                        'NA',
+                                      )
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div className="bg-white rounded-md border border-gray-200 p-3">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Expiry Date
+                            </label>
+                            <input
+                              type="date"
+                              value={ext.expiryDate}
+                              onChange={(e) =>
+                                updateExtinguisher(index, 'expiryDate', e.target.value)
+                              }
+                              className={`w-full px-3 py-2 rounded-md border focus:outline-none focus:ring-2 text-sm ${
+                                checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                  ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                                  : checkExpiryDate(ext.expiryDate)?.type === 'warning'
+                                  ? 'border-yellow-500 bg-yellow-50 focus:ring-yellow-500'
+                                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                              }`}
+                            />
+                            {ext.expiryDate && checkExpiryDate(ext.expiryDate) && (
+                              <div
+                                className={`mt-2 p-2 rounded-md border flex items-start gap-2 ${
+                                  checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                    ? 'bg-red-50 border-red-200'
+                                    : checkExpiryDate(ext.expiryDate)?.type === 'warning'
+                                    ? 'bg-yellow-50 border-yellow-200'
+                                    : 'bg-green-50 border-green-200'
+                                }`}
+                              >
+                                <span className="flex-shrink-0 text-lg">
+                                  {checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                    ? '⚠️'
+                                    : checkExpiryDate(ext.expiryDate)?.type === 'warning'
+                                    ? '⏰'
+                                    : '✅'}
+                                </span>
+                                <div className="flex-1">
+                                  <p
+                                    className={`text-xs font-semibold ${
+                                      checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                        ? 'text-red-800'
+                                        : checkExpiryDate(ext.expiryDate)?.type === 'warning'
+                                        ? 'text-yellow-800'
+                                        : 'text-green-800'
+                                    }`}
+                                  >
+                                    {checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                      ? `EXPIRED ${checkExpiryDate(ext.expiryDate)?.days} days ago`
+                                      : checkExpiryDate(ext.expiryDate)?.type === 'warning'
+                                      ? `Expiring in ${checkExpiryDate(ext.expiryDate)?.days} days`
+                                      : `Valid (${checkExpiryDate(ext.expiryDate)?.days} days remaining)`}
+                                  </p>
+                                  {checkExpiryDate(ext.expiryDate)?.type !== 'valid' && (
+                                    <p className="text-xs text-gray-600 mt-1">
+                                      {checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                        ? 'This extinguisher requires immediate attention'
+                                        : 'Schedule servicing soon'}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-white rounded-md border border-gray-200 p-3">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Remarks
+                            </label>
+                            <textarea
+                              value={ext.remarks}
+                              onChange={(e) => updateExtinguisher(index, 'remarks', e.target.value)}
+                              rows={2}
+                              className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              placeholder="Any issues or notes..."
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop View: Table Layout */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-blue-600 text-white">
+                      <th className="border border-gray-200 px-3 py-3 text-center sticky left-0 bg-blue-600">
+                        No
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-left min-w-[140px]">
+                        Serial No
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-left min-w-[100px]">
+                        Location
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center">
+                        Type/Size (kg)
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[100px]">
+                        AI Scan
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[60px]">
+                        Shell
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[60px]">
+                        Hose
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[60px]">
+                        Nozzle
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[80px]">
+                        Pressure Gauge
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[80px]">
+                        Safety Pin
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[80px]">
+                        Pin Seal
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[80px]">
+                        Accessible
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[80px]">
+                        Missing
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[80px]">
+                        Empty/Low
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[90px]">
+                        Servicing/Tags
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-center min-w-[120px]">
+                        Expiry Date
+                      </th>
+                      <th className="border border-gray-200 px-3 py-3 text-left min-w-[150px]">
+                        Remarks
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {checklistData.extinguishers.map((ext, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 px-3 py-2 text-center font-medium sticky left-0 bg-white">
+                          {ext.no}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">{ext.serialNo}</td>
+                        <td className="border border-gray-200 px-3 py-2">{ext.location}</td>
+                        <td className="border border-gray-200 px-3 py-2 text-center">
+                          {ext.typeSize}
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">
+                          <button
+                            onClick={() => startAIScanning(index)}
+                            className="w-full rounded-md bg-blue-600 text-white px-3 py-1.5 font-medium hover:bg-blue-700 transition-all text-xs"
+                          >
+                            {ext.aiScanned ? 'Re-scan' : 'Scan'}
+                          </button>
+                        </td>
+                        {[
+                          'shell',
+                          'hose',
+                          'nozzle',
+                          'pressureGauge',
+                          'safetyPin',
+                          'pinSeal',
+                          'accessible',
+                          'missingNotInPlace',
+                          'emptyPressureLow',
+                          'servicingTags',
+                        ].map((field) => (
+                          <td key={field} className="border border-gray-200 px-2 py-2">
+                            <div className="flex gap-1 justify-center">
+                              <RatingButton
+                                value="√"
+                                current={ext[field as keyof FireExtinguisherRow] as RatingType}
+                                onChange={() =>
+                                  updateExtinguisher(index, field as keyof FireExtinguisherRow, '√')
+                                }
+                              />
+                              <RatingButton
+                                value="X"
+                                current={ext[field as keyof FireExtinguisherRow] as RatingType}
+                                onChange={() =>
+                                  updateExtinguisher(index, field as keyof FireExtinguisherRow, 'X')
+                                }
+                              />
+                              <RatingButton
+                                value="NA"
+                                current={ext[field as keyof FireExtinguisherRow] as RatingType}
+                                onChange={() =>
+                                  updateExtinguisher(
+                                    index,
+                                    field as keyof FireExtinguisherRow,
+                                    'NA',
+                                  )
+                                }
+                              />
+                            </div>
+                          </td>
+                        ))}
+                        <td className="border border-gray-200 px-3 py-2">
+                          <div className="space-y-1">
+                            <input
+                              type="date"
+                              value={ext.expiryDate}
+                              onChange={(e) =>
+                                updateExtinguisher(index, 'expiryDate', e.target.value)
+                              }
+                              className={`w-full px-2 py-1 rounded-md border focus:outline-none focus:ring-2 text-xs ${
+                                checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                  ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                                  : checkExpiryDate(ext.expiryDate)?.type === 'warning'
+                                  ? 'border-yellow-500 bg-yellow-50 focus:ring-yellow-500'
+                                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                              }`}
+                            />
+                            {ext.expiryDate && checkExpiryDate(ext.expiryDate)?.type !== 'valid' && (
+                              <div
+                                className={`text-[10px] font-semibold flex items-center gap-1 ${
+                                  checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                    ? 'text-red-700'
+                                    : 'text-yellow-700'
+                                }`}
+                              >
+                                <span>
+                                  {checkExpiryDate(ext.expiryDate)?.type === 'expired' ? '⚠️' : '⏰'}
+                                </span>
+                                <span>
+                                  {checkExpiryDate(ext.expiryDate)?.type === 'expired'
+                                    ? `Expired ${checkExpiryDate(ext.expiryDate)?.days}d ago`
+                                    : `${checkExpiryDate(ext.expiryDate)?.days}d left`}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="border border-gray-200 px-3 py-2">
+                          <input
+                            type="text"
+                            value={ext.remarks}
+                            onChange={(e) => updateExtinguisher(index, 'remarks', e.target.value)}
+                            className="w-full px-2 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
+                            placeholder="Notes..."
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleSaveDraft}
+                className="flex-1 rounded-md border border-gray-300 text-gray-700 py-3 font-medium hover:bg-gray-50 transition-all"
+              >
+                Save as Draft
+              </button>
+              {/* <button
+                onClick={() => setShowExportDialog(true)}
+                className="flex-1 rounded-md border border-gray-300 text-gray-700 py-3 font-medium hover:bg-gray-50 transition-all"
+              >
+                Export Documents
+              </button> */}
+              <button
+                onClick={() => setShowSubmitDialog(true)}
+                className="flex-1 rounded-md bg-blue-600 text-white py-3 font-medium hover:bg-blue-700 transition-all"
+              >
+                Submit Checklist
+              </button>
+            </div>
+          </div>
+
+          {/* Export Dialog */}
+          {showExportDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-md w-full shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Export with Template</h3>
+                <p className="text-gray-600 mb-6">Choose your export format:</p>
+                <div className="space-y-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/export/fire-extinguisher-template', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            inspectedBy: checklistData.inspectedBy,
+                            inspectionDate: checklistData.inspectionDate,
+                            designation: checklistData.designation,
+                            signature: checklistData.signature,
+                            extinguishers: checklistData.extinguishers,
+                            format: 'pdf',
+                          }),
+                        });
+                        if (!response.ok) throw new Error('Export failed');
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        const filename = `Fire_Extinguisher_Checklist_${
+                          new Date().toISOString().split('T')[0]
+                        }.pdf`;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        setShowExportDialog(false);
+                      } catch (error) {
+                        alert(
+                          `Failed to export PDF: ${
+                            error instanceof Error ? error.message : 'Unknown error'
+                          }`,
+                        );
+                      }
+                    }}
+                    className="w-full rounded-md bg-blue-600 text-white py-3 font-medium hover:bg-blue-700 transition-all"
+                  >
+                    Export as PDF
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/export/fire-extinguisher-template', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            inspectedBy: checklistData.inspectedBy,
+                            inspectionDate: checklistData.inspectionDate,
+                            designation: checklistData.designation,
+                            signature: checklistData.signature,
+                            extinguishers: checklistData.extinguishers,
+                            format: 'excel',
+                          }),
+                        });
+                        if (!response.ok) throw new Error('Export failed');
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        const filename = `Fire_Extinguisher_Checklist_${
+                          new Date().toISOString().split('T')[0]
+                        }.xlsx`;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        setShowExportDialog(false);
+                      } catch (error) {
+                        alert(
+                          `Failed to export Excel: ${
+                            error instanceof Error ? error.message : 'Unknown error'
+                          }`,
+                        );
+                      }
+                    }}
+                    className="w-full rounded-md border border-gray-300 text-gray-700 py-3 font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Export as Excel
+                  </button>
+                </div>
                 <button
-                  onClick={() => setShowSignatureModal(false)}
-                  className="mt-4 w-full px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                  onClick={() => setShowExportDialog(false)}
+                  className="w-full mt-3 rounded-md border border-gray-300 text-gray-700 py-2.5 font-medium hover:bg-gray-50 transition-all"
                 >
                   Cancel
                 </button>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </BaseLayout>
+          )}
+
+          {/* Submit Confirmation Dialog */}
+          {showSubmitDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-md w-full shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Submit Checklist?</h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to submit this fire extinguisher checklist? This action
+                  cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSubmitDialog(false)}
+                    className="flex-1 rounded-md border border-gray-300 text-gray-700 py-2.5 font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    className="flex-1 rounded-md bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 transition-all"
+                  >
+                    Confirm Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Camera Capture Modal */}
+          {showAIScanner && scanningExtinguisherIndex !== null && (
+            <AICameraCapture
+              onComplete={handleAICaptureComplete}
+              onCancel={handleAICaptureCancel}
+            />
+          )}
+
+          {/* AI Processing Loader */}
+          {isProcessingAI && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center shadow-lg">
+                <div className="flex justify-center mb-4">
+                  <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <h3 className="text-xl font-bold mb-2 text-gray-800">AI is Analyzing Images</h3>
+                <p className="text-gray-600">
+                  Processing your photos and detecting fire extinguisher components...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* AI Results Preview Dialog */}
+          {showAIResults && currentAIResults && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-2xl w-full my-8 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">AI Scan Results</h3>
+                    <p className="text-sm text-gray-600">
+                      {currentAIResults.detections.length} components detected
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAIResults(false)}
+                    className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="space-y-3 mb-6 max-h-96 overflow-y-auto">
+                  {currentAIResults.detections.map((detection, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-md border border-gray-200 p-3 flex items-center justify-between bg-gray-50"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm capitalize text-gray-800">
+                            {detection.field.replace(/([A-Z])/g, ' $1').trim()}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              detection.value === '√'
+                                ? 'bg-green-100 text-green-700'
+                                : detection.value === 'X'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-blue-100 text-blue-700'
+                            }`}
+                          >
+                            {detection.value}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600">{detection.reasoning}</p>
+                      </div>
+                      <span className="px-3 py-1 text-xs text-gray-600">
+                        {Math.round(detection.confidence * 100)}%
+                      </span>
+                    </div>
+                  ))}
+                  {currentAIResults.extractedData.expiryDate && (
+                    <div className="rounded-md border border-gray-200 p-3 flex items-center justify-between bg-gray-50">
+                      <div className="flex-1">
+                        <span className="font-medium text-sm text-gray-800">Expiry Date</span>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {currentAIResults.extractedData.expiryDate.value}
+                        </p>
+                      </div>
+                      <span className="px-3 py-1 text-xs text-gray-600">
+                        {Math.round(currentAIResults.extractedData.expiryDate.confidence * 100)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-4 mb-4">
+                  <p className="text-sm text-blue-800 font-medium mb-1">Review Required</p>
+                  <p className="text-xs text-gray-600">
+                    AI results have been automatically filled. Please review and adjust any fields
+                    as needed before submitting.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAIResults(false)}
+                  className="w-full rounded-md bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 transition-all"
+                >
+                  Review Form
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </InspectorLayout>
+    </ProtectedRoute>
   );
 };
 
-export default function ProtectedFireExtinguisherInspection() {
-  return (
-    <ProtectedRoute requiredPermission="canCreateInspections">
-      <FireExtinguisherInspection />
-    </ProtectedRoute>
-  );
-}
+export default FireExtinguisherChecklist;

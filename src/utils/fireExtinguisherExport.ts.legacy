@@ -1,0 +1,712 @@
+// Fire Extinguisher Export Utilities
+// Generates two separate documents:
+// 1. Image Capture Document - Shows AI-captured images with labels and timestamps
+// 2. Checklist Form Document - Shows inspection table with tick/untick results
+
+// Note: This file uses exceljs for Excel generation (via template-based exports)
+// Old xlsx dependency has been removed for security reasons
+
+interface FireExtinguisherRow {
+  no: number;
+  serialNo: string;
+  location: string;
+  typeSize: string;
+  shell: '√' | 'X' | 'NA' | null;
+  hose: '√' | 'X' | 'NA' | null;
+  nozzle: '√' | 'X' | 'NA' | null;
+  pressureGauge: '√' | 'X' | 'NA' | null;
+  safetyPin: '√' | 'X' | 'NA' | null;
+  pinSeal: '√' | 'X' | 'NA' | null;
+  accessible: '√' | 'X' | 'NA' | null;
+  missingNotInPlace: '√' | 'X' | 'NA' | null;
+  emptyPressureLow: '√' | 'X' | 'NA' | null;
+  servicingTags: '√' | 'X' | 'NA' | null;
+  expiryDate: string;
+  remarks: string;
+  aiScanned?: boolean;
+  aiConfidence?: { [field: string]: number };
+  aiCapturedImages?: CapturedImage[];
+}
+
+interface CapturedImage {
+  stepId: string;
+  dataUrl: string;
+  timestamp: number;
+}
+
+interface ChecklistData {
+  id: string;
+  inspectedBy: string;
+  inspectionDate: string;
+  designation: string;
+  signature: string;
+  extinguishers: FireExtinguisherRow[];
+  status: 'draft' | 'completed';
+  createdAt: string;
+}
+
+/**
+ * Export 1: Image Capture Document
+ * Generates HTML/PDF document showing all captured images with labels and timestamps
+ */
+export const generateImageCaptureDocument = (checklistData: ChecklistData): void => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Fire Extinguisher - Image Capture Report</title>
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+          background: #f5f5f5;
+        }
+        .header {
+          background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+          color: white;
+          padding: 30px;
+          border-radius: 10px;
+          margin-bottom: 30px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+          font-size: 28px;
+          margin-bottom: 10px;
+        }
+        .header p {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+        .info-section {
+          background: white;
+          padding: 20px;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 15px;
+        }
+        .info-item {
+          display: flex;
+          flex-direction: column;
+        }
+        .info-label {
+          font-size: 12px;
+          color: #666;
+          font-weight: 600;
+          margin-bottom: 5px;
+          text-transform: uppercase;
+        }
+        .info-value {
+          font-size: 16px;
+          color: #333;
+          font-weight: 500;
+        }
+        .extinguisher-section {
+          background: white;
+          margin-bottom: 30px;
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+          page-break-inside: avoid;
+        }
+        .extinguisher-header {
+          background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+          color: white;
+          padding: 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .extinguisher-title {
+          font-size: 18px;
+          font-weight: 600;
+        }
+        .extinguisher-badge {
+          background: rgba(255,255,255,0.2);
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 600;
+        }
+        .images-container {
+          padding: 20px;
+        }
+        .no-images {
+          text-align: center;
+          padding: 40px;
+          color: #999;
+          font-style: italic;
+        }
+        .image-card {
+          margin-bottom: 30px;
+          border: 2px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+          page-break-inside: avoid;
+        }
+        .image-header {
+          background: #f9fafb;
+          padding: 12px 16px;
+          border-bottom: 2px solid #e5e7eb;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .image-step {
+          font-weight: 600;
+          color: #374151;
+          text-transform: uppercase;
+          font-size: 12px;
+        }
+        .image-timestamp {
+          font-size: 12px;
+          color: #6b7280;
+          font-family: 'Courier New', monospace;
+        }
+        .image-wrapper {
+          position: relative;
+          background: #000;
+        }
+        .captured-image {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+        .ai-badge {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          background: rgba(124, 58, 237, 0.9);
+          color: white;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .ai-icon {
+          width: 14px;
+          height: 14px;
+        }
+        .detection-info {
+          padding: 16px;
+          background: #faf5ff;
+          border-top: 2px solid #e5e7eb;
+        }
+        .detection-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #7c3aed;
+          margin-bottom: 10px;
+          text-transform: uppercase;
+        }
+        .detection-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+          gap: 8px;
+        }
+        .detection-item {
+          background: white;
+          padding: 8px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border: 1px solid #e5e7eb;
+        }
+        .detection-field {
+          font-weight: 500;
+          color: #374151;
+        }
+        .detection-confidence {
+          font-weight: 600;
+          color: #7c3aed;
+        }
+        .confidence-high { color: #10b981; }
+        .confidence-medium { color: #f59e0b; }
+        .confidence-low { color: #ef4444; }
+        .footer {
+          text-align: center;
+          color: #999;
+          font-size: 12px;
+          margin-top: 40px;
+          padding: 20px;
+          border-top: 2px solid #e5e7eb;
+        }
+        @media print {
+          body {
+            background: white;
+            padding: 0;
+          }
+          .extinguisher-section {
+            box-shadow: none;
+            page-break-after: always;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <!-- Header -->
+      <div class="header">
+        <h1>🔥 Fire Extinguisher Inspection</h1>
+        <h2 style="font-size: 20px; margin-top: 10px;">Image Capture Report</h2>
+        <p>AI-Assisted Visual Documentation</p>
+      </div>
+
+      <!-- General Information -->
+      <div class="info-section">
+        <h3 style="margin-bottom: 15px; color: #333;">General Information</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Inspected By</span>
+            <span class="info-value">${checklistData.inspectedBy}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Inspection Date</span>
+            <span class="info-value">${new Date(
+              checklistData.inspectionDate,
+            ).toLocaleDateString()}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Designation</span>
+            <span class="info-value">${checklistData.designation}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Report Generated</span>
+            <span class="info-value">${new Date().toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fire Extinguishers with Images -->
+      ${checklistData.extinguishers
+        .filter((ext) => ext.aiCapturedImages && ext.aiCapturedImages.length > 0)
+        .map(
+          (ext) => `
+          <div class="extinguisher-section">
+            <div class="extinguisher-header">
+              <div>
+                <div class="extinguisher-title">Fire Extinguisher #${ext.no}</div>
+                <div style="font-size: 14px; margin-top: 5px; opacity: 0.9;">${ext.serialNo} • ${
+            ext.location
+          }</div>
+              </div>
+              <div class="extinguisher-badge">
+                ${ext.aiCapturedImages?.length || 0} ${
+            ext.aiCapturedImages?.length === 1 ? 'Image' : 'Images'
+          }
+              </div>
+            </div>
+
+            <div class="images-container">
+              ${
+                ext.aiCapturedImages
+                  ?.map(
+                    (image, idx) => `
+                <div class="image-card">
+                  <div class="image-header">
+                    <span class="image-step">${image.stepId.replace(/_/g, ' ')}</span>
+                    <span class="image-timestamp">
+                      📷 ${new Date(image.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <div class="image-wrapper">
+                    <img src="${image.dataUrl}" alt="${image.stepId}" class="captured-image" />
+                    ${
+                      ext.aiScanned
+                        ? '<div class="ai-badge"><svg class="ai-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 22.5l-.394-1.933a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>AI Scanned</div>'
+                        : ''
+                    }
+                  </div>
+                  ${
+                    ext.aiConfidence && Object.keys(ext.aiConfidence).length > 0
+                      ? `
+                    <div class="detection-info">
+                      <div class="detection-title">AI Detection Results</div>
+                      <div class="detection-grid">
+                        ${Object.entries(ext.aiConfidence)
+                          .map(([field, confidence]) => {
+                            const confLevel =
+                              confidence >= 0.8 ? 'high' : confidence >= 0.6 ? 'medium' : 'low';
+                            return `
+                            <div class="detection-item">
+                              <span class="detection-field">${field
+                                .replace(/([A-Z])/g, ' $1')
+                                .trim()}</span>
+                              <span class="detection-confidence confidence-${confLevel}">
+                                ${Math.round(confidence * 100)}%
+                              </span>
+                            </div>
+                          `;
+                          })
+                          .join('')}
+                      </div>
+                    </div>
+                  `
+                      : ''
+                  }
+                </div>
+              `,
+                  )
+                  .join('') || '<div class="no-images">No images captured</div>'
+              }
+            </div>
+          </div>
+        `,
+        )
+        .join('')}
+
+      ${
+        checklistData.extinguishers.filter(
+          (ext) => ext.aiCapturedImages && ext.aiCapturedImages.length > 0,
+        ).length === 0
+          ? `
+        <div class="info-section">
+          <div class="no-images">
+            <p style="font-size: 18px; margin-bottom: 10px;">📷 No Images Captured</p>
+            <p>No fire extinguishers have AI-captured images for this inspection.</p>
+          </div>
+        </div>
+      `
+          : ''
+      }
+
+      <!-- Footer -->
+      <div class="footer">
+        <p>Fire Extinguisher Image Capture Report • Generated on ${new Date().toLocaleString()}</p>
+        <p style="margin-top: 5px;">Theta Edge Berhad • HSEP-08/FEC(F)/RV00-017</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Open in new window for printing/saving
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+    };
+  }
+};
+
+/**
+ * Export 2: Checklist Form Document
+ * Generates Excel document with the inspection table showing tick/untick results
+ */
+export const generateChecklistFormDocument = (checklistData: ChecklistData): void => {
+  try {
+    // Create a new workbook
+    const wb = /* XLSX. */ ({} as any).utils.book_new();
+
+    // Get date for sheet naming and document reference
+    const date = new Date(checklistData.inspectionDate);
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const sheetName = `${monthNames[month]} - ${year}`;
+
+    // Format date for display
+    const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(month + 1).padStart(
+      2,
+      '0',
+    )}/${year}`;
+
+    // Create the main sheet data with proper spacing to match template
+    const sheetData: any[][] = [];
+
+    // Row 1: Document reference (column P - index 15)
+    const row1 = new Array(16).fill('');
+    row1[15] = `HSEP-08/FEC(F)/RV00-0${String(month + 10).padStart(2, '0')}`;
+    sheetData.push(row1);
+
+    // Rows 2-3: Empty
+    sheetData.push([]);
+    sheetData.push([]);
+
+    // Row 4: Title
+    sheetData.push(['FIRE EXTINGUISHER CHECKLIST']);
+
+    // Row 5: Section 1
+    sheetData.push(['Section 1 : General Information']);
+
+    // Row 6: Company info with Inspector info on right
+    const row6 = new Array(16).fill('');
+    row6[0] = `Company : Theta Edge Berhad\r\n                  \r\n                  Lot 11B, Jalan 223, Seksyen 51A, 46100 Petaling Jaya,\r\n                  Selangor, Malaysia.\r\n                 +603 6043 0000`;
+    row6[9] = `Inspected by :\r\n${checklistData.inspectedBy}`;
+    row6[14] = `Date of Inspection :\r\n${formattedDate}`;
+    sheetData.push(row6);
+
+    // Row 7: Designation and Signature
+    const row7 = new Array(16).fill('');
+    row7[9] = `Designation  :\r\n${checklistData.designation}`;
+    row7[14] = 'Signature :';
+    sheetData.push(row7);
+
+    // Row 8: Section 2 with Legend
+    const row8 = new Array(16).fill('');
+    row8[0] = 'Section 2 : Inspection Details';
+    row8[9] =
+      'LEGEND :                             \r\n                                                  √ = OK / Good Condition           X = Not in good condition\r\n                                                  NA = Not Applicable';
+    sheetData.push(row8);
+
+    // Row 9: First header row
+    const row9 = [
+      'No',
+      'Serial No',
+      'Location',
+      'Type \r\n/Size (kg)',
+      'Shell',
+      'Hose',
+      'Nozzle',
+      'Pressure Gauge',
+      'Safety Pin (Missing?)',
+      'Pin Seal Broken/Missing?',
+      'Accessible \r\n(not obstructed)',
+      'Missing /\r\n Not in Place',
+      'Empty / \r\nPressure Low',
+      'Servicing / \r\nTags in Place',
+      'Expiry Date',
+      'Remarks',
+    ];
+    sheetData.push(row9);
+
+    // Row 10: Empty (merged with row 9 headers)
+    sheetData.push([]);
+
+    // Rows 11+: Data
+    checklistData.extinguishers.forEach((ext) => {
+      sheetData.push([
+        ext.no,
+        ext.serialNo,
+        ext.location,
+        ext.typeSize,
+        ext.shell || '',
+        ext.hose || '',
+        ext.nozzle || '',
+        ext.pressureGauge || '',
+        ext.safetyPin || '',
+        ext.pinSeal || '',
+        ext.accessible || '',
+        ext.missingNotInPlace || '',
+        ext.emptyPressureLow || '',
+        ext.servicingTags || '',
+        ext.expiryDate || '',
+        ext.remarks || '',
+      ]);
+    });
+
+    // Create worksheet
+    const ws = /* XLSX. */ ({} as any).utils.aoa_to_sheet(sheetData);
+
+    // Set column widths to match template
+    ws['!cols'] = [
+      { wch: 5 }, // A: No
+      { wch: 18 }, // B: Serial No
+      { wch: 15 }, // C: Location
+      { wch: 12 }, // D: Type/Size
+      { wch: 8 }, // E: Shell
+      { wch: 8 }, // F: Hose
+      { wch: 8 }, // G: Nozzle
+      { wch: 14 }, // H: Pressure Gauge
+      { wch: 12 }, // I: Safety Pin
+      { wch: 12 }, // J: Pin Seal
+      { wch: 12 }, // K: Accessible
+      { wch: 12 }, // L: Missing/Not in Place
+      { wch: 12 }, // M: Empty/Pressure Low
+      { wch: 12 }, // N: Servicing/Tags
+      { wch: 14 }, // O: Expiry Date
+      { wch: 20 }, // P: Remarks
+    ];
+
+    // Add merged cells to match template
+    const merges: /* XLSX. */ ({} as any).Range[] = [
+      // Row 7: Full row (title area separator)
+      { s: { r: 6, c: 0 }, e: { r: 6, c: 15 } }, // A7:P7
+      // Row 8: Full row (Section 2)
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 15 } }, // A8:P8
+      // Rows 6-7: Company info block (A6:I7)
+      { s: { r: 5, c: 0 }, e: { r: 6, c: 8 } }, // A6:I7
+      // Row 6: Inspector label (J6:N6)
+      { s: { r: 5, c: 9 }, e: { r: 5, c: 13 } }, // J6:N6
+      // Row 6: Date label (O6:P6)
+      { s: { r: 5, c: 14 }, e: { r: 5, c: 15 } }, // O6:P6
+      // Row 7: Designation label (J7:N7)
+      { s: { r: 6, c: 9 }, e: { r: 6, c: 13 } }, // J7:N7
+      // Row 7: Signature label (O7:P7)
+      { s: { r: 6, c: 14 }, e: { r: 6, c: 15 } }, // O7:P7
+      // Row 8: Section 2 left (A8:I8)
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 8 } }, // A8:I8
+      // Row 8: Legend right (J8:P8)
+      { s: { r: 7, c: 9 }, e: { r: 7, c: 15 } }, // J8:P8
+      // Header rows (9-10): Each column
+      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // A9:A10 - No
+      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // B9:B10 - Serial No
+      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // C9:C10 - Location
+      { s: { r: 8, c: 3 }, e: { r: 9, c: 3 } }, // D9:D10 - Type/Size
+      { s: { r: 8, c: 4 }, e: { r: 9, c: 4 } }, // E9:E10 - Shell
+      { s: { r: 8, c: 5 }, e: { r: 9, c: 5 } }, // F9:F10 - Hose
+      { s: { r: 8, c: 6 }, e: { r: 9, c: 6 } }, // G9:G10 - Nozzle
+      { s: { r: 8, c: 7 }, e: { r: 9, c: 7 } }, // H9:H10 - Pressure Gauge
+      { s: { r: 8, c: 8 }, e: { r: 9, c: 8 } }, // I9:I10 - Safety Pin
+      { s: { r: 8, c: 9 }, e: { r: 9, c: 9 } }, // J9:J10 - Pin Seal
+      { s: { r: 8, c: 10 }, e: { r: 9, c: 10 } }, // K9:K10 - Accessible
+      { s: { r: 8, c: 11 }, e: { r: 9, c: 11 } }, // L9:L10 - Missing
+      { s: { r: 8, c: 12 }, e: { r: 9, c: 12 } }, // M9:M10 - Empty
+      { s: { r: 8, c: 13 }, e: { r: 9, c: 13 } }, // N9:N10 - Servicing
+      { s: { r: 8, c: 14 }, e: { r: 9, c: 14 } }, // O9:O10 - Expiry Date
+      { s: { r: 8, c: 15 }, e: { r: 9, c: 15 } }, // P9:P10 - Remarks
+    ];
+
+    ws['!merges'] = merges;
+
+    // Add worksheet to workbook with month-year sheet name
+    /* XLSX. */ ({} as any).utils.book_append_sheet(wb, ws, sheetName);
+
+    // Create AI Images sheet if there are any captured images
+    const extinguishersWithImages = checklistData.extinguishers.filter(
+      (ext) => ext.aiCapturedImages && ext.aiCapturedImages.length > 0,
+    );
+
+    if (extinguishersWithImages.length > 0) {
+      const aiImageData: any[][] = [];
+
+      // Header section
+      aiImageData.push(['AI SCAN IMAGES - FIRE EXTINGUISHER INSPECTION']);
+      aiImageData.push([]);
+      aiImageData.push([
+        'Inspection Date:',
+        formattedDate,
+        '',
+        'Inspector:',
+        checklistData.inspectedBy,
+      ]);
+      aiImageData.push([]);
+      aiImageData.push([
+        'Note: This sheet contains image metadata. Images are embedded as base64 data URLs.',
+      ]);
+      aiImageData.push([]);
+
+      // Column headers for image data
+      aiImageData.push([
+        'Extinguisher #',
+        'Serial No',
+        'Location',
+        'Capture Time',
+        'AI Scan Images',
+      ]);
+
+      // Add image data for each extinguisher
+      extinguishersWithImages.forEach((ext) => {
+        if (ext.aiCapturedImages && ext.aiCapturedImages.length > 0) {
+          // Combine all images for this extinguisher into one cell
+          const combinedImages = ext.aiCapturedImages
+            .map((image) => image.dataUrl)
+            .join('\n\n'); // Separate images with double newline
+
+          // Get timestamp range or single timestamp
+          const timestamps = ext.aiCapturedImages.map((img) => new Date(img.timestamp));
+          const captureTime = timestamps.length === 1
+            ? timestamps[0].toLocaleString()
+            : `${timestamps[0].toLocaleString()} - ${timestamps[timestamps.length - 1].toLocaleString()}`;
+
+          aiImageData.push([
+            ext.no,
+            ext.serialNo,
+            ext.location,
+            captureTime,
+            combinedImages, // All images combined in one cell
+          ]);
+        }
+      });
+
+      // Summary section
+      aiImageData.push([]);
+      aiImageData.push([
+        'Total Images:',
+        extinguishersWithImages.reduce(
+          (sum, ext) => sum + (ext.aiCapturedImages?.length || 0),
+          0,
+        ),
+      ]);
+      aiImageData.push([
+        'Extinguishers Scanned:',
+        extinguishersWithImages.length,
+      ]);
+
+      // Create AI Images worksheet
+      const aiWs = /* XLSX. */ ({} as any).utils.aoa_to_sheet(aiImageData);
+
+      // Set column widths for AI Images sheet
+      aiWs['!cols'] = [
+        { wch: 15 }, // Extinguisher #
+        { wch: 18 }, // Serial No
+        { wch: 15 }, // Location
+        { wch: 35 }, // Capture Time (wider for timestamp range)
+        { wch: 60 }, // AI Scan Images - wider for combined base64 data
+      ];
+
+      // Add merged cells for header
+      const aiMerges: /* XLSX. */ ({} as any).Range[] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }, // Title row
+        { s: { r: 4, c: 0 }, e: { r: 4, c: 4 } }, // Note row
+      ];
+      aiWs['!merges'] = aiMerges;
+
+      // Add AI Images worksheet to workbook
+      /* XLSX. */ ({} as any).utils.book_append_sheet(wb, aiWs, 'AI Scan Images');
+    }
+
+    // Generate filename
+    const filename = `Fire_Extinguisher_Checklist_${monthNames[month]}_${year}.xlsx`;
+
+    // Download file
+    /* XLSX. */ ({} as any).writeFile(wb, filename);
+  } catch (error) {
+    console.error('Error generating checklist document:', error);
+    alert('Failed to generate checklist document. Please try again.');
+  }
+};
+
+/**
+ * Combined Export - Generates both documents at once
+ */
+export const generateBothDocuments = (checklistData: ChecklistData): void => {
+  // Generate Image Capture Document
+  generateImageCaptureDocument(checklistData);
+
+  // Small delay to ensure print dialog doesn't interfere with file download
+  setTimeout(() => {
+    // Generate Checklist Form Document
+    generateChecklistFormDocument(checklistData);
+  }, 1000);
+};

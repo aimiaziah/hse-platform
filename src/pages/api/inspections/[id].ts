@@ -2,8 +2,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { withRBAC } from '@/lib/rbac';
 import { User } from '@/hooks/useAuth';
-import { storage } from '@/utils/storage';
-import { InspectionSubmission } from './index';
+import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
+import { InspectionStatus } from '@/types/database';
 
 async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
   const { id } = req.query;
@@ -32,15 +32,20 @@ async function getInspection(
   user: User,
 ) {
   try {
-    const inspections = storage.load('inspections', []) as InspectionSubmission[];
-    const inspection = inspections.find((i) => i.id === inspectionId);
+    const supabase = getServiceSupabase();
 
-    if (!inspection) {
+    const { data: inspection, error } = await supabase
+      .from('inspections')
+      .select('*')
+      .eq('id', inspectionId)
+      .single();
+
+    if (error || !inspection) {
       return res.status(404).json({ error: 'Inspection not found' });
     }
 
     // Check permission: inspectors can only view their own
-    if (user.role === 'inspector' && inspection.inspectorId !== user.id) {
+    if (user.role === 'inspector' && (inspection as any).inspector_id !== user.id) {
       return res.status(403).json({ error: 'Forbidden - You can only view your own inspections' });
     }
 
@@ -58,66 +63,95 @@ async function updateInspection(
   inspectionId: string,
   user: User,
 ) {
-  const { data, signature, status } = req.body;
+  const { data, signature, status, reviewComments } = req.body;
 
   try {
-    const inspections = storage.load('inspections', []) as InspectionSubmission[];
-    const inspectionIndex = inspections.findIndex((i) => i.id === inspectionId);
+    const supabase = getServiceSupabase();
 
-    if (inspectionIndex === -1) {
+    // First, fetch the existing inspection
+    const { data: existingInspection, error: fetchError } = await supabase
+      .from('inspections')
+      .select('*')
+      .eq('id', inspectionId)
+      .single();
+
+    if (fetchError || !existingInspection) {
       return res.status(404).json({ error: 'Inspection not found' });
     }
 
-    const existingInspection = inspections[inspectionIndex];
-
     // Check permission: inspectors can only edit their own
-    if (user.role === 'inspector' && existingInspection.inspectorId !== user.id) {
+    if (user.role === 'inspector' && (existingInspection as any).inspector_id !== user.id) {
       return res.status(403).json({ error: 'Forbidden - You can only edit your own inspections' });
     }
 
-    // Cannot edit submitted inspections
-    if (existingInspection.status === 'submitted' && user.role === 'inspector') {
+    // Cannot edit submitted inspections (for inspectors)
+    if ((existingInspection as any).status !== 'draft' && user.role === 'inspector') {
       return res.status(400).json({ error: 'Cannot edit submitted inspections' });
     }
 
-    // Update fields
+    // Build update object
+    const updateData: any = {};
+
     if (data) {
-      existingInspection.data = data;
+      updateData.form_data = data;
     }
 
     if (signature) {
-      existingInspection.signature = {
-        dataUrl: signature.dataUrl,
-        timestamp: signature.timestamp || new Date().toISOString(),
-        inspectorId: user.id,
-        inspectorName: user.name,
-      };
+      updateData.signature = signature.dataUrl || signature;
     }
 
     if (status) {
-      existingInspection.status = status;
-      if (status === 'submitted' && !existingInspection.submittedAt) {
-        existingInspection.submittedAt = new Date().toISOString();
-        existingInspection.googleDriveExport = { status: 'pending' };
+      // Map status from old format to new format
+      let inspectionStatus: InspectionStatus = 'draft';
+      if (status === 'submitted' || status === 'pending_review') {
+        inspectionStatus = 'pending_review';
+        updateData.submitted_at = updateData.submitted_at || new Date().toISOString();
+      } else if (status === 'approved') {
+        inspectionStatus = 'approved';
+        updateData.reviewed_at = new Date().toISOString();
+        updateData.reviewer_id = user.id;
+      } else if (status === 'rejected') {
+        inspectionStatus = 'rejected';
+        updateData.reviewed_at = new Date().toISOString();
+        updateData.reviewer_id = user.id;
+      } else if (status === 'completed') {
+        inspectionStatus = 'completed';
       }
+      updateData.status = inspectionStatus;
     }
 
-    existingInspection.updatedAt = new Date().toISOString();
+    if (reviewComments !== undefined) {
+      updateData.review_comments = reviewComments;
+    }
 
-    inspections[inspectionIndex] = existingInspection;
-    storage.save('inspections', inspections);
+    // Perform the update
+    const { data: updatedInspection, error: updateError } = await (supabase
+      .from('inspections') as any)
+      .update(updateData)
+      .eq('id', inspectionId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Supabase update error:', updateError);
+      return res.status(500).json({ error: 'Failed to update inspection', details: updateError.message });
+    }
 
     // Log update
-    logAuditEvent({
-      action: 'INSPECTION_UPDATED',
-      performedBy: user.id,
-      performedByName: user.name,
-      details: { inspectionId, status: existingInspection.status },
-      timestamp: new Date().toISOString(),
+    await logAuditTrail({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'UPDATE',
+      entityType: 'inspection',
+      entityId: inspectionId,
+      description: `Updated inspection status to ${updateData.status || (existingInspection as any).status}`,
+      oldValues: existingInspection,
+      newValues: updateData,
     });
 
     return res.status(200).json({
-      inspection: existingInspection,
+      inspection: updatedInspection,
       message: 'Inspection updated successfully',
     });
   } catch (error) {
@@ -134,37 +168,52 @@ async function deleteInspection(
   user: User,
 ) {
   try {
-    const inspections = storage.load('inspections', []) as InspectionSubmission[];
-    const inspectionIndex = inspections.findIndex((i) => i.id === inspectionId);
+    const supabase = getServiceSupabase();
 
-    if (inspectionIndex === -1) {
+    // First, fetch the existing inspection
+    const { data: existingInspection, error: fetchError } = await supabase
+      .from('inspections')
+      .select('*')
+      .eq('id', inspectionId)
+      .single();
+
+    if (fetchError || !existingInspection) {
       return res.status(404).json({ error: 'Inspection not found' });
     }
 
-    const existingInspection = inspections[inspectionIndex];
-
     // Check permission: inspectors can only delete their own drafts
-    if (user.role === 'inspector' && existingInspection.inspectorId !== user.id) {
+    if (user.role === 'inspector' && (existingInspection as any).inspector_id !== user.id) {
       return res
         .status(403)
         .json({ error: 'Forbidden - You can only delete your own inspections' });
     }
 
     // Can only delete drafts
-    if (existingInspection.status !== 'draft') {
+    if ((existingInspection as any).status !== 'draft') {
       return res.status(400).json({ error: 'Can only delete draft inspections' });
     }
 
-    inspections.splice(inspectionIndex, 1);
-    storage.save('inspections', inspections);
+    // Delete the inspection
+    const { error: deleteError } = await supabase
+      .from('inspections')
+      .delete()
+      .eq('id', inspectionId);
+
+    if (deleteError) {
+      console.error('Supabase delete error:', deleteError);
+      return res.status(500).json({ error: 'Failed to delete inspection', details: deleteError.message });
+    }
 
     // Log deletion
-    logAuditEvent({
-      action: 'INSPECTION_DELETED',
-      performedBy: user.id,
-      performedByName: user.name,
-      details: { inspectionId },
-      timestamp: new Date().toISOString(),
+    await logAuditTrail({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'DELETE',
+      entityType: 'inspection',
+      entityId: inspectionId,
+      description: `Deleted ${(existingInspection as any).inspection_type} inspection`,
+      oldValues: existingInspection,
     });
 
     return res.status(200).json({ message: 'Inspection deleted successfully' });
@@ -174,16 +223,13 @@ async function deleteInspection(
   }
 }
 
-function logAuditEvent(event: any) {
-  const auditLogs = storage.load('auditLogs', []);
-  auditLogs.push(event);
-
-  if (auditLogs.length > 50000) {
-    auditLogs.splice(0, auditLogs.length - 50000);
-  }
-
-  storage.save('auditLogs', auditLogs);
-}
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Increased from default 1mb to handle inspections with multiple images
+    },
+  },
+};
 
 export default withRBAC(handler, {
   requiredPermission: 'canViewInspections',

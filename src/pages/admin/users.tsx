@@ -1,9 +1,10 @@
 // src/pages/admin/users.tsx
 import React, { useState, useEffect } from 'react';
-import AdminLayout from '@/layouts/AdminLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import AdminLayout from '@/roles/admin/layouts/AdminLayout';
+import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
 import { useAuth, User, UserRole } from '@/hooks/useAuth';
+import { apiGet, apiPost, apiPut } from '@/lib/api-client';
 
 type UserStatus = 'active' | 'inactive' | 'pending';
 
@@ -12,7 +13,6 @@ interface UserFormData {
   pin: string;
   role: UserRole;
   status: UserStatus;
-  department: string;
   permissions: {
     // Admin permissions
     canManageUsers: boolean;
@@ -30,14 +30,6 @@ interface UserFormData {
     canViewGoogleDriveStatus: boolean;
     canAddDigitalSignature: boolean;
     canExportReports: boolean;
-
-    // DevSecOps permissions
-    canViewDevSecOpsDashboard: boolean;
-    canViewSecurityLogs: boolean;
-    canViewSystemErrors: boolean;
-    canTrackDataBreaches: boolean;
-    canMonitorUpdates: boolean;
-    canViewAuditTrail: boolean;
   };
 }
 
@@ -50,7 +42,6 @@ const UserManagement: React.FC = () => {
   // Filters
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Modal state
@@ -61,7 +52,6 @@ const UserManagement: React.FC = () => {
     pin: '',
     role: 'inspector',
     status: 'active',
-    department: '',
     permissions: {
       // Admin permissions
       canManageUsers: false,
@@ -79,27 +69,8 @@ const UserManagement: React.FC = () => {
       canViewGoogleDriveStatus: true,
       canAddDigitalSignature: true,
       canExportReports: true,
-
-      // DevSecOps permissions
-      canViewDevSecOpsDashboard: false,
-      canViewSecurityLogs: false,
-      canViewSystemErrors: false,
-      canTrackDataBreaches: false,
-      canMonitorUpdates: false,
-      canViewAuditTrail: false,
     },
   });
-
-  const departments = [
-    'Safety & Compliance',
-    'Operations',
-    'Maintenance',
-    'Security',
-    'Administration',
-    'Quality Assurance',
-    'Environmental',
-    'Other',
-  ];
 
   useEffect(() => {
     loadUsers();
@@ -107,13 +78,13 @@ const UserManagement: React.FC = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [users, roleFilter, statusFilter, departmentFilter, searchQuery]);
+  }, [users, roleFilter, statusFilter, searchQuery]);
 
-  const loadUsers = () => {
+  const loadUsers = async () => {
     setLoading(true);
     try {
-      const storedUsers = storage.load('users', []) as User[];
-      setUsers(storedUsers);
+      const data = await apiGet<{ users: User[] }>('/api/admin/users');
+      setUsers(data.users || []);
     } catch (error) {
       console.error('Error loading users:', error);
     } finally {
@@ -134,18 +105,12 @@ const UserManagement: React.FC = () => {
       filtered = filtered.filter((user) => user.isActive === (statusFilter === 'active'));
     }
 
-    // Department filter
-    if (departmentFilter) {
-      filtered = filtered.filter((user) => user.department === departmentFilter);
-    }
-
     // Search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (user) =>
           user.name.toLowerCase().includes(query) ||
-          user.department.toLowerCase().includes(query) ||
           user.pin.includes(query),
       );
     }
@@ -156,11 +121,10 @@ const UserManagement: React.FC = () => {
   const clearFilters = () => {
     setRoleFilter('');
     setStatusFilter('');
-    setDepartmentFilter('');
     setSearchQuery('');
   };
 
-  const generateRandomPIN = () => {
+  const generateRandomPIN = (): string => {
     const pin = Math.floor(1000 + Math.random() * 9000).toString();
     // Check if PIN already exists
     const existingUser = users.find((u) => u.pin === pin);
@@ -177,7 +141,6 @@ const UserManagement: React.FC = () => {
       pin: generateRandomPIN(),
       role: 'inspector',
       status: 'active',
-      department: '',
       permissions: getDefaultPermissions('inspector'),
     });
     setShowUserModal(true);
@@ -190,15 +153,25 @@ const UserManagement: React.FC = () => {
       pin: user.pin,
       role: user.role,
       status: user.isActive ? 'active' : 'inactive',
-      department: user.department,
-      permissions: user.permissions,
+      permissions: {
+        ...user.permissions,
+        // Add missing properties with defaults if they don't exist
+        canManageRoles: (user.permissions as any).canManageRoles ?? false,
+        canSetNotifications: (user.permissions as any).canSetNotifications ?? false,
+        canManageSystem: (user.permissions as any).canManageSystem ?? false,
+        canBackupRestore: (user.permissions as any).canBackupRestore ?? false,
+        canEditInspections: (user.permissions as any).canEditInspections ?? false,
+        canViewGoogleDriveStatus: (user.permissions as any).canViewGoogleDriveStatus ?? false,
+        canAddDigitalSignature: (user.permissions as any).canAddDigitalSignature ?? false,
+        canExportReports: (user.permissions as any).canExportReports ?? false,
+      },
     });
     setShowUserModal(true);
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     try {
-      if (!userFormData.name || !userFormData.pin || !userFormData.department) {
+      if (!userFormData.name || !userFormData.pin) {
         alert('Please fill in all required fields.');
         return;
       }
@@ -212,45 +185,32 @@ const UserManagement: React.FC = () => {
         return;
       }
 
-      const now = new Date().toISOString();
-      let updatedUsers;
-
       if (editingUser) {
-        // Update existing user
-        updatedUsers = users.map((user) =>
-          user.id === editingUser.id
-            ? {
-                ...user,
-                name: userFormData.name,
-                pin: userFormData.pin,
-                role: userFormData.role,
-                isActive: userFormData.status === 'active',
-                department: userFormData.department,
-                permissions: userFormData.permissions,
-              }
-            : user,
-        );
-      } else {
-        // Create new user
-        const newUser: User = {
-          id: Date.now().toString(),
+        // Update existing user via API
+        await apiPut(`/api/admin/users/${editingUser.id}`, {
           name: userFormData.name,
           pin: userFormData.pin,
           role: userFormData.role,
-          isActive: userFormData.status === 'active',
-          department: userFormData.department,
+          is_active: userFormData.status === 'active',
           permissions: userFormData.permissions,
-          createdAt: now,
-        };
-        updatedUsers = [...users, newUser];
+        });
+      } else {
+        // Create new user via API
+        const data = await apiPost<{ tempPIN: string }>('/api/admin/users', {
+          name: userFormData.name,
+          pin: userFormData.pin,
+          role: userFormData.role,
+        });
+
+        alert(`User created successfully! PIN: ${data.tempPIN}`);
       }
 
-      storage.save('users', updatedUsers);
-      setUsers(updatedUsers);
+      // Reload users from server
+      loadUsers();
       setShowUserModal(false);
     } catch (error) {
       console.error('Error saving user:', error);
-      alert('Error saving user. Please try again.');
+      alert(`Error saving user: ${error instanceof Error ? error.message : 'Please try again.'}`);
     }
   };
 
@@ -296,10 +256,12 @@ const UserManagement: React.FC = () => {
     switch (role) {
       case 'admin':
         return 'bg-purple-100 text-purple-800';
+      case 'supervisor':
+        return 'bg-blue-100 text-blue-800';
       case 'inspector':
         return 'bg-green-100 text-green-800';
-      case 'devsecops':
-        return 'bg-blue-100 text-blue-800';
+      case 'employee':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -317,26 +279,37 @@ const UserManagement: React.FC = () => {
           canManageUsers: true,
           canManageRoles: true,
           canManageForms: true,
-          canSetNotifications: true,
-          canManageSystem: true,
-          canBackupRestore: true,
+          canSetNotifications: false,
+          canManageSystem: false,
+          canBackupRestore: false,
 
-          // Inspector permissions (limited access)
-          canCreateInspections: false,
-          canEditInspections: false,
+          // Inspector permissions
+          canCreateInspections: true,
+          canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
           canViewGoogleDriveStatus: true,
-          canAddDigitalSignature: false,
+          canAddDigitalSignature: true,
           canExportReports: true,
+        };
+      case 'supervisor':
+        return {
+          // Admin permissions
+          canManageUsers: false,
+          canManageRoles: false,
+          canManageForms: false,
+          canSetNotifications: false,
+          canManageSystem: false,
+          canBackupRestore: false,
 
-          // DevSecOps permissions (limited access)
-          canViewDevSecOpsDashboard: false,
-          canViewSecurityLogs: true,
-          canViewSystemErrors: true,
-          canTrackDataBreaches: true,
-          canMonitorUpdates: true,
-          canViewAuditTrail: true,
+          // Inspector permissions
+          canCreateInspections: true,
+          canEditInspections: true,
+          canViewInspections: true,
+          canViewAnalytics: true,
+          canViewGoogleDriveStatus: true,
+          canAddDigitalSignature: true,
+          canExportReports: true,
         };
       case 'inspector':
         return {
@@ -356,16 +329,8 @@ const UserManagement: React.FC = () => {
           canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
-
-          // DevSecOps permissions
-          canViewDevSecOpsDashboard: false,
-          canViewSecurityLogs: false,
-          canViewSystemErrors: false,
-          canTrackDataBreaches: false,
-          canMonitorUpdates: false,
-          canViewAuditTrail: false,
         };
-      case 'devsecops':
+      case 'employee':
         return {
           // Admin permissions
           canManageUsers: false,
@@ -375,7 +340,7 @@ const UserManagement: React.FC = () => {
           canManageSystem: false,
           canBackupRestore: false,
 
-          // Inspector permissions (limited access)
+          // Inspector permissions
           canCreateInspections: false,
           canEditInspections: false,
           canViewInspections: true,
@@ -383,14 +348,6 @@ const UserManagement: React.FC = () => {
           canViewGoogleDriveStatus: false,
           canAddDigitalSignature: false,
           canExportReports: false,
-
-          // DevSecOps permissions
-          canViewDevSecOpsDashboard: true,
-          canViewSecurityLogs: true,
-          canViewSystemErrors: true,
-          canTrackDataBreaches: true,
-          canMonitorUpdates: true,
-          canViewAuditTrail: true,
         };
       default:
         return userFormData.permissions;
@@ -494,7 +451,7 @@ const UserManagement: React.FC = () => {
 
           {/* Filters */}
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                 <input
@@ -515,7 +472,9 @@ const UserManagement: React.FC = () => {
                 >
                   <option value="">All Roles</option>
                   <option value="admin">Admin</option>
+                  <option value="supervisor">Supervisor</option>
                   <option value="inspector">Inspector</option>
+                  <option value="employee">Employee</option>
                 </select>
               </div>
 
@@ -531,25 +490,9 @@ const UserManagement: React.FC = () => {
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-                <select
-                  value={departmentFilter}
-                  onChange={(e) => setDepartmentFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
-            {(roleFilter || statusFilter || departmentFilter || searchQuery) && (
+            {(roleFilter || statusFilter || searchQuery) && (
               <button
                 onClick={clearFilters}
                 className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 underline"
@@ -578,9 +521,6 @@ const UserManagement: React.FC = () => {
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Department
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
@@ -627,9 +567,6 @@ const UserManagement: React.FC = () => {
                           >
                             {user.role}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {user.department}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -748,29 +685,10 @@ const UserManagement: React.FC = () => {
                           onChange={(e) => handleRoleChange(e.target.value as UserRole)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="inspector">Inspector</option>
-                          <option value="supervisor">Supervisor</option>
                           <option value="admin">Admin</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Department *
-                        </label>
-                        <select
-                          value={userFormData.department}
-                          onChange={(e) =>
-                            setUserFormData({ ...userFormData, department: e.target.value })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select Department</option>
-                          {departments.map((dept) => (
-                            <option key={dept} value={dept}>
-                              {dept}
-                            </option>
-                          ))}
+                          <option value="supervisor">Supervisor</option>
+                          <option value="inspector">Inspector</option>
+                          <option value="employee">Employee</option>
                         </select>
                       </div>
 

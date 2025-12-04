@@ -2,7 +2,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { withRBAC } from '@/lib/rbac';
 import { User } from '@/hooks/useAuth';
-import { storage } from '@/utils/storage';
+import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
+import { InspectionType, InspectionStatus } from '@/types/database';
+
+// Increase body size limit for this endpoint to handle images
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '50mb',
+    },
+  },
+};
 
 export interface InspectionSubmission {
   id: string;
@@ -29,6 +39,58 @@ export interface InspectionSubmission {
   };
 }
 
+/**
+ * Auto-assign inspection to an available supervisor
+ * Uses round-robin or load-balanced assignment
+ */
+async function assignToSupervisor(supabase: any): Promise<string | null> {
+  try {
+    // Get all active supervisors with review permissions
+    const { data: supervisors, error: supervisorError } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('role', 'supervisor')
+      .eq('is_active', true);
+
+    if (supervisorError || !supervisors || supervisors.length === 0) {
+      console.warn('No active supervisors found for assignment');
+      return null;
+    }
+
+    // If only one supervisor, assign to them
+    if (supervisors.length === 1) {
+      return supervisors[0].id;
+    }
+
+    // Get pending inspection counts for each supervisor (load balancing)
+    const supervisorLoads = await Promise.all(
+      supervisors.map(async (supervisor: any) => {
+        const { count } = await supabase
+          .from('inspections')
+          .select('*', { count: 'exact', head: true })
+          .eq('reviewer_id', supervisor.id)
+          .eq('status', 'pending_review');
+
+        return {
+          id: supervisor.id,
+          name: supervisor.name,
+          pendingCount: count || 0,
+        };
+      })
+    );
+
+    // Assign to supervisor with least pending inspections
+    supervisorLoads.sort((a, b) => a.pendingCount - b.pendingCount);
+    const assignedSupervisor = supervisorLoads[0];
+
+    console.log(`Auto-assigned to supervisor: ${assignedSupervisor.name} (${assignedSupervisor.pendingCount} pending)`);
+    return assignedSupervisor.id;
+  } catch (error) {
+    console.error('Error assigning supervisor:', error);
+    return null;
+  }
+}
+
 async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
   if (req.method === 'GET') {
     return getInspections(req, res, user);
@@ -44,47 +106,54 @@ async function getInspections(req: NextApiRequest, res: NextApiResponse, user: U
   const { formType, status, startDate, endDate, page = '1', limit = '20' } = req.query;
 
   try {
-    const inspections = storage.load('inspections', []) as InspectionSubmission[];
-    let filtered = inspections;
+    const supabase = getServiceSupabase();
+    let query = supabase.from('inspections').select('*', { count: 'exact' });
 
-    // Filter by inspector if not admin or devsecops
+    // Filter by inspector if not admin/supervisor
     if (user.role === 'inspector') {
-      filtered = filtered.filter((i) => i.inspectorId === user.id);
+      query = query.eq('inspector_id', user.id);
     }
 
-    // Filter by form type
+    // Filter by formType if specified, otherwise return all inspection types
     if (formType && typeof formType === 'string') {
-      filtered = filtered.filter((i) => i.formType === formType);
+      query = query.eq('inspection_type', formType as InspectionType);
     }
+    // No else clause - return all inspection types when formType is not specified
 
     // Filter by status
     if (status && typeof status === 'string') {
-      filtered = filtered.filter((i) => i.status === status);
+      query = query.eq('status', status as InspectionStatus);
     }
 
     // Filter by date range
     if (startDate && typeof startDate === 'string') {
-      filtered = filtered.filter((i) => new Date(i.createdAt) >= new Date(startDate));
+      query = query.gte('created_at', startDate);
     }
     if (endDate && typeof endDate === 'string') {
-      filtered = filtered.filter((i) => new Date(i.createdAt) <= new Date(endDate));
+      query = query.lte('created_at', endDate);
     }
 
     // Sort by creation date (newest first)
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    query = query.order('created_at', { ascending: false });
 
     // Pagination
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
     const startIndex = (pageNum - 1) * limitNum;
-    const endIndex = startIndex + limitNum;
-    const paginated = filtered.slice(startIndex, endIndex);
+    query = query.range(startIndex, startIndex + limitNum - 1);
+
+    const { data: inspections, error, count } = await query;
+
+    if (error) {
+      console.error('Supabase query error:', error);
+      return res.status(500).json({ error: 'Failed to fetch inspections' });
+    }
 
     return res.status(200).json({
-      inspections: paginated,
-      total: filtered.length,
+      inspections: inspections || [],
+      total: count || 0,
       page: pageNum,
-      totalPages: Math.ceil(filtered.length / limitNum),
+      totalPages: Math.ceil((count || 0) / limitNum),
     });
   } catch (error) {
     console.error('Get inspections error:', error);
@@ -94,57 +163,85 @@ async function getInspections(req: NextApiRequest, res: NextApiResponse, user: U
 
 // POST /api/inspections
 async function createInspection(req: NextApiRequest, res: NextApiResponse, user: User) {
-  const { formType, formTemplateId, data, signature, status = 'draft' } = req.body;
+  const { id, formType, formTemplateId, data, signature, status = 'draft', locationId, assetId, inspectorId, inspectorName } = req.body;
 
   try {
-    if (!formType || !formTemplateId || !data) {
+    if (!formType || !data) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['formType', 'formTemplateId', 'data'],
+        required: ['formType', 'data'],
       });
     }
 
+    const supabase = getServiceSupabase();
     const now = new Date().toISOString();
-    const newInspection: InspectionSubmission = {
-      id: Date.now().toString(),
-      formType,
-      formTemplateId,
-      inspectorId: user.id,
-      inspectorName: user.name,
-      data,
-      signature: signature
-        ? {
-            dataUrl: signature.dataUrl,
-            timestamp: signature.timestamp || now,
-            inspectorId: user.id,
-            inspectorName: user.name,
-          }
-        : undefined,
-      status: status === 'submitted' ? 'submitted' : 'draft',
-      submittedAt: status === 'submitted' ? now : undefined,
-      createdAt: now,
-      updatedAt: now,
-      googleDriveExport: status === 'submitted' ? { status: 'pending' } : undefined,
+
+    // Map status from old format to new format
+    let inspectionStatus: InspectionStatus = 'draft';
+    if (status === 'submitted' || status === 'pending_review') {
+      inspectionStatus = 'pending_review';
+    } else if (status === 'approved') {
+      inspectionStatus = 'approved';
+    } else if (status === 'rejected') {
+      inspectionStatus = 'rejected';
+    } else if (status === 'completed') {
+      inspectionStatus = 'completed';
+    }
+
+    // Auto-assign to a supervisor if status is pending_review
+    let assignedSupervisorId = null;
+    if (inspectionStatus === 'pending_review') {
+      assignedSupervisorId = await assignToSupervisor(supabase);
+    }
+
+    // Use provided inspector info (for localStorage migration) or current user
+    const actualInspectorId = inspectorId || user.id;
+    const actualInspectorName = inspectorName || data.inspectedBy || user.name;
+
+    const inspectionData: any = {
+      inspection_type: formType as InspectionType,
+      inspector_id: actualInspectorId,
+      inspected_by: actualInspectorName,
+      designation: data.designation || user.role || null,
+      location_id: locationId || null,
+      asset_id: assetId || null,
+      form_template_id: formTemplateId || null,
+      form_data: data,
+      signature: signature?.dataUrl || null,
+      status: inspectionStatus,
+      submitted_at: inspectionStatus === 'pending_review' ? now : null,
+      inspection_date: data.inspectionDate || data.date || new Date().toISOString().split('T')[0],
+      remarks: data.remarks || null,
+      reviewer_id: assignedSupervisorId,
     };
 
-    const inspections = storage.load('inspections', []) as InspectionSubmission[];
-    inspections.push(newInspection);
-    storage.save('inspections', inspections);
+    // Include custom ID if provided (for localStorage migration)
+    if (id) {
+      inspectionData.id = id;
+    }
+
+    const { data: newInspection, error } = await (supabase
+      .from('inspections') as any)
+      .insert(inspectionData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return res.status(500).json({ error: 'Failed to create inspection', details: error.message });
+    }
 
     // Log inspection creation
-    logAuditEvent({
-      action: 'INSPECTION_CREATED',
-      performedBy: user.id,
-      performedByName: user.name,
-      details: { inspectionId: newInspection.id, formType, status: newInspection.status },
-      timestamp: now,
+    await logAuditTrail({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'CREATE',
+      entityType: 'inspection',
+      entityId: newInspection.id,
+      description: `Created ${formType} inspection`,
+      newValues: inspectionData,
     });
-
-    // Trigger Google Drive export if submitted
-    if (status === 'submitted') {
-      // This would trigger background job in production
-      // For now, just mark as pending
-    }
 
     return res.status(201).json({
       inspection: newInspection,
@@ -154,17 +251,6 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
     console.error('Create inspection error:', error);
     return res.status(500).json({ error: 'Failed to create inspection' });
   }
-}
-
-function logAuditEvent(event: any) {
-  const auditLogs = storage.load('auditLogs', []);
-  auditLogs.push(event);
-
-  if (auditLogs.length > 50000) {
-    auditLogs.splice(0, auditLogs.length - 50000);
-  }
-
-  storage.save('auditLogs', auditLogs);
 }
 
 export default withRBAC(handler, {

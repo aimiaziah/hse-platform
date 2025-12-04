@@ -211,7 +211,7 @@ export function initializeDemoData() {
           items: [
             { id: 'item-001', label: 'Fire Extinguisher', required: true },
             { id: 'item-002', label: 'Emergency Exit Signs', required: true },
-            { id: 'item-003', label: 'First Aid Kit', required: true },
+            { id: 'item-003', label: 'First Aid Items', required: true },
           ],
         },
         {

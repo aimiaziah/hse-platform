@@ -1,0 +1,88 @@
+====================================================================
+BROWSER CONSOLE DEBUG SCRIPT FOR HSE INSPECTION ERROR
+====================================================================
+
+Copy and paste this into your browser's console (F12 -> Console tab)
+when you're on the HSE Inspection page, then try to submit again.
+
+====================================================================
+
+// Check authentication status
+console.log('=== AUTHENTICATION DEBUG ===');
+console.log('1. Checking localStorage...');
+
+// Check if auth token exists
+const authToken = localStorage.getItem('authToken');
+console.log('Auth Token:', authToken);
+
+// Check if current user exists
+const currentUser = localStorage.getItem('currentUser');
+console.log('Current User:', currentUser);
+
+if (currentUser) {
+  try {
+    const user = JSON.parse(currentUser);
+    console.log('User Details:', user);
+    console.log('User ID:', user.id);
+    console.log('User Name:', user.name);
+    console.log('User Role:', user.role);
+    console.log('Permissions:', user.permissions);
+  } catch (e) {
+    console.error('Error parsing user data:', e);
+  }
+}
+
+// Check cookies
+console.log('\n2. Checking cookies...');
+console.log('All cookies:', document.cookie);
+
+if (!authToken) {
+  console.error('❌ NO AUTH TOKEN FOUND!');
+  console.log('👉 You need to LOG IN first!');
+  console.log('Go to /login and log in with PIN: 1111 (Inspector)');
+} else {
+  console.log('✅ Auth token exists');
+
+  // Test API call
+  console.log('\n3. Testing API call...');
+  fetch('/api/inspections', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+    credentials: 'include',
+    body: JSON.stringify({
+      formType: 'hse_general',
+      data: {
+        contractor: 'Test',
+        location: 'Test',
+        date: '2025-01-01',
+        inspectedBy: 'Test',
+        workActivity: 'Test',
+        tablePersons: [],
+        inspectionItems: [],
+        commentsRemarks: 'Test',
+      },
+      status: 'pending_review',
+    }),
+  })
+  .then(response => {
+    console.log('Response status:', response.status);
+    return response.json();
+  })
+  .then(data => {
+    console.log('Response data:', data);
+    if (data.error) {
+      console.error('❌ API Error:', data.error);
+      console.log('Error details:', data);
+    } else {
+      console.log('✅ API call successful!');
+    }
+  })
+  .catch(error => {
+    console.error('❌ Network error:', error);
+  });
+}
+
+====================================================================

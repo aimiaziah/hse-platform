@@ -1,7 +1,8 @@
 // src/pages/admin/checklist-items.tsx
 import React, { useState, useEffect } from 'react';
-import AdminLayout from '@/layouts/AdminLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import Link from 'next/link';
+import AdminLayout from '@/roles/admin/layouts/AdminLayout';
+import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -46,18 +47,29 @@ const ChecklistItemsManagement: React.FC = () => {
   >('activate');
 
   // Form data
-  const [itemFormData, setItemFormData] = useState({
+  const [itemFormData, setItemFormData] = useState<{
+    category: string;
+    item: string;
+    description: string;
+    inspectionType: 'hse' | 'fire_extinguisher' | 'first_aid';
+    isActive: boolean;
+  }>({
     category: '',
     item: '',
     description: '',
-    inspectionType: 'hse' as const,
+    inspectionType: 'hse',
     isActive: true,
   });
 
-  const [categoryFormData, setCategoryFormData] = useState({
+  const [categoryFormData, setCategoryFormData] = useState<{
+    name: string;
+    description: string;
+    inspectionType: 'hse' | 'fire_extinguisher' | 'first_aid';
+    isActive: boolean;
+  }>({
     name: '',
     description: '',
-    inspectionType: 'hse' as const,
+    inspectionType: 'hse',
     isActive: true,
   });
 
@@ -549,7 +561,7 @@ const ChecklistItemsManagement: React.FC = () => {
       case 'fire_extinguisher':
         return 'Fire Extinguisher';
       case 'first_aid':
-        return 'First Aid Kit';
+        return 'First Aid Items';
       default:
         return type;
     }
@@ -589,13 +601,27 @@ const ChecklistItemsManagement: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Forms Management</h1>
               <p className="text-gray-600">
-                Comprehensive management of inspection forms, categories, and items
+                Create and manage inspection forms with WYSIWYG editor
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
+              <Link
+                href="/admin/form-editor?mode=create"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 flex items-center shadow-sm"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                Create New Form
+              </Link>
               <button
                 onClick={handleExportItems}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -707,7 +733,7 @@ const ChecklistItemsManagement: React.FC = () => {
                   <option value="all">All Types</option>
                   <option value="hse">HSE Inspection</option>
                   <option value="fire_extinguisher">Fire Extinguisher</option>
-                  <option value="first_aid">First Aid Kit</option>
+                  <option value="first_aid">First Aid Items</option>
                 </select>
               </div>
               <div>
@@ -983,7 +1009,7 @@ const ChecklistItemsManagement: React.FC = () => {
                         >
                           <option value="hse">HSE Inspection</option>
                           <option value="fire_extinguisher">Fire Extinguisher</option>
-                          <option value="first_aid">First Aid Kit</option>
+                          <option value="first_aid">First Aid Items</option>
                         </select>
                       </div>
                       <div>
@@ -1077,7 +1103,7 @@ const ChecklistItemsManagement: React.FC = () => {
                         >
                           <option value="hse">HSE Inspection</option>
                           <option value="fire_extinguisher">Fire Extinguisher</option>
-                          <option value="first_aid">First Aid Kit</option>
+                          <option value="first_aid">First Aid Items</option>
                         </select>
                       </div>
                       <div>

@@ -1,80 +1,193 @@
-// src/pages/api/auth/login.ts
+// src/pages/api/auth/login.ts - User Login API
 import { NextApiRequest, NextApiResponse } from 'next';
-import { storage } from '@/utils/storage';
-import { User } from '@/hooks/useAuth';
+import { getServiceSupabase } from '@/lib/supabase';
 import { serialize } from 'cookie';
+import { generateToken } from '@/lib/jwt';
+import { isAuthMethodEnabled } from '@/lib/auth-config';
+import { rateLimitMiddleware, resetRateLimit } from '@/lib/rate-limiter';
+import { validateBody, LoginSchema } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+interface LoginRequest {
+  pin: string;
+}
+
+interface LoginResponse {
+  success: boolean;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    signature?: string | null;
+    permissions: any;
+  };
+  token?: string;
+  error?: string;
+  details?: Array<{ field: string; message: string }>;
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<LoginResponse>,
+) {
+  // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  const { pin } = req.body;
+  // Check if PIN auth is enabled
+  if (!isAuthMethodEnabled('pin')) {
+    return res.status(403).json({
+      success: false,
+      error: 'PIN authentication is disabled. Please use Microsoft login.'
+    });
+  }
 
-  if (!pin) {
-    return res.status(400).json({ error: 'PIN is required' });
+  // Apply rate limiting
+  if (rateLimitMiddleware(req, res, 'pin-login')) {
+    return; // Response already sent by middleware
   }
 
   try {
-    const users = storage.load('users', []) as User[];
-    const foundUser = users.find((u) => u.pin === pin && u.isActive);
+    // ✅ SECURITY: Validate input with Zod schema
+    const validation = validateBody(LoginSchema, req.body);
 
-    if (!foundUser) {
-      // Log failed login attempt
-      logAuditEvent({
-        action: 'LOGIN_FAILED',
-        details: { reason: 'Invalid PIN or inactive user' },
-        timestamp: new Date().toISOString(),
+    if (!validation.success) {
+      logger.warn('Login validation failed', {
+        ip: req.socket.remoteAddress,
+        details: validation.details,
       });
 
-      return res.status(401).json({ error: 'Invalid PIN' });
+      return res.status(400).json({
+        success: false,
+        error: validation.error,
+        details: validation.details,
+      });
     }
 
-    // Update last login
-    const updatedUser = { ...foundUser, lastLogin: new Date().toISOString() };
-    const updatedUsers = users.map((u) => (u.id === foundUser.id ? updatedUser : u));
-    storage.save('users', updatedUsers);
+    const { pin } = validation.data;
 
-    // Set auth token cookie (using user ID as token for demo)
-    // In production, use JWT or proper session tokens
-    const cookie = serialize('auth-token', foundUser.id, {
+    const supabase = getServiceSupabase();
+
+    // Find user with matching PIN
+    const { data: users, error: fetchError } = await supabase
+      .from('users')
+      .select(`
+        *,
+        user_permissions (
+          can_manage_users,
+          can_manage_forms,
+          can_create_inspections,
+          can_view_inspections,
+          can_review_inspections,
+          can_approve_inspections,
+          can_reject_inspections,
+          can_view_pending_inspections,
+          can_view_analytics
+        )
+      `)
+      .eq('pin', pin)
+      .eq('is_active', true);
+
+    if (fetchError) {
+      logger.error('Database error during login', fetchError, {
+        ip: req.socket.remoteAddress,
+      });
+      return res.status(500).json({ success: false, error: 'Internal server error' });
+    }
+
+    // Check if user found
+    if (!users || users.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid PIN or user not found' });
+    }
+
+    const user = users[0] as any;
+
+    // Fix: user_permissions is an object, not an array
+    const permissions = user.user_permissions || {};
+
+    // Update last login
+    await (supabase
+      .from('users') as any)
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id);
+
+    // Generate JWT token
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      permissions: {
+        canManageUsers: permissions.can_manage_users || false,
+        canManageForms: permissions.can_manage_forms || false,
+        canCreateInspections: permissions.can_create_inspections || false,
+        canViewInspections: permissions.can_view_inspections || false,
+        canReviewInspections: permissions.can_review_inspections || false,
+        canApproveInspections: permissions.can_approve_inspections || false,
+        canRejectInspections: permissions.can_reject_inspections || false,
+        canViewPendingInspections: permissions.can_view_pending_inspections || false,
+        canViewAnalytics: permissions.can_view_analytics || false,
+      },
+      authMethod: 'pin',
+    });
+
+    // Set auth token cookie
+    const cookie = serialize('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
       path: '/',
     });
 
     res.setHeader('Set-Cookie', cookie);
 
-    // Log successful login
-    logAuditEvent({
-      action: 'LOGIN_SUCCESS',
-      performedBy: foundUser.id,
-      performedByName: foundUser.name,
+    // Log successful login to audit trail
+    await (supabase.from('audit_trail') as any).insert({
+      user_id: user.id,
+      user_name: user.name,
+      user_role: user.role,
+      action: 'LOGIN',
+      entity_type: 'user',
+      entity_id: user.id,
+      description: 'User logged in successfully via PIN',
       timestamp: new Date().toISOString(),
     });
 
-    // Return user without PIN
-    const sanitizedUser = { ...updatedUser, pin: undefined };
+    // Reset rate limit on successful login
+    resetRateLimit(req, 'pin-login');
+
+    // Prepare user response
+    const userResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      signature: user.signature || null,
+      permissions: {
+        canManageUsers: permissions.can_manage_users || false,
+        canManageForms: permissions.can_manage_forms || false,
+        canCreateInspections: permissions.can_create_inspections || false,
+        canViewInspections: permissions.can_view_inspections || false,
+        canReviewInspections: permissions.can_review_inspections || false,
+        canApproveInspections: permissions.can_approve_inspections || false,
+        canRejectInspections: permissions.can_reject_inspections || false,
+        canViewPendingInspections: permissions.can_view_pending_inspections || false,
+        canViewAnalytics: permissions.can_view_analytics || false,
+      },
+    };
 
     return res.status(200).json({
       success: true,
-      user: sanitizedUser,
+      user: userResponse,
+      token,
     });
   } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ error: 'Login failed' });
+    logger.error('Login error', error, {
+      ip: req.socket.remoteAddress,
+    });
+    return res.status(500).json({ success: false, error: 'Internal server error' });
   }
-}
-
-function logAuditEvent(event: any) {
-  const auditLogs = storage.load('auditLogs', []);
-  auditLogs.push(event);
-
-  if (auditLogs.length > 50000) {
-    auditLogs.splice(0, auditLogs.length - 50000);
-  }
-
-  storage.save('auditLogs', auditLogs);
 }

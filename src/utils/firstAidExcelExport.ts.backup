@@ -1,0 +1,372 @@
+// src/utils/firstAidExcelExport.ts
+// First Aid Inspection Excel Export - Matching Template Format
+
+import * as XLSX from 'xlsx';
+
+interface CapturedImage {
+  dataUrl: string;
+  timestamp: number;
+}
+
+interface FirstAidItem {
+  id: string;
+  name: string;
+  expiryDateOption: 'NA' | 'date';
+  expiryDate: string;
+  quantity: string;
+  status: '✓' | 'X' | 'NA' | null;
+}
+
+interface FirstAidKitInspection {
+  id: string;
+  no: number;
+  model: string;
+  location: string;
+  modelNo: string;
+  items: FirstAidItem[];
+  remarks: string;
+  capturedImages?: CapturedImage[];
+}
+
+interface FirstAidInspectionData {
+  inspectedBy: string;
+  designation: string;
+  inspectionDate: string;
+  signature?: string;
+  kits: FirstAidKitInspection[];
+}
+
+// Standardized first aid items list matching the template
+const STANDARD_FIRST_AID_ITEMS = [
+  'Cotton Wool',
+  'Cotton Swabs',
+  'Cotton Buds',
+  'Cotton Balls',
+  'Analgesic Cream (Flanil)',
+  'Antiseptic Cream (Bacidin)',
+  'Normal Saline Eye Drops (Rinz)',
+  'Surgical Tape 1.25 cm',
+  'Lint Dressing No. 8',
+  'Wound Dressing',
+  'Non-Adherent Wound Compress',
+  'Gauze Swabs (5cmx5cmx8ply)',
+  'Non-Woven Triangular Bandage',
+  'Elastic Gauze Bandage 8cm',
+  'W.O.W Bandage (2.5cm/5cm/7.5cm)',
+  'Antibacterial Disinfectant (BactePro)',
+  'Antibacterial Disinfectant (Dr Cleanol\'s)',
+  'Losyen Kuning (Cap Kaki Tiga)',
+  'Alcohol Swab',
+  'Linemen Wintergreen',
+  'Safety/ Cloth Pin ',
+  'Emergency Blanket',
+  'CPR Face Shield',
+  'Plastic Tweezers',
+  'Scissors',
+  'Assorted Plasters 50\'s',
+  'Plaster Strips 10\'s ',
+  'Adhesive Plaster (Snowflake)',
+  'Roll Bandage',
+];
+
+/**
+ * Generate First Aid Inspection Excel file matching the official template
+ */
+export function generateFirstAidExcel(data: FirstAidInspectionData): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new();
+
+  // Get date for sheet naming
+  const date = new Date(data.inspectionDate);
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  const sheetName = `${monthNames[date.getMonth()]} - ${date.getFullYear()}`;
+
+  // Create the main sheet data
+  const sheetData: any[][] = [];
+
+  // Rows 1-3: Empty
+  sheetData.push([]);
+  sheetData.push([]);
+  sheetData.push([]);
+
+  // Row 4: Document reference at column AH (index 33)
+  const row4 = new Array(44).fill('');
+  row4[33] = 'HSEP-08/FAC(F)/RV00-001';
+  sheetData.push(row4);
+
+  // Rows 5-6: Empty
+  sheetData.push([]);
+  sheetData.push([]);
+
+  // Row 7: Title
+  sheetData.push(['FIRST AID ITEMS CHECKLIST']);
+
+  // Row 8: Section 1
+  sheetData.push(['Section 1 : General Information']);
+
+  // Row 9: Company info with Inspector/Date info
+  const row9 = new Array(44).fill('');
+  row9[0] = `Company : Theta Edge Berhad\r\n                  \r\n                  Lot 11B, Jalan 223, Seksyen 51A, 46100 Petaling Jaya,\r\n                  Selangor, Malaysia.\r\n                 +603 6043 0000`;
+  row9[15] = 'Inspected by :\r\n';
+  row9[24] = 'Date of Inspection :';
+  sheetData.push(row9);
+
+  // Row 10: Empty (part of merged cell)
+  sheetData.push([]);
+
+  // Row 11: Designation and Signature
+  const row11 = new Array(44).fill('');
+  row11[15] = 'Designation  :\r\n';
+  row11[24] = 'Signature :';
+  sheetData.push(row11);
+
+  // Row 12: Empty (part of merged cell)
+  sheetData.push([]);
+
+  // Row 13: Section 2 with Legend
+  const row13 = new Array(44).fill('');
+  row13[0] = 'Section 2 : Inspection Details';
+  row13[15] = 'LEGEND :                             \r\n                             √ = OK / Available          X = Not available\r\n                                                         NA = Not Applicable';
+  sheetData.push(row13);
+
+  // Row 14: Header row
+  const row14 = ['No', 'Model', 'Location', 'Model No.', ...STANDARD_FIRST_AID_ITEMS, 'Remarks'];
+  while (row14.length < 44) row14.push('');
+  sheetData.push(row14);
+
+  // Row 15: Empty (merged with row 14)
+  sheetData.push([]);
+
+  // Add data for each kit (starting from row 16)
+  data.kits.forEach((kit, index) => {
+    // Empty separator row between kits (except before first kit)
+    if (index > 0) {
+      sheetData.push([]);
+    }
+
+    // Status row
+    const statusRow = new Array(44).fill('');
+    statusRow[0] = kit.no;
+    statusRow[1] = kit.model;
+    statusRow[2] = kit.location;
+    statusRow[3] = kit.modelNo;
+    kit.items.forEach((item, idx) => {
+      if (item.status === '✓') statusRow[4 + idx] = '√';
+      else if (item.status === 'X') statusRow[4 + idx] = 'X';
+      else if (item.status === 'NA') statusRow[4 + idx] = 'N/A';
+      else statusRow[4 + idx] = '';
+    });
+    sheetData.push(statusRow);
+
+    // Expiry Date row
+    const expiryRow = new Array(44).fill('');
+    expiryRow[2] = 'Expiry Date';
+    kit.items.forEach((item, idx) => {
+      if (item.expiryDateOption === 'date' && item.expiryDate) {
+        expiryRow[4 + idx] = formatExpiryDate(item.expiryDate);
+      }
+    });
+    sheetData.push(expiryRow);
+
+    // Quantity row
+    const quantityRow = new Array(44).fill('');
+    quantityRow[2] = 'Quantity';
+    kit.items.forEach((item, idx) => {
+      quantityRow[4 + idx] = item.quantity || '';
+    });
+    quantityRow[33] = kit.remarks || '';  // Remarks at column AH
+    sheetData.push(quantityRow);
+  });
+
+  // Create worksheet
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+  // Set column widths
+  const colWidths = [];
+  for (let i = 0; i < 44; i++) {
+    if (i === 0) colWidths.push({ wch: 5 });      // No
+    else if (i === 1) colWidths.push({ wch: 20 }); // Model
+    else if (i === 2) colWidths.push({ wch: 15 }); // Location
+    else if (i === 3) colWidths.push({ wch: 12 }); // Model No.
+    else colWidths.push({ wch: 12 });              // Items and others
+  }
+  ws['!cols'] = colWidths;
+
+  // Add merged cells to match template exactly
+  const merges: XLSX.Range[] = [
+    // Row 7: Title (A7:AH7)
+    { s: { r: 6, c: 0 }, e: { r: 6, c: 33 } },
+    // Row 8: Section 1 (A8:AH8)
+    { s: { r: 7, c: 0 }, e: { r: 7, c: 33 } },
+    // Rows 9-12: Company info block (A9:K12)
+    { s: { r: 8, c: 0 }, e: { r: 11, c: 10 } },
+    // Row 9: Inspected by (P9:X9)
+    { s: { r: 8, c: 15 }, e: { r: 8, c: 23 } },
+    // Row 9: Date (Y9:AH9)
+    { s: { r: 8, c: 24 }, e: { r: 8, c: 33 } },
+    // Row 10: Inspected by continued (P10:X10)
+    { s: { r: 9, c: 15 }, e: { r: 9, c: 23 } },
+    // Row 10: Date continued (Y10:AH10)
+    { s: { r: 9, c: 24 }, e: { r: 9, c: 33 } },
+    // Row 11: Designation (P11:X11)
+    { s: { r: 10, c: 15 }, e: { r: 10, c: 23 } },
+    // Row 11: Signature (Y11:AH11)
+    { s: { r: 10, c: 24 }, e: { r: 10, c: 33 } },
+    // Row 12: Continued (P12:X12)
+    { s: { r: 11, c: 15 }, e: { r: 11, c: 23 } },
+    // Row 12: Continued (Y12:AH12)
+    { s: { r: 11, c: 24 }, e: { r: 11, c: 33 } },
+    // Row 13: Section 2 left (A13:K13)
+    { s: { r: 12, c: 0 }, e: { r: 12, c: 10 } },
+    // Row 13: Legend right (P13:AH13)
+    { s: { r: 12, c: 15 }, e: { r: 12, c: 33 } },
+    // Header rows (14-15): Each column header
+    { s: { r: 13, c: 0 }, e: { r: 14, c: 0 } },   // No
+    { s: { r: 13, c: 1 }, e: { r: 14, c: 1 } },   // Model
+    { s: { r: 13, c: 2 }, e: { r: 14, c: 2 } },   // Location
+    { s: { r: 13, c: 3 }, e: { r: 14, c: 3 } },   // Model No.
+  ];
+
+  // Add merges for all item columns
+  for (let i = 0; i < STANDARD_FIRST_AID_ITEMS.length; i++) {
+    merges.push({ s: { r: 13, c: 4 + i }, e: { r: 14, c: 4 + i } });
+  }
+  // Remarks column
+  merges.push({ s: { r: 13, c: 33 }, e: { r: 14, c: 33 } });
+
+  // Add merges for each kit's data rows
+  let currentRow = 15; // Start after headers (row 16 in 1-indexed)
+  data.kits.forEach((kit, index) => {
+    if (index > 0) {
+      // Empty separator row merge (full row)
+      merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow, c: 33 } });
+      currentRow++;
+    }
+    // Merge No, Model, and Model No. across 3 rows (status, expiry, quantity)
+    merges.push({ s: { r: currentRow, c: 0 }, e: { r: currentRow + 2, c: 0 } }); // No
+    merges.push({ s: { r: currentRow, c: 1 }, e: { r: currentRow + 2, c: 1 } }); // Model
+    merges.push({ s: { r: currentRow, c: 3 }, e: { r: currentRow + 2, c: 3 } }); // Model No.
+    currentRow += 3;
+  });
+
+  ws['!merges'] = merges;
+
+  // Add the worksheet to the workbook
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  // Create Kit Images sheet if there are any captured images
+  const kitsWithImages = data.kits.filter(
+    (kit) => kit.capturedImages && kit.capturedImages.length > 0
+  );
+
+  if (kitsWithImages.length > 0) {
+    const imageData: any[][] = [];
+
+    // Format date for display
+    const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}/${date.getFullYear()}`;
+
+    // Header section
+    imageData.push(['KIT IMAGES - FIRST AID INSPECTION']);
+    imageData.push([]);
+    imageData.push([
+      'Inspection Date:',
+      formattedDate,
+      '',
+      'Inspector:',
+      data.inspectedBy,
+    ]);
+    imageData.push([]);
+    imageData.push([
+      'Note: This sheet contains image metadata with timestamps. Images are embedded as base64 data URLs.',
+    ]);
+    imageData.push([]);
+
+    // Column headers for image data
+    imageData.push([
+      'Kit #',
+      'Model',
+      'Location',
+      'Model No.',
+      'Capture Time',
+      'Image Data (Base64)',
+    ]);
+
+    // Add image data for each kit
+    kitsWithImages.forEach((kit) => {
+      if (kit.capturedImages) {
+        kit.capturedImages.forEach((image) => {
+          imageData.push([
+            kit.no,
+            kit.model,
+            kit.location,
+            kit.modelNo,
+            new Date(image.timestamp).toLocaleString(),
+            image.dataUrl, // Full base64 data URL
+          ]);
+        });
+      }
+    });
+
+    // Summary section
+    imageData.push([]);
+    imageData.push([
+      'Total Images:',
+      kitsWithImages.reduce((sum, kit) => sum + (kit.capturedImages?.length || 0), 0),
+    ]);
+    imageData.push(['Kits Photographed:', kitsWithImages.length]);
+
+    // Create Kit Images worksheet
+    const imgWs = XLSX.utils.aoa_to_sheet(imageData);
+
+    // Set column widths for Kit Images sheet
+    imgWs['!cols'] = [
+      { wch: 10 },  // Kit #
+      { wch: 20 },  // Model
+      { wch: 15 },  // Location
+      { wch: 15 },  // Model No.
+      { wch: 22 },  // Capture Time
+      { wch: 50 },  // Image Data - wider for base64
+    ];
+
+    // Add merged cells for header
+    const imgMerges: XLSX.Range[] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // Title row
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 5 } }, // Note row
+    ];
+    imgWs['!merges'] = imgMerges;
+
+    // Add Kit Images worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, imgWs, 'Kit Images');
+  }
+
+  return wb;
+}
+
+/**
+ * Download the Excel file
+ */
+export function downloadFirstAidExcel(data: FirstAidInspectionData, filename?: string) {
+  const wb = generateFirstAidExcel(data);
+  const date = new Date(data.inspectionDate);
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  const defaultFilename = `First_Aid_Checklist_${monthNames[date.getMonth()]}_${date.getFullYear()}.xlsx`;
+  XLSX.writeFile(wb, filename || defaultFilename);
+}
+
+/**
+ * Format expiry date (e.g., "02/29")
+ */
+function formatExpiryDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${month}/${year}`;
+  } catch {
+    return 'N/A';
+  }
+}

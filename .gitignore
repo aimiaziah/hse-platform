@@ -18,6 +18,9 @@
 .DS_Store
 *.pem
 
+# DATA STORAGE
+.data/
+
 # TEMPORARY FILES
 next-env.d.ts
 

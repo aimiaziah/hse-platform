@@ -1,0 +1,74 @@
+// src/components/MobileHeader.tsx - Clean Mobile Header
+import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+
+interface MobileHeaderProps {
+  title?: string;
+  showLogo?: boolean;
+  showUserInfo?: boolean;
+}
+
+const MobileHeader: React.FC<MobileHeaderProps> = ({
+  title = '',
+  showLogo = true,
+  showUserInfo = false,
+}) => {
+  const { user } = useAuth();
+
+  // Get profile link based on role
+  const getProfileLink = () => {
+    if (user?.role === 'supervisor') return '/supervisor/profile';
+    if (user?.role === 'inspector') return '/inspector/profile';
+    return '/';
+  };
+
+  return (
+    <header className="sticky top-0 bg-white border-b border-gray-200 shadow-sm z-40">
+      <div className="px-4 py-4">
+        <div className="flex items-center justify-between gap-4">
+          {/* Left side - User Info and Profile Link */}
+          <div className="flex items-center gap-3">
+            {user && (
+              <>
+                {/* Profile Link */}
+                {(user.role === 'inspector' || user.role === 'supervisor') && (
+                  <Link
+                    href={getProfileLink()}
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors flex-shrink-0"
+                    title="Go to Profile"
+                  >
+                    <span className="material-icons text-xl">person</span>
+                  </Link>
+                )}
+
+                {/* User Name and Role */}
+                <div className="flex flex-col justify-center mt-1">
+                  <p className="text-sm font-semibold text-gray-900 leading-tight mb-0">{user.name}</p>
+                  <p className="text-xs text-gray-600 capitalize font-medium leading-tight">{user.role}</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Logo */}
+          {showLogo && (
+            <Link href="/" className="flex items-center flex-shrink-0">
+              <Image
+                src="/theta-logo.png"
+                alt="Logo"
+                width={52}
+                height={52}
+                className="rounded-lg"
+                style={{ width: 'auto', height: 'auto' }}
+              />
+            </Link>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default MobileHeader;

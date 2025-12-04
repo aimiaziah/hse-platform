@@ -131,7 +131,7 @@ const ExportStatusPage: React.FC = () => {
   if (loading) {
     return (
       <ProtectedRoute requiredPermission="canViewGoogleDriveStatus">
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-white">
           <RoleBasedNav />
           <div className="flex items-center justify-center h-screen">
             <div className="text-center">
@@ -150,7 +150,7 @@ const ExportStatusPage: React.FC = () => {
         <title>Google Drive Export Status - HSE Inspection</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-white">
         <RoleBasedNav />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

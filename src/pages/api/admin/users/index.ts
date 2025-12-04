@@ -2,8 +2,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { withRBAC, getRolePermissions } from '@/lib/rbac';
 import { User } from '@/hooks/useAuth';
-import { storage } from '@/utils/storage';
-import { generateSecurePIN, hashPIN } from '@/utils/auth';
+import { getServiceSupabase } from '@/lib/supabase';
+import { validateBody, validateQuery, UserCreateSchema, ListQuerySchema } from '@/lib/validation';
+import { logger } from '@/lib/logger';
 
 async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
   if (req.method === 'GET') {
@@ -17,134 +18,188 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
 
 // GET /api/admin/users - List all users with filters
 async function getUsers(req: NextApiRequest, res: NextApiResponse) {
-  const { role, status, search, page = '1', limit = '10' } = req.query;
+  // Validate query parameters
+  const validation = validateQuery(ListQuerySchema, req.query);
+  if (!validation.success) {
+    logger.warn('Invalid query parameters', { errors: validation.details });
+    return res.status(400).json(validation);
+  }
+
+  const { role, status, search, page, limit } = validation.data;
+  // Assert types after validation (Zod transforms ensure these are numbers)
+  const pageNum = page as number;
+  const limitNum = limit as number;
 
   try {
-    const users = storage.load('users', []) as User[];
-    let filtered = users;
+    const supabase = getServiceSupabase();
+
+    // Build query
+    let query = supabase
+      .from('users')
+      .select('*, user_permissions(*)', { count: 'exact' });
 
     // Filter by role
-    if (role && typeof role === 'string') {
-      filtered = filtered.filter((u) => u.role === role);
+    if (role) {
+      query = query.eq('role', role);
     }
 
     // Filter by status
-    if (status && typeof status === 'string') {
-      filtered = filtered.filter((u) => u.isActive === (status === 'active'));
+    if (status) {
+      query = query.eq('is_active', status === 'active');
     }
 
-    // Search by name or department
-    if (search && typeof search === 'string') {
-      const searchLower = search.toLowerCase();
-      filtered = filtered.filter(
-        (u) =>
-          u.name.toLowerCase().includes(searchLower) ||
-          u.department?.toLowerCase().includes(searchLower),
-      );
+    // Search by name
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
     }
 
     // Pagination
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
     const startIndex = (pageNum - 1) * limitNum;
-    const endIndex = startIndex + limitNum;
-    const paginated = filtered.slice(startIndex, endIndex);
+    const endIndex = startIndex + limitNum - 1;
 
-    // Remove sensitive data
-    const sanitizedUsers = paginated.map((u) => ({
-      ...u,
-      pin: undefined,
-    }));
+    query = query.range(startIndex, endIndex).order('created_at', { ascending: false });
+
+    const { data: users, error, count } = await query;
+
+    if (error) {
+      logger.error('Get users error', error);
+      return res.status(500).json({ error: 'Failed to fetch users' });
+    }
+
+    // Format response with all necessary fields
+    const sanitizedUsers = (users || []).map((u: any) => {
+      const permissions = u.user_permissions?.[0] || {};
+      return {
+        id: u.id,
+        name: u.name,
+        role: u.role,
+        email: u.email,
+        pin: u.pin, // Include PIN for display in user management
+        isActive: u.is_active,
+        createdAt: u.created_at,
+        lastLogin: u.last_login,
+        permissions: {
+          canManageUsers: permissions.can_manage_users || false,
+          canManageForms: permissions.can_manage_forms || false,
+          canCreateInspections: permissions.can_create_inspections || false,
+          canViewInspections: permissions.can_view_inspections || false,
+          canReviewInspections: permissions.can_review_inspections || false,
+          canApproveInspections: permissions.can_approve_inspections || false,
+          canRejectInspections: permissions.can_reject_inspections || false,
+          canViewPendingInspections: permissions.can_view_pending_inspections || false,
+          canViewAnalytics: permissions.can_view_analytics || false,
+        },
+      };
+    });
 
     return res.status(200).json({
       users: sanitizedUsers,
-      total: filtered.length,
+      total: count || 0,
       page: pageNum,
-      totalPages: Math.ceil(filtered.length / limitNum),
+      totalPages: Math.ceil((count || 0) / limitNum),
     });
   } catch (error) {
-    console.error('Get users error:', error);
+    logger.error('Get users error', error as Error);
     return res.status(500).json({ error: 'Failed to fetch users' });
   }
 }
 
 // POST /api/admin/users - Create new user
 async function createUser(req: NextApiRequest, res: NextApiResponse, adminUser: User) {
-  const { name, role, department } = req.body;
+  // Validate request body
+  const validation = validateBody(UserCreateSchema, req.body);
+  if (!validation.success) {
+    logger.warn('User creation validation failed', { errors: validation.details, adminUser: adminUser.id });
+    return res.status(400).json(validation);
+  }
+
+  const { name, role, pin, email, isActive } = validation.data;
 
   try {
-    // Validate required fields
-    if (!name || !role || !department) {
-      return res.status(400).json({
-        error: 'Missing required fields',
-        required: ['name', 'role', 'department'],
-      });
-    }
 
-    // Validate role
-    if (!['admin', 'inspector', 'devsecops'].includes(role)) {
-      return res.status(400).json({
-        error: 'Invalid role',
-        validRoles: ['admin', 'inspector', 'devsecops'],
-      });
-    }
+    const supabase = getServiceSupabase();
 
-    // Generate secure PIN
-    const newPIN = generateSecurePIN();
-    const hashedPIN = hashPIN(newPIN);
+    // Use provided PIN (already validated by schema)
+    const userPin = pin;
+
+    // Use provided email or create one from name
+    const userEmail = email || `${name.toLowerCase().replace(/\s+/g, '.')}@inspection.local`;
 
     // Get default permissions for role
     const permissions = getRolePermissions(role);
 
-    const newUser: User = {
-      id: Date.now().toString(),
-      name,
-      pin: hashedPIN,
-      role,
-      department,
-      permissions,
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: undefined,
-    };
+    // Create user in database
+    const { data: newUser, error: userError } = await (supabase
+      .from('users') as any)
+      .insert({
+        name,
+        pin: userPin,
+        role,
+        email: userEmail,
+        is_active: isActive ?? true,
+      })
+      .select()
+      .single();
 
-    const users = storage.load('users', []) as User[];
-    users.push(newUser);
-    storage.save('users', users);
+    if (userError) {
+      logger.error('Create user error', userError, { adminUser: adminUser.id });
+      return res.status(500).json({ error: 'Failed to create user' });
+    }
 
-    // Log user creation
-    logAuditEvent({
+    logger.info('User created', { userId: newUser.id, role: newUser.role, createdBy: adminUser.id });
+
+    // Create user permissions
+    const { error: permError } = await (supabase
+      .from('user_permissions') as any)
+      .insert({
+        user_id: newUser.id,
+        can_manage_users: permissions.canManageUsers || false,
+        can_manage_forms: permissions.canManageForms || false,
+        can_create_inspections: permissions.canCreateInspections || false,
+        can_view_inspections: permissions.canViewInspections || false,
+        can_review_inspections: permissions.canReviewInspections || false,
+        can_approve_inspections: permissions.canApproveInspections || false,
+        can_reject_inspections: permissions.canRejectInspections || false,
+        can_view_pending_inspections: permissions.canViewPendingInspections || false,
+        can_view_analytics: permissions.canViewAnalytics || false,
+      });
+
+    if (permError) {
+      logger.error('Create permissions error', permError, { userId: newUser.id });
+      // Rollback user creation
+      await (supabase.from('users') as any).delete().eq('id', newUser.id);
+      return res.status(500).json({ error: 'Failed to create user permissions' });
+    }
+
+    // Log user creation to audit trail
+    await (supabase.from('audit_trail') as any).insert({
+      user_id: adminUser.id,
+      user_name: adminUser.name,
+      user_role: adminUser.role,
       action: 'USER_CREATED',
-      performedBy: adminUser.id,
-      performedByName: adminUser.name,
-      targetUserId: newUser.id,
-      targetUserName: newUser.name,
-      details: { role: newUser.role, department: newUser.department },
+      entity_type: 'user',
+      entity_id: newUser.id,
+      description: `Created user ${newUser.name} with role ${newUser.role}`,
       timestamp: new Date().toISOString(),
     });
 
     return res.status(201).json({
-      user: { ...newUser, pin: undefined },
-      tempPIN: newPIN, // Send PIN once for display
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        role: newUser.role,
+        email: newUser.email,
+        isActive: newUser.is_active,
+        createdAt: newUser.created_at,
+        permissions,
+      },
+      tempPIN: userPin, // Send PIN once for display
       message: 'User created successfully',
     });
   } catch (error) {
-    console.error('Create user error:', error);
+    logger.error('Create user error', error as Error, { adminUser: adminUser.id });
     return res.status(500).json({ error: 'Failed to create user' });
   }
-}
-
-// Helper function to log audit events
-function logAuditEvent(event: any) {
-  const auditLogs = storage.load('auditLogs', []);
-  auditLogs.push(event);
-
-  // Keep only last 50000 audit logs
-  if (auditLogs.length > 50000) {
-    auditLogs.splice(0, auditLogs.length - 50000);
-  }
-
-  storage.save('auditLogs', auditLogs);
 }
 
 // Export with RBAC protection - Only admins can manage users

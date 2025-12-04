@@ -1,1122 +1,1146 @@
-/* eslint-disable react/button-has-type */
-import React, { useState } from 'react';
-import BaseLayout from '@/layouts/BaseLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { storage } from '@/utils/storage';
+import React, { useState, useEffect } from 'react';
+import InspectorLayout from '@/roles/inspector/layouts/InspectorLayout';
+import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/router';
+import { generateFirstAidPDF, downloadPDF } from '@/utils/templatePdfGenerator';
+import SimpleCameraCapture, { CapturedImage } from '@/components/SimpleCameraCapture';
 
-type ItemStatus = 'GOOD' | 'LOW' | 'EXPIRED' | 'MISSING' | 'DAMAGED' | null;
+type RatingType = '✓' | 'X' | 'NA' | null;
 type InspectionStatus = 'draft' | 'completed';
-type UserRole = 'inspector' | 'admin';
 
 interface FirstAidItem {
   id: string;
-  category: string;
-  item: string;
-  requiredQuantity: number;
-  currentQuantity: number;
-  status: ItemStatus;
-  expiryDate?: string;
-  comments: string;
-  requiresAction: boolean;
+  name: string;
+  expiryDateOption: 'NA' | 'date';
+  expiryDate: string;
+  quantity: string;
+  previousQuantity?: string;
+  status: RatingType;
+  capturedImages?: CapturedImage[];
 }
 
-interface FirstAidInspectionData {
+interface FirstAidKitInspection {
   id: string;
-  building: string;
-  floor: string;
+  no: number;
+  model: string;
   location: string;
-  kitType: string;
-  kitSerialNumber: string;
-  lastRestockDate: string;
-  inspectedBy: string;
-  inspectionDate: string;
-  status: InspectionStatus;
+  modelNo: string;
   items: FirstAidItem[];
-  auditLog: Array<{
-    timestamp: string;
-    user: string;
-    action: string;
-    details: string;
-  }>;
-  createdAt: string;
-  savedAt?: string;
+  remarks: string;
+  capturedImages?: CapturedImage[];
 }
+
+interface InspectionData {
+  id: string;
+  inspectedBy: string;
+  designation: string;
+  inspectionDate: string;
+  signature: string;
+  status: InspectionStatus;
+  kits: FirstAidKitInspection[];
+  createdAt: string;
+}
+
+const INITIAL_KITS_DATA = [
+  { id: '1', no: 1, model: 'PVC Large', location: 'Ground Floor', modelNo: 'P-3' },
+  { id: '2', no: 2, model: 'AS Transparent Small', location: 'Ground Floor', modelNo: 'AS-3ET' },
+  { id: '3', no: 3, model: 'AS Transparent Small', location: 'Ground Floor', modelNo: 'AS-3ET' },
+  { id: '4', no: 4, model: 'PVC Large', location: 'First Floor', modelNo: 'P-3' },
+  { id: '5', no: 5, model: 'AS Transparent Small', location: 'First Floor', modelNo: 'AS-3ET' },
+  { id: '6', no: 6, model: 'AS Transparent Small', location: 'First Floor', modelNo: 'AS-3ET' },
+  { id: '7', no: 7, model: 'AS Transparent Small', location: 'Second Floor', modelNo: 'AS-3ET' },
+  { id: '8', no: 8, model: 'AS Transparent Small', location: 'Second Floor', modelNo: 'AS-3ET' },
+];
+
+const FIRST_AID_ITEMS = [
+  'Cotton Wool',
+  'Cotton Swabs',
+  'Cotton Buds',
+  'Cotton Balls',
+  'Analgesic Cream (Flanil)',
+  'Antiseptic Cream (Bacidin)',
+  'Surgical Tape 1.25cm',
+  'Lint Dressing No. 8',
+  'Wound Dressing',
+  'Non-Adherent Wound Compress',
+  'Gauze Swabs (5cmx5cmx8ply)',
+  'Non-Woven Triangular Bandage',
+  'Elastic Gauze Bandage 8cm',
+  'W.O.W Bandage (2.5cm/5cm/7.5cm)',
+  'Antibacterial Disinfectant (BactePro)',
+  'Antibacterial Disinfectant (Dr Cleanol)',
+  'Losyen Kuning (Cap Kaki Tiga)',
+  'Alcohol Swab',
+  'Linemen Wintergreen',
+  'Safety/Cloth Pin',
+  'Emergency Blanket',
+  'CPR Face Shield',
+  'Plastic Tweezers',
+  'Scissors',
+  'Assorted Plasters 50s',
+  'Plastic Strips 10s',
+  'Adhesive Plaster (Snowflake)',
+  'Roll Bandage',
+];
+
+const createInitialItems = (): FirstAidItem[] => {
+  return FIRST_AID_ITEMS.map((name, idx) => ({
+    id: `item${idx + 1}`,
+    name,
+    expiryDateOption: 'NA',
+    expiryDate: '',
+    quantity: '',
+    status: null,
+  }));
+};
 
 const FirstAidInspection: React.FC = () => {
-  const { user, hasPermission, isRole } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const router = useRouter();
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [expandedKit, setExpandedKit] = useState<number | null>(null);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [photographingKitIndex, setPhotographingKitIndex] = useState<number | null>(null);
+  const [photographingItemIndex, setPhotographingItemIndex] = useState<number | null>(null);
 
-  // Check if user can create inspections and is not an admin
-  const canFillInspection = hasPermission('canCreateInspections') && !isRole('admin');
+  const loadPreviousInspectionData = () => {
+    try {
+      const history = JSON.parse(localStorage.getItem('first-aid-history') || '[]');
+      return history.length > 0 ? history[history.length - 1] : null;
+    } catch (error) {
+      console.error('Error loading previous inspection:', error);
+      return null;
+    }
+  };
 
-  if (!canFillInspection) {
-    return (
-      <BaseLayout title="First Aid Kit Inspection">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div className="mb-4">
+  const [inspectionData, setInspectionData] = useState<InspectionData>(() => {
+    const previousInspection = loadPreviousInspectionData();
+    return {
+      id: Date.now().toString(),
+      inspectedBy: user?.name || '',
+      designation: user?.role || 'HSE',
+      inspectionDate: new Date().toISOString().split('T')[0],
+      signature: '',
+      status: 'draft',
+      kits: INITIAL_KITS_DATA.map((kit) => {
+        const previousKit = previousInspection?.kitInspections?.find(
+          (pk: any) => pk.modelNo === kit.modelNo && pk.location === kit.location,
+        );
+        return {
+          ...kit,
+          items: createInitialItems().map((item, idx) => {
+            const previousItem = previousKit?.items?.[idx];
+            return {
+              ...item,
+              previousQuantity: previousItem?.quantity || '',
+              expiryDateOption: previousItem?.expiryDateOption || 'NA',
+              expiryDate: previousItem?.expiryDate || '',
+            };
+          }),
+          remarks: '',
+        };
+      }),
+      createdAt: new Date().toISOString(),
+    };
+  });
+
+  useEffect(() => {
+    if (!hasPermission('canCreateInspections')) {
+      router.push('/');
+    }
+  }, [hasPermission, router]);
+
+  // Load existing draft if available
+  useEffect(() => {
+    try {
+      const drafts = JSON.parse(localStorage.getItem('first-aid-drafts') || '[]');
+      if (drafts.length > 0) {
+        // Load the most recent draft
+        const latestDraft = drafts[drafts.length - 1];
+        setInspectionData(latestDraft);
+        console.log('[First Aid] Loaded draft:', latestDraft.id);
+      }
+    } catch (error) {
+      console.error('[First Aid] Error loading draft:', error);
+    }
+  }, []);
+
+  if (!hasPermission('canCreateInspections')) {
+    return null;
+  }
+
+  const updateField = (field: keyof InspectionData, value: any) => {
+    setInspectionData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateKitItem = (
+    kitIndex: number,
+    itemIndex: number,
+    field: keyof FirstAidItem,
+    value: any,
+  ) => {
+    setInspectionData((prev) => ({
+      ...prev,
+      kits: prev.kits.map((kit, kIdx) =>
+        kIdx === kitIndex
+          ? {
+              ...kit,
+              items: kit.items.map((item, iIdx) =>
+                iIdx === itemIndex ? { ...item, [field]: value } : item,
+              ),
+            }
+          : kit,
+      ),
+    }));
+  };
+
+  const updateKitRemarks = (kitIndex: number, remarks: string) => {
+    setInspectionData((prev) => ({
+      ...prev,
+      kits: prev.kits.map((kit, idx) => (idx === kitIndex ? { ...kit, remarks } : kit)),
+    }));
+  };
+
+  const checkItemExpiryDate = (expiryDate: string) => {
+    if (!expiryDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      return { type: 'expired', days: Math.abs(diffDays) };
+    } else if (diffDays <= 30) {
+      return { type: 'warning', days: diffDays };
+    }
+    return { type: 'valid', days: diffDays };
+  };
+
+  const getExpirySummary = () => {
+    let expired = 0;
+    let expiringSoon = 0;
+    inspectionData.kits.forEach((kit) => {
+      kit.items.forEach((item) => {
+        if (item.expiryDateOption === 'date' && item.expiryDate) {
+          const status = checkItemExpiryDate(item.expiryDate);
+          if (status?.type === 'expired') expired++;
+          else if (status?.type === 'warning') expiringSoon++;
+        }
+      });
+    });
+    return { expired, expiringSoon };
+  };
+
+  const handleSaveDraft = () => {
+    try {
+      const drafts = JSON.parse(localStorage.getItem('first-aid-drafts') || '[]');
+      const existingIndex = drafts.findIndex((d: InspectionData) => d.id === inspectionData.id);
+      if (existingIndex >= 0) {
+        drafts[existingIndex] = inspectionData;
+      } else {
+        drafts.push(inspectionData);
+      }
+      localStorage.setItem('first-aid-drafts', JSON.stringify(drafts));
+      alert('Draft saved successfully!');
+    } catch (error) {
+      alert('Failed to save draft');
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // Submit to Supabase
+      const response = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          formType: 'first_aid',
+          status: 'pending_review',
+          data: {
+            inspectedBy: inspectionData.inspectedBy,
+            inspectionDate: inspectionData.inspectionDate,
+            designation: inspectionData.designation,
+            signature: inspectionData.signature,
+            kits: inspectionData.kits,
+            kitInspections: inspectionData.kits,
+            company: 'Theta Edge Berhad',
+            location: 'All Locations',
+          },
+          signature: {
+            dataUrl: inspectionData.signature,
+            timestamp: new Date().toISOString(),
+            inspectorId: user?.id || '',
+            inspectorName: inspectionData.inspectedBy,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit inspection');
+      }
+
+      // Remove from drafts after successful submission
+      const drafts = JSON.parse(localStorage.getItem('first-aid-drafts') || '[]');
+      const updatedDrafts = drafts.filter((d: InspectionData) => d.id !== inspectionData.id);
+      localStorage.setItem('first-aid-drafts', JSON.stringify(updatedDrafts));
+
+      setShowSubmitDialog(false);
+      alert('First Aid Inspection submitted successfully!');
+      router.push('/inspector/forms');
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert(`Failed to submit inspection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const getKitCompletionStatus = (kit: FirstAidKitInspection) => {
+    const answeredItems = kit.items.filter((item) => item.status !== null).length;
+    return { completed: answeredItems, total: kit.items.length };
+  };
+
+  const getKitExpiryStatus = (kit: FirstAidKitInspection) => {
+    let expired = 0;
+    let expiringSoon = 0;
+    kit.items.forEach((item) => {
+      if (item.expiryDateOption === 'date' && item.expiryDate) {
+        const status = checkItemExpiryDate(item.expiryDate);
+        if (status?.type === 'expired') expired++;
+        else if (status?.type === 'warning') expiringSoon++;
+      }
+    });
+    return { expired, expiringSoon };
+  };
+
+  const startPhotoCapture = (kitIndex: number) => {
+    setPhotographingKitIndex(kitIndex);
+    setPhotographingItemIndex(null);
+    setShowCamera(true);
+  };
+
+  const startItemPhotoCapture = (kitIndex: number, itemIndex: number) => {
+    setPhotographingKitIndex(kitIndex);
+    setPhotographingItemIndex(itemIndex);
+    setShowCamera(true);
+  };
+
+  const handlePhotoCaptureComplete = (images: CapturedImage[]) => {
+    if (photographingKitIndex === null) return;
+
+    // If capturing for a specific item
+    if (photographingItemIndex !== null) {
+      setInspectionData((prev) => ({
+        ...prev,
+        kits: prev.kits.map((kit, kIdx) =>
+          kIdx === photographingKitIndex
+            ? {
+                ...kit,
+                items: kit.items.map((item, iIdx) =>
+                  iIdx === photographingItemIndex
+                    ? { ...item, capturedImages: [...(item.capturedImages || []), ...images] }
+                    : item
+                ),
+              }
+            : kit
+        ),
+      }));
+    } else {
+      // Capturing for the kit
+      setInspectionData((prev) => ({
+        ...prev,
+        kits: prev.kits.map((kit, idx) =>
+          idx === photographingKitIndex
+            ? { ...kit, capturedImages: [...(kit.capturedImages || []), ...images] }
+            : kit
+        ),
+      }));
+    }
+
+    setShowCamera(false);
+    setPhotographingKitIndex(null);
+    setPhotographingItemIndex(null);
+  };
+
+  const handlePhotoCaptureCancel = () => {
+    setShowCamera(false);
+    setPhotographingKitIndex(null);
+    setPhotographingItemIndex(null);
+  };
+
+  const deleteKitImage = (kitIndex: number, imageIndex: number) => {
+    setInspectionData((prev) => ({
+      ...prev,
+      kits: prev.kits.map((kit, idx) =>
+        idx === kitIndex
+          ? {
+              ...kit,
+              capturedImages: kit.capturedImages?.filter((_, i) => i !== imageIndex),
+            }
+          : kit
+      ),
+    }));
+  };
+
+  const deleteItemImage = (kitIndex: number, itemIndex: number, imageIndex: number) => {
+    setInspectionData((prev) => ({
+      ...prev,
+      kits: prev.kits.map((kit, kIdx) =>
+        kIdx === kitIndex
+          ? {
+              ...kit,
+              items: kit.items.map((item, iIdx) =>
+                iIdx === itemIndex
+                  ? {
+                      ...item,
+                      capturedImages: item.capturedImages?.filter((_, i) => i !== imageIndex),
+                    }
+                  : item
+              ),
+            }
+          : kit
+      ),
+    }));
+  };
+
+  return (
+    <ProtectedRoute requiredPermission="canCreateInspections">
+      <InspectorLayout>
+        <div className="min-h-screen bg-gray-50 pb-20">
+          {/* Header */}
+          <div className="bg-white border-b border-gray-200 p-4 sticky top-0 z-10 shadow-sm">
+            <button
+              onClick={() => router.push('/inspector/forms')}
+              className="mb-2 text-sm text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+            >
               <svg
-                className="mx-auto h-12 w-12 text-red-400"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
                 fill="none"
-                stroke="currentColor"
                 viewBox="0 0 24 24"
+                stroke="currentColor"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0l-8.898 12c-.77.833.192 2.5 1.732 2.5z"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-            </div>
-            <h3 className="text-lg font-medium text-red-800 mb-2">Access Restricted</h3>
-            <p className="text-red-700 mb-4">
-              {isRole('admin')
-                ? 'Administrators cannot fill inspection forms. This is reserved for inspectors.'
-                : 'You do not have permission to create inspections. Please contact your administrator.'}
-            </p>
-            <p className="text-sm text-red-600">
-              Current role: <span className="font-medium">{user?.role}</span>
-            </p>
-          </div>
-        </div>
-      </BaseLayout>
-    );
-  }
-
-  const [inspectionData, setInspectionData] = useState<FirstAidInspectionData>({
-    id: Date.now().toString(),
-    building: '',
-    floor: '',
-    location: '',
-    kitType: 'Standard Workplace Kit',
-    kitSerialNumber: '',
-    lastRestockDate: '',
-    inspectedBy: user?.name || '',
-    inspectionDate: new Date().toISOString().split('T')[0],
-    status: 'draft',
-    createdAt: new Date().toISOString(),
-    auditLog: [
-      {
-        timestamp: new Date().toISOString(),
-        user: user?.name || 'Unknown',
-        action: 'created',
-        details: 'First aid kit inspection record created',
-      },
-    ],
-    items: [
-      // Wound Care Supplies
-      {
-        id: '1',
-        category: 'WOUND CARE',
-        item: 'Adhesive Bandages (assorted sizes)',
-        requiredQuantity: 20,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '2',
-        category: 'WOUND CARE',
-        item: 'Sterile Gauze Pads (2x2 inch)',
-        requiredQuantity: 10,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '3',
-        category: 'WOUND CARE',
-        item: 'Sterile Gauze Pads (4x4 inch)',
-        requiredQuantity: 5,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '4',
-        category: 'WOUND CARE',
-        item: 'Medical Tape (1 inch)',
-        requiredQuantity: 2,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '5',
-        category: 'WOUND CARE',
-        item: 'Elastic Bandages (various sizes)',
-        requiredQuantity: 3,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '6',
-        category: 'WOUND CARE',
-        item: 'Triangular Bandages',
-        requiredQuantity: 2,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Antiseptic & Cleaning
-      {
-        id: '7',
-        category: 'ANTISEPTIC & CLEANING',
-        item: 'Antiseptic Wipes/Towelettes',
-        requiredQuantity: 10,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '8',
-        category: 'ANTISEPTIC & CLEANING',
-        item: 'Antibiotic Ointment Packets',
-        requiredQuantity: 5,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '9',
-        category: 'ANTISEPTIC & CLEANING',
-        item: 'Alcohol Prep Pads',
-        requiredQuantity: 10,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '10',
-        category: 'ANTISEPTIC & CLEANING',
-        item: 'Hand Sanitizer (small bottle)',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Tools & Equipment
-      {
-        id: '11',
-        category: 'TOOLS & EQUIPMENT',
-        item: 'Disposable Gloves (pairs)',
-        requiredQuantity: 10,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '12',
-        category: 'TOOLS & EQUIPMENT',
-        item: 'Scissors (medical)',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '13',
-        category: 'TOOLS & EQUIPMENT',
-        item: 'Tweezers',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '14',
-        category: 'TOOLS & EQUIPMENT',
-        item: 'Digital Thermometer',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '15',
-        category: 'TOOLS & EQUIPMENT',
-        item: 'CPR Face Mask/Shield',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Emergency Medications
-      {
-        id: '16',
-        category: 'EMERGENCY MEDICATIONS',
-        item: 'Pain Reliever (Ibuprofen/Acetaminophen)',
-        requiredQuantity: 20,
-        currentQuantity: 0,
-        status: null,
-        expiryDate: '',
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '17',
-        category: 'EMERGENCY MEDICATIONS',
-        item: 'Aspirin (for heart attack)',
-        requiredQuantity: 10,
-        currentQuantity: 0,
-        status: null,
-        expiryDate: '',
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '18',
-        category: 'EMERGENCY MEDICATIONS',
-        item: 'Antihistamine (for allergic reactions)',
-        requiredQuantity: 10,
-        currentQuantity: 0,
-        status: null,
-        expiryDate: '',
-        comments: '',
-        requiresAction: false,
-      },
-
-      // Documentation
-      {
-        id: '19',
-        category: 'DOCUMENTATION',
-        item: 'First Aid Manual/Guide',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '20',
-        category: 'DOCUMENTATION',
-        item: 'Emergency Contact List',
-        requiredQuantity: 1,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-      {
-        id: '21',
-        category: 'DOCUMENTATION',
-        item: 'Incident Report Forms',
-        requiredQuantity: 5,
-        currentQuantity: 0,
-        status: null,
-        comments: '',
-        requiresAction: false,
-      },
-    ],
-  });
-
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Kit types
-  const kitTypes = [
-    'Standard Workplace Kit',
-    'Industrial/Heavy Duty Kit',
-    'Vehicle/Mobile Kit',
-    'Sports/Recreation Kit',
-    'Laboratory Kit',
-    'Kitchen/Food Service Kit',
-    'Construction Site Kit',
-    'Office Environment Kit',
-    'Custom Kit',
-  ];
-
-  // Status options with professional colors
-  const statusOptions = [
-    { value: 'GOOD', label: 'Good', color: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
-    { value: 'LOW', label: 'Low Stock', color: 'bg-amber-600 hover:bg-amber-700 text-white' },
-    { value: 'EXPIRED', label: 'Expired', color: 'bg-red-600 hover:bg-red-700 text-white' },
-    { value: 'MISSING', label: 'Missing', color: 'bg-red-700 hover:bg-red-800 text-white' },
-    { value: 'DAMAGED', label: 'Damaged', color: 'bg-orange-600 hover:bg-orange-700 text-white' },
-  ];
-
-  // Check if inspection is editable
-  const isEditable = inspectionData.status === 'draft';
-
-  // Handle quantity change
-  const handleQuantityChange = (itemId: string, quantity: number) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => {
-        if (item.id === itemId) {
-          const updatedItem = { ...item, currentQuantity: Math.max(0, quantity) };
-          // Auto-determine status based on quantity
-          if (updatedItem.currentQuantity === 0) {
-            updatedItem.status = 'MISSING';
-            updatedItem.requiresAction = true;
-          } else if (updatedItem.currentQuantity < updatedItem.requiredQuantity * 0.3) {
-            updatedItem.status = 'LOW';
-            updatedItem.requiresAction = true;
-          } else if (
-            !updatedItem.status ||
-            updatedItem.status === 'MISSING' ||
-            updatedItem.status === 'LOW'
-          ) {
-            updatedItem.status = 'GOOD';
-            updatedItem.requiresAction = false;
-          }
-          return updatedItem;
-        }
-        return item;
-      }),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'quantity_changed',
-          details: `Quantity changed for item ${itemId} to ${quantity}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle status change
-  const handleStatusChange = (itemId: string, status: ItemStatus) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) =>
-        item.id === itemId
-          ? {
-              ...item,
-              status,
-              requiresAction: ['LOW', 'EXPIRED', 'MISSING', 'DAMAGED'].includes(status || ''),
-            }
-          : item,
-      ),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'status_changed',
-          details: `Status changed for item ${itemId} to ${status}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle expiry date change
-  const handleExpiryDateChange = (itemId: string, expiryDate: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => {
-        if (item.id === itemId) {
-          const updatedItem = { ...item, expiryDate };
-          // Check if expired
-          if (expiryDate && new Date(expiryDate) < new Date()) {
-            updatedItem.status = 'EXPIRED';
-            updatedItem.requiresAction = true;
-          }
-          return updatedItem;
-        }
-        return item;
-      }),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'expiry_changed',
-          details: `Expiry date changed for item ${itemId} to ${expiryDate}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle comment change
-  const handleCommentChange = (itemId: string, comments: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => (item.id === itemId ? { ...item, comments } : item)),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'comment_changed',
-          details: `Comment updated for item ${itemId}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle header data change
-  const handleHeaderChange = (field: string, value: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      [field]: value,
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'header_changed',
-          details: `${field} changed to ${value}`,
-        },
-      ],
-    }));
-  };
-
-  // Save inspection
-  const handleSave = () => {
-    // Validation
-    const missingFields = [];
-    if (!inspectionData.building) missingFields.push('Building');
-    if (!inspectionData.location) missingFields.push('Location');
-    if (!inspectionData.inspectedBy) missingFields.push('Inspected By');
-
-    const unratedItems = inspectionData.items.filter((item) => item.status === null).length;
-
-    if (missingFields.length > 0) {
-      setSaveError(`Please fill in required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-
-    if (unratedItems > 0) {
-      setSaveError(`Please check all items. ${unratedItems} items remaining.`);
-      return;
-    }
-
-    setShowSaveConfirmation(true);
-  };
-
-  // Confirm save
-  const confirmSave = () => {
-    const savedInspection = {
-      ...inspectionData,
-      status: 'completed' as InspectionStatus,
-      savedAt: new Date().toISOString(),
-      auditLog: [
-        ...inspectionData.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'completed',
-          details: 'First aid kit inspection completed and saved',
-        },
-      ],
-    };
-
-    // Save to localStorage
-    const existingInspections = storage.load('first_aid_inspections') || [];
-    const updatedInspections = [...existingInspections, savedInspection];
-    storage.save('first_aid_inspections', updatedInspections);
-
-    setInspectionData(savedInspection);
-    setShowSaveConfirmation(false);
-    setSaveError(null);
-  };
-
-  // Clear all data
-  const handleClearAll = () => {
-    if (!isEditable) return;
-
-    if (confirm('Are you sure you want to clear all quantities, statuses, and comments?')) {
-      setInspectionData((prev) => ({
-        ...prev,
-        items: prev.items.map((item) => ({
-          ...item,
-          currentQuantity: 0,
-          status: null,
-          comments: '',
-          requiresAction: false,
-          expiryDate: '',
-        })),
-        auditLog: [
-          ...prev.auditLog,
-          {
-            timestamp: new Date().toISOString(),
-            user: user?.name || 'Unknown',
-            action: 'cleared_all',
-            details: 'All quantities, statuses, and comments cleared',
-          },
-        ],
-      }));
-    }
-  };
-
-  // Group items by category
-  const groupedItems = inspectionData.items.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, FirstAidItem[]>);
-
-  // Calculate statistics
-  const stats = {
-    total: inspectionData.items.length,
-    completed: inspectionData.items.filter((item) => item.status !== null).length,
-    good: inspectionData.items.filter((item) => item.status === 'GOOD').length,
-    lowStock: inspectionData.items.filter((item) => item.status === 'LOW').length,
-    expired: inspectionData.items.filter((item) => item.status === 'EXPIRED').length,
-    missing: inspectionData.items.filter((item) => item.status === 'MISSING').length,
-    damaged: inspectionData.items.filter((item) => item.status === 'DAMAGED').length,
-    requiresAction: inspectionData.items.filter((item) => item.requiresAction).length,
-  };
-
-  const overallStatus =
-    stats.missing > 0 || stats.expired > 0 || stats.damaged > 0
-      ? 'NEEDS IMMEDIATE ATTENTION'
-      : stats.lowStock > 0
-      ? 'NEEDS RESTOCKING'
-      : stats.completed === stats.total
-      ? 'READY'
-      : 'INCOMPLETE';
-
-  return (
-    <BaseLayout title="First Aid Kit Inspection">
-      <div className="max-w-4xl mx-auto">
-        {/* Status Banner */}
-        {!isEditable && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-semibold text-green-800">Record Completed</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  This inspection has been saved and cannot be edited. Status:{' '}
-                  <span className="font-medium capitalize">
-                    {inspectionData.status.replace('_', ' ')}
-                  </span>
-                </p>
-              </div>
+              Back to Dashboard
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">First Aid Items Checklist</h1>
+              <p className="text-gray-500 text-xs">HSEP-08/FAIC(F)/RV00-018</p>
             </div>
           </div>
-        )}
 
-        {/* Error Message */}
-        {saveError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{saveError}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Header Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="px-6 py-5 border-b border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900">First Aid Kit Inspection</h1>
-            <p className="text-sm text-gray-600 mt-1">Emergency Supplies Verification</p>
-          </div>
-
-          <div className="p-6">
-            {/* Basic Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Building <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.building}
-                  onChange={(e) => handleHeaderChange('building', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Building name or number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Floor</label>
-                <input
-                  type="text"
-                  value={inspectionData.floor}
-                  onChange={(e) => handleHeaderChange('floor', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Floor number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Specific Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.location}
-                  onChange={(e) => handleHeaderChange('location', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Break room, hallway, etc."
-                />
-              </div>
-            </div>
-
-            {/* Kit Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Kit Type</label>
-                <select
-                  value={inspectionData.kitType}
-                  onChange={(e) => handleHeaderChange('kitType', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {kitTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kit Serial/ID Number
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.kitSerialNumber}
-                  onChange={(e) => handleHeaderChange('kitSerialNumber', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Kit identification number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Restock Date
-                </label>
-                <input
-                  type="date"
-                  value={inspectionData.lastRestockDate}
-                  onChange={(e) => handleHeaderChange('lastRestockDate', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Inspector Information */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inspected By <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={inspectionData.inspectedBy}
-                  onChange={(e) => handleHeaderChange('inspectedBy', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Inspector name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inspection Date
-                </label>
-                <input
-                  type="date"
-                  value={inspectionData.inspectionDate}
-                  onChange={(e) => handleHeaderChange('inspectionDate', e.target.value)}
-                  disabled={!isEditable}
-                  className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Progress Statistics */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Kit Status</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-900">
-                    {stats.completed}/{stats.total}
-                  </div>
-                  <div className="text-xs text-gray-600">Checked</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-emerald-600">{stats.good}</div>
-                  <div className="text-xs text-gray-600">Good</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-amber-600">{stats.lowStock}</div>
-                  <div className="text-xs text-gray-600">Low Stock</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-red-600">{stats.expired}</div>
-                  <div className="text-xs text-gray-600">Expired</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-red-700">{stats.missing}</div>
-                  <div className="text-xs text-gray-600">Missing</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-orange-600">{stats.damaged}</div>
-                  <div className="text-xs text-gray-600">Damaged</div>
-                </div>
-                <div className="text-center">
-                  <div
-                    className={`text-lg font-bold ${
-                      overallStatus === 'READY'
-                        ? 'text-emerald-600'
-                        : overallStatus.includes('IMMEDIATE')
-                        ? 'text-red-600'
-                        : overallStatus.includes('RESTOCKING')
-                        ? 'text-amber-600'
-                        : 'text-gray-600'
-                    }`}
-                  >
-                    {overallStatus}
-                  </div>
-                  <div className="text-xs text-gray-600">Overall</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Checklist Items */}
-        <div className="space-y-4">
-          {Object.entries(groupedItems).map(([category, items]) => (
-            <div key={category} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
-              </div>
-
-              <div className="p-6">
-                <div className="space-y-6">
-                  {items.map((item) => (
-                    <div key={item.id} className="border-b border-gray-100 pb-6 last:border-b-0">
-                      {/* Item Header */}
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-900 mb-1">{item.item}</h4>
-                        <p className="text-xs text-gray-500">Required: {item.requiredQuantity}</p>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Current Quantity */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-2">
-                            Current Quantity
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={item.currentQuantity}
-                            onChange={(e) =>
-                              handleQuantityChange(item.id, parseInt(e.target.value) || 0)
-                            }
-                            disabled={!isEditable}
-                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                            }`}
-                          />
-                        </div>
-
-                        {/* Status */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-2">
-                            Status
-                          </label>
-                          <div className="grid grid-cols-2 gap-1">
-                            {statusOptions.slice(0, 2).map((option) => (
-                              <button
-                                key={option.value}
-                                onClick={() =>
-                                  handleStatusChange(item.id, option.value as ItemStatus)
-                                }
-                                disabled={!isEditable}
-                                className={`
-                                  px-2 py-2 text-xs font-medium rounded transition-all duration-200 touch-manipulation
-                                  ${
-                                    !isEditable
-                                      ? 'cursor-not-allowed opacity-50'
-                                      : 'cursor-pointer active:scale-95'
-                                  }
-                                  ${
-                                    item.status === option.value
-                                      ? option.color
-                                      : isEditable
-                                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
-                                      : 'bg-gray-50 text-gray-400 border border-gray-200'
-                                  }
-                                `}
-                              >
-                                {option.value}
-                              </button>
-                            ))}
-                            {statusOptions.slice(2).map((option) => (
-                              <button
-                                key={option.value}
-                                onClick={() =>
-                                  handleStatusChange(item.id, option.value as ItemStatus)
-                                }
-                                disabled={!isEditable}
-                                className={`
-                                  px-2 py-2 text-xs font-medium rounded transition-all duration-200 touch-manipulation
-                                  ${
-                                    !isEditable
-                                      ? 'cursor-not-allowed opacity-50'
-                                      : 'cursor-pointer active:scale-95'
-                                  }
-                                  ${
-                                    item.status === option.value
-                                      ? option.color
-                                      : isEditable
-                                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
-                                      : 'bg-gray-50 text-gray-400 border border-gray-200'
-                                  }
-                                `}
-                              >
-                                {option.value}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Expiry Date (for medications) */}
-                        {item.category === 'EMERGENCY MEDICATIONS' && (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-2">
-                              Expiry Date
-                            </label>
-                            <input
-                              type="date"
-                              value={item.expiryDate || ''}
-                              onChange={(e) => handleExpiryDateChange(item.id, e.target.value)}
-                              disabled={!isEditable}
-                              className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                                !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                              }`}
-                            />
-                          </div>
-                        )}
-
-                        {/* Comments */}
-                        <div
-                          className={
-                            item.category === 'EMERGENCY MEDICATIONS' ? '' : 'sm:col-span-2'
-                          }
-                        >
-                          <label className="block text-xs font-medium text-gray-600 mb-2">
-                            Comments
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Notes..."
-                            value={item.comments}
-                            onChange={(e) => handleCommentChange(item.id, e.target.value)}
-                            disabled={!isEditable}
-                            className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                            }`}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Action Required Badge */}
-                      {item.requiresAction && (
-                        <div className="mt-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path
-                                fillRule="evenodd"
-                                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            Action Required
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="mt-8 mb-8">
-          {isEditable ? (
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleSave}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors min-h-[52px] touch-manipulation active:scale-95"
-              >
-                <svg
-                  className="inline w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Save Inspection
-              </button>
-
-              <button
-                onClick={handleClearAll}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors min-h-[52px] touch-manipulation active:scale-95"
-              >
-                <svg
-                  className="inline w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                Clear All
-              </button>
-            </div>
-          ) : (
-            <div className="bg-gray-100 rounded-lg p-4 text-center">
-              <p className="text-gray-600 font-medium">
-                Inspection saved on: {new Date(inspectionData.savedAt!).toLocaleString()}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Save Confirmation Modal */}
-        {showSaveConfirmation && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full mx-4">
-              <div className="p-6">
-                <div className="flex items-start mb-4">
-                  <div className="flex-shrink-0 mt-1">
-                    <svg
-                      className="h-6 w-6 text-amber-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0l-8.898 12c-.77.833.192 2.5 1.732 2.5z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-lg font-semibold text-gray-900">Confirm Save</h3>
-                    <p className="text-gray-600 mt-2">
-                      <strong>Once saved, this record cannot be edited.</strong>
+          {/* Main Content */}
+          <div className="max-w-7xl mx-auto p-4 space-y-6">
+            {/* Section 1: General Information */}
+            <div className="bg-white rounded-lg p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Section 1: General Information
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">Company: Theta Edge Berhad</p>
+                    <p className="text-gray-600 text-xs mt-1">
+                      Lot 11B, Jalan 223, Seksyen 51A,
                       <br />
-                      The inspection will be completed and saved.
+                      46100 Petaling Jaya, Selangor, Malaysia.
+                      <br />
+                      +60 36043 0000
                     </p>
                   </div>
                 </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Inspected by *
+                    </label>
+                    <input
+                      type="text"
+                      value={inspectionData.inspectedBy}
+                      onChange={(e) => updateField('inspectedBy', e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date of Inspection *
+                    </label>
+                    <input
+                      type="date"
+                      value={inspectionData.inspectionDate}
+                      onChange={(e) => updateField('inspectionDate', e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Designation *
+                    </label>
+                    <input
+                      type="text"
+                      value={inspectionData.designation}
+                      onChange={(e) => updateField('designation', e.target.value)}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., HSE"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 mt-6">
+            {/* Expiry Summary Banner */}
+            {(() => {
+              const summary = getExpirySummary();
+              if (summary.expired > 0 || summary.expiringSoon > 0) {
+                return (
+                  <div className="bg-white rounded-lg p-4 shadow-sm border-l-4 border-red-500">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <svg
+                          className="h-6 w-6 text-red-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-bold text-gray-900 mb-1">
+                          Expiry Date Alerts
+                        </h3>
+                        <div className="space-y-1">
+                          {summary.expired > 0 && (
+                            <p className="text-sm text-red-700">
+                              <span className="font-semibold">{summary.expired}</span> first aid
+                              item{summary.expired > 1 ? 's have' : ' has'} expired
+                            </p>
+                          )}
+                          {summary.expiringSoon > 0 && (
+                            <p className="text-sm text-yellow-700">
+                              <span className="font-semibold">{summary.expiringSoon}</span> first
+                              aid item{summary.expiringSoon > 1 ? 's are' : ' is'} expiring within
+                              30 days
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          Please review and replace expired or expiring items immediately
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Section 2: First Aid Kits Inspection */}
+            <div className="bg-white rounded-lg p-6 space-y-4 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                Section 2: First Aid Kits Inspection
+              </h2>
+              <div className="bg-blue-50 rounded-lg border border-blue-200 p-4 mb-6">
+                <p className="text-sm font-medium text-blue-800 mb-2">LEGEND:</p>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <span className="flex items-center gap-1">
+                    <span className="text-green-600 font-bold">✓</span> = OK / Available
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-red-600 font-bold">✕</span> = Not Available
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-blue-600 font-bold">NA</span> = Not Applicable
+                  </span>
+                </div>
+              </div>
+
+              {/* All Kits - Expandable Cards */}
+              <div className="space-y-4">
+                {inspectionData.kits.map((kit, kitIndex) => {
+                  const status = getKitCompletionStatus(kit);
+                  const expiryStatus = getKitExpiryStatus(kit);
+                  const isExpanded = expandedKit === kitIndex;
+                  return (
+                    <div
+                      key={kit.id}
+                      className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"
+                    >
+                      <div
+                        onClick={() => setExpandedKit(isExpanded ? null : kitIndex)}
+                        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-200"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <span className="rounded-md border border-blue-600 text-blue-600 px-2 py-0.5 text-xs font-medium">
+                                #{kit.no}
+                              </span>
+                              {status.completed === status.total && (
+                                <span className="text-xs text-green-600 flex items-center gap-1">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  Complete
+                                </span>
+                              )}
+                              {kit.capturedImages && kit.capturedImages.length > 0 && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-3 w-3"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                                    />
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+                                  </svg>
+                                  {kit.capturedImages.length} photo{kit.capturedImages.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                              {expiryStatus.expired > 0 && (
+                                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                                  ⚠️
+                                  {expiryStatus.expired} expired
+                                </span>
+                              )}
+                              {expiryStatus.expiringSoon > 0 && (
+                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
+                                  ⏰
+                                  {expiryStatus.expiringSoon} expiring soon
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium text-gray-800">
+                              {kit.model} - {kit.modelNo}
+                            </p>
+                            <p className="text-sm text-gray-600">{kit.location}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="rounded-md border border-blue-600 text-blue-600 px-2 py-0.5 text-xs font-medium">
+                                {status.completed}/{status.total} items
+                              </div>
+                            </div>
+                          </div>
+                          <span className="text-gray-600">{isExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div className="p-4 space-y-3">
+                          <button
+                            onClick={() => startPhotoCapture(kitIndex)}
+                            className="w-full rounded-md bg-blue-600 text-white py-2 px-4 font-medium hover:bg-blue-700 transition-all"
+                          >
+                            {kit.capturedImages && kit.capturedImages.length > 0
+                              ? 'Add More Photos'
+                              : 'Capture Photos'}
+                          </button>
+                          {kit.capturedImages && kit.capturedImages.length > 0 && (
+                            <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                              <p className="text-xs text-blue-800 font-medium mb-3">
+                                {kit.capturedImages.length} photo(s) captured
+                              </p>
+                              <div className="grid grid-cols-3 gap-2">
+                                {kit.capturedImages.map((image, imgIdx) => (
+                                  <div key={imgIdx} className="relative group">
+                                    <img
+                                      src={image.dataUrl}
+                                      alt={`Kit ${kit.no} - Photo ${imgIdx + 1}`}
+                                      className="w-full h-24 object-cover rounded-md border border-gray-300"
+                                    />
+                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 rounded-b-md">
+                                      {new Date(image.timestamp).toLocaleTimeString()}
+                                    </div>
+                                    <button
+                                      onClick={() => deleteKitImage(kitIndex, imgIdx)}
+                                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="h-3 w-3"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M6 18L18 6M6 6l12 12"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {kit.items.map((item, itemIndex) => (
+                            <div
+                              key={item.id}
+                              className="bg-gray-50 rounded-lg border border-gray-200 p-4"
+                            >
+                              <div className="flex items-start gap-2 mb-3">
+                                <div className="w-6 h-6 rounded-md border border-blue-600 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-blue-600 text-xs font-medium">
+                                    {itemIndex + 1}
+                                  </span>
+                                </div>
+                                <p className="text-sm font-medium text-gray-800 flex-1">
+                                  {item.name}
+                                </p>
+                              </div>
+                              <div className="grid grid-cols-3 gap-2 mb-3">
+                                <button
+                                  onClick={() => updateKitItem(kitIndex, itemIndex, 'status', '✓')}
+                                  className={`py-2 px-3 rounded-md font-medium text-lg transition-all ${
+                                    item.status === '✓'
+                                      ? 'bg-green-600 text-white'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  ✓
+                                </button>
+                                <button
+                                  onClick={() => updateKitItem(kitIndex, itemIndex, 'status', 'X')}
+                                  className={`py-2 px-3 rounded-md font-medium text-lg transition-all ${
+                                    item.status === 'X'
+                                      ? 'bg-red-600 text-white'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  ✕
+                                </button>
+                                <button
+                                  onClick={() => updateKitItem(kitIndex, itemIndex, 'status', 'NA')}
+                                  className={`py-2 px-3 rounded-md font-medium text-sm transition-all ${
+                                    item.status === 'NA'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  NA
+                                </button>
+                              </div>
+                              <div className="space-y-3">
+                                {/* Photo Capture Section */}
+                                <div>
+                                  <button
+                                    onClick={() => startItemPhotoCapture(kitIndex, itemIndex)}
+                                    disabled={(item.capturedImages?.length || 0) >= 2}
+                                    className={`w-full rounded-md py-2 px-3 font-medium text-sm transition-all ${
+                                      (item.capturedImages?.length || 0) >= 2
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-green-600 text-white hover:bg-green-700'
+                                    }`}
+                                  >
+                                    {(item.capturedImages?.length || 0) >= 2
+                                      ? 'Max 2 photos reached'
+                                      : item.capturedImages && item.capturedImages.length > 0
+                                      ? `Add Photo (${item.capturedImages.length}/2)`
+                                      : 'Capture Photo'}
+                                  </button>
+                                  {item.capturedImages && item.capturedImages.length > 0 && (
+                                    <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-2">
+                                      <p className="text-xs text-green-800 font-medium mb-2">
+                                        {item.capturedImages.length} photo(s) captured
+                                      </p>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {item.capturedImages.map((image, imgIdx) => (
+                                          <div key={imgIdx} className="relative group">
+                                            <img
+                                              src={image.dataUrl}
+                                              alt={`${item.name} - Photo ${imgIdx + 1}`}
+                                              className="w-full h-20 object-cover rounded-md border border-gray-300"
+                                            />
+                                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 rounded-b-md">
+                                              {new Date(image.timestamp).toLocaleTimeString()}
+                                            </div>
+                                            <button
+                                              onClick={() => deleteItemImage(kitIndex, itemIndex, imgIdx)}
+                                              className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                              <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-3 w-3"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M6 18L18 6M6 6l12 12"
+                                                />
+                                              </svg>
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Expiry Date
+                                  </label>
+                                  <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <button
+                                      onClick={() =>
+                                        updateKitItem(kitIndex, itemIndex, 'expiryDateOption', 'NA')
+                                      }
+                                      className={`py-1.5 px-3 rounded-md font-medium text-xs transition-all ${
+                                        item.expiryDateOption === 'NA'
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      N/A
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        updateKitItem(
+                                          kitIndex,
+                                          itemIndex,
+                                          'expiryDateOption',
+                                          'date',
+                                        )
+                                      }
+                                      className={`py-1.5 px-3 rounded-md font-medium text-xs transition-all ${
+                                        item.expiryDateOption === 'date'
+                                          ? 'bg-green-600 text-white'
+                                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      Set Date
+                                    </button>
+                                  </div>
+                                  {item.expiryDateOption === 'date' && (
+                                    <>
+                                      <input
+                                        type="date"
+                                        value={item.expiryDate}
+                                        onChange={(e) =>
+                                          updateKitItem(
+                                            kitIndex,
+                                            itemIndex,
+                                            'expiryDate',
+                                            e.target.value,
+                                          )
+                                        }
+                                        className={`w-full px-3 py-2 rounded-md border focus:outline-none focus:ring-2 text-sm ${
+                                          checkItemExpiryDate(item.expiryDate)?.type === 'expired'
+                                            ? 'border-red-500 bg-red-50 focus:ring-red-500'
+                                            : checkItemExpiryDate(item.expiryDate)?.type ===
+                                              'warning'
+                                            ? 'border-yellow-500 bg-yellow-50 focus:ring-yellow-500'
+                                            : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                                        }`}
+                                      />
+                                      {item.expiryDate && checkItemExpiryDate(item.expiryDate) && (
+                                        <div
+                                          className={`mt-2 p-2 rounded-md border flex items-start gap-2 ${
+                                            checkItemExpiryDate(item.expiryDate)?.type === 'expired'
+                                              ? 'bg-red-50 border-red-200'
+                                              : checkItemExpiryDate(item.expiryDate)?.type ===
+                                                'warning'
+                                              ? 'bg-yellow-50 border-yellow-200'
+                                              : 'bg-green-50 border-green-200'
+                                          }`}
+                                        >
+                                          <span className="flex-shrink-0 text-base">
+                                            {checkItemExpiryDate(item.expiryDate)?.type === 'expired'
+                                              ? '⚠️'
+                                              : checkItemExpiryDate(item.expiryDate)?.type ===
+                                                'warning'
+                                              ? '⏰'
+                                              : '✅'}
+                                          </span>
+                                          <div className="flex-1">
+                                            <p
+                                              className={`text-xs font-semibold ${
+                                                checkItemExpiryDate(item.expiryDate)?.type ===
+                                                'expired'
+                                                  ? 'text-red-800'
+                                                  : checkItemExpiryDate(item.expiryDate)?.type ===
+                                                    'warning'
+                                                  ? 'text-yellow-800'
+                                                  : 'text-green-800'
+                                              }`}
+                                            >
+                                              {checkItemExpiryDate(item.expiryDate)?.type ===
+                                              'expired'
+                                                ? `EXPIRED ${
+                                                    checkItemExpiryDate(item.expiryDate)?.days
+                                                  } days ago`
+                                                : checkItemExpiryDate(item.expiryDate)?.type ===
+                                                  'warning'
+                                                ? `Expiring in ${
+                                                    checkItemExpiryDate(item.expiryDate)?.days
+                                                  } days`
+                                                : `Valid (${
+                                                    checkItemExpiryDate(item.expiryDate)?.days
+                                                  } days remaining)`}
+                                            </p>
+                                            {checkItemExpiryDate(item.expiryDate)?.type !==
+                                              'valid' && (
+                                              <p className="text-xs text-gray-600 mt-1">
+                                                {checkItemExpiryDate(item.expiryDate)?.type ===
+                                                'expired'
+                                                  ? 'Replace this item immediately'
+                                                  : 'Plan to restock soon'}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-xs font-medium text-gray-700">
+                                      Quantity
+                                    </label>
+                                    {item.previousQuantity && (
+                                      <span className="text-xs text-gray-600 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-md">
+                                        Last: {item.previousQuantity}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={item.quantity}
+                                    onChange={(e) =>
+                                      updateKitItem(kitIndex, itemIndex, 'quantity', e.target.value)
+                                    }
+                                    placeholder={
+                                      item.previousQuantity
+                                        ? `Last was ${item.previousQuantity}`
+                                        : 'e.g., 10'
+                                    }
+                                    className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                            <label className="block text-xs font-medium text-gray-700 mb-2">
+                              Kit Remarks
+                            </label>
+                            <textarea
+                              value={kit.remarks}
+                              onChange={(e) => updateKitRemarks(kitIndex, e.target.value)}
+                              rows={2}
+                              className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                              placeholder="Any issues or notes for this kit..."
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleSaveDraft}
+                className="flex-1 rounded-md border border-gray-300 text-gray-700 py-3 font-medium hover:bg-gray-50 transition-all"
+              >
+                Save as Draft
+              </button>
+              {/* <button
+                onClick={() => setShowExportDialog(true)}
+                className="flex-1 rounded-md border border-gray-300 text-gray-700 py-3 font-medium hover:bg-gray-50 transition-all"
+              >
+                Export Documents
+              </button> */}
+              <button
+                onClick={() => setShowSubmitDialog(true)}
+                className="flex-1 rounded-md bg-blue-600 text-white py-3 font-medium hover:bg-blue-700 transition-all"
+              >
+                Submit Checklist
+              </button>
+            </div>
+          </div>
+
+          {/* Export Dialog */}
+          {showExportDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-md w-full shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Export with Template</h3>
+                <p className="text-gray-600 mb-6">Choose your export format:</p>
+                <div className="space-y-3">
                   <button
-                    onClick={() => setShowSaveConfirmation(false)}
-                    className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                    onClick={() => {
+                      try {
+                        const pdf = generateFirstAidPDF({
+                          inspectedBy: inspectionData.inspectedBy,
+                          inspectionDate: inspectionData.inspectionDate,
+                          designation: inspectionData.designation,
+                          signature: inspectionData.signature,
+                          kits: inspectionData.kits,
+                        });
+                        const date = new Date(inspectionData.inspectionDate);
+                        const monthNames = [
+                          'January',
+                          'February',
+                          'March',
+                          'April',
+                          'May',
+                          'June',
+                          'July',
+                          'August',
+                          'September',
+                          'October',
+                          'November',
+                          'December',
+                        ];
+                        const filename = `First_Aid_Checklist_${
+                          monthNames[date.getMonth()]
+                        }_${date.getFullYear()}.pdf`;
+                        downloadPDF(pdf, filename);
+                        setShowExportDialog(false);
+                      } catch (error) {
+                        alert(
+                          `Failed to export PDF: ${
+                            error instanceof Error ? error.message : 'Unknown error'
+                          }`,
+                        );
+                      }
+                    }}
+                    className="w-full rounded-md bg-blue-600 text-white py-3 font-medium hover:bg-blue-700 transition-all"
+                  >
+                    Export as PDF
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/export/first-aid-template', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ...inspectionData, format: 'excel' }),
+                        });
+                        if (!response.ok) throw new Error('Export failed');
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        const filename = `First_Aid_Checklist_${
+                          new Date().toISOString().split('T')[0]
+                        }.xlsx`;
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                        setShowExportDialog(false);
+                      } catch (error) {
+                        alert(
+                          `Failed to export Excel: ${
+                            error instanceof Error ? error.message : 'Unknown error'
+                          }`,
+                        );
+                      }
+                    }}
+                    className="w-full rounded-md border border-gray-300 text-gray-700 py-3 font-medium hover:bg-gray-50 transition-all"
+                  >
+                    Export as Excel
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowExportDialog(false)}
+                  className="w-full mt-3 rounded-md border border-gray-300 text-gray-700 py-2.5 font-medium hover:bg-gray-50 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Submit Confirmation Dialog */}
+          {showSubmitDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-md w-full shadow-lg">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Submit Checklist?</h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to submit this first aid checklist? This action cannot be
+                  undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSubmitDialog(false)}
+                    className="flex-1 rounded-md border border-gray-300 text-gray-700 py-2.5 font-medium hover:bg-gray-50 transition-all"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={confirmSave}
-                    className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    onClick={handleSubmit}
+                    className="flex-1 rounded-md bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 transition-all"
                   >
-                    Save Inspection
+                    Confirm Submit
                   </button>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </BaseLayout>
+          )}
+
+          {/* Camera Capture Modal */}
+          {showCamera && photographingKitIndex !== null && (
+            <SimpleCameraCapture
+              onComplete={handlePhotoCaptureComplete}
+              onCancel={handlePhotoCaptureCancel}
+              maxPhotos={
+                photographingItemIndex !== null
+                  ? Math.max(
+                      0,
+                      2 - (inspectionData.kits[photographingKitIndex]?.items[photographingItemIndex]?.capturedImages?.length || 0)
+                    )
+                  : 10
+              }
+            />
+          )}
+        </div>
+      </InspectorLayout>
+    </ProtectedRoute>
   );
 };
 
-export default function ProtectedFirstAidInspection() {
-  return (
-    <ProtectedRoute requiredPermission="canCreateInspections">
-      <FirstAidInspection />
-    </ProtectedRoute>
-  );
-}
+export default FirstAidInspection;

@@ -1,768 +1,1178 @@
-import React, { useState, useEffect } from 'react';
-import BaseLayout from '@/layouts/BaseLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { storage } from '@/utils/storage';
+import React, { useState, useRef, useEffect } from 'react';
+import InspectorLayout from '@/roles/inspector/layouts/InspectorLayout';
+import ProtectedRoute from '@/shared/components/ProtectedRoute';
+import {
+  ArrowLeft,
+  RefreshCw,
+  Eye,
+  Trash2,
+  ChevronUp,
+  ChevronDown,
+  Plus,
+  Edit2,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/router';
+import { downloadHSEInspectionChecklistWithTemplate } from '@/utils/hseChecklistExport';
+import { downloadHSEObservationForm } from '@/utils/hseObservationExport';
+import { storage } from '@/utils/storage';
 
-// Types
-type RatingType = 'G' | 'A' | 'P' | 'I' | 'SIN' | 'SPS' | 'SWO' | null;
-type InspectionStatus = 'draft' | 'completed';
-type UserRole = 'inspector' | 'admin';
+const HSEInspectionForm = () => {
+  const { hasPermission } = useAuth();
+  const router = useRouter();
+  const [inspectionId, setInspectionId] = useState<string>('');
+  const [observations, setObservations] = useState<any[]>([]);
 
-interface ChecklistItem {
-  id: string;
-  category: string;
-  item: string;
-  rating: RatingType;
-  comments: string;
-}
+  useEffect(() => {
+    const existingId = localStorage.getItem('active-hse-inspection-id');
+    if (existingId) {
+      setInspectionId(existingId);
+    } else {
+      const newId = Date.now().toString();
+      localStorage.setItem('active-hse-inspection-id', newId);
+      setInspectionId(newId);
+    }
+  }, []);
 
-interface AuditLog {
-  timestamp: string;
-  user: string;
-  action: string;
-  details: string;
-}
+  useEffect(() => {
+    if (!hasPermission('canCreateInspections')) {
+      router.push('/');
+    }
+  }, [hasPermission, router]);
 
-interface InspectionData {
-  id: string;
-  contractor: string;
-  location: string;
-  inspectedBy: string;
-  date: string;
-  status: InspectionStatus;
-  items: ChecklistItem[];
-  auditLog: AuditLog[];
-  createdAt: string;
-  savedAt?: string;
-}
+  useEffect(() => {
+    if (!inspectionId) return;
+    const loadObservations = () => {
+      const savedObservations = JSON.parse(
+        localStorage.getItem(`hse-observations-${inspectionId}`) || '[]',
+      );
+      setObservations(savedObservations);
+    };
+    loadObservations();
+    window.addEventListener('storage', loadObservations);
+    window.addEventListener('focus', loadObservations);
+    return () => {
+      window.removeEventListener('storage', loadObservations);
+      window.removeEventListener('focus', loadObservations);
+    };
+  }, [inspectionId]);
 
-const ChecklistPage: React.FC = () => {
-  const { user, hasPermission, isRole } = useAuth();
-
-  // Check if user can create inspections and is not an admin
-  const canFillInspection = hasPermission('canCreateInspections') && !isRole('admin');
-
-  if (!canFillInspection) {
-    return (
-      <BaseLayout title="HSE Inspection">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <div className="mb-4">
-              <svg
-                className="mx-auto h-12 w-12 text-red-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0l-8.898 12c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-red-800 mb-2">Access Restricted</h3>
-            <p className="text-red-700 mb-4">
-              {isRole('admin')
-                ? 'Administrators cannot fill inspection forms. This is reserved for inspectors.'
-                : 'You do not have permission to create inspections. Please contact your administrator.'}
-            </p>
-            <p className="text-sm text-red-600">
-              Current role: <span className="font-medium">{user?.role}</span>
-            </p>
-          </div>
-        </div>
-      </BaseLayout>
-    );
+  if (!hasPermission('canCreateInspections')) {
+    return null;
   }
 
-  const [inspectionData, setInspectionData] = useState<InspectionData>({
-    id: Date.now().toString(),
+  const [formData, setFormData] = useState({
     contractor: '',
     location: '',
-    inspectedBy: user?.name || '',
     date: new Date().toISOString().split('T')[0],
-    status: 'draft',
-    createdAt: new Date().toISOString(),
-    auditLog: [
-      {
-        timestamp: new Date().toISOString(),
-        user: user?.name || 'Unknown',
-        action: 'created',
-        details: 'Inspection record created',
-      },
+    inspectedBy: '',
+    workActivity: '',
+    tablePersons: [
+      { no: 1, name: '', designation: '', signature: '' },
+      { no: 2, name: '', designation: '', signature: '' },
+      { no: 3, name: '', designation: '', signature: '' },
+      { no: 4, name: '', designation: '', signature: '' },
+      { no: 5, name: '', designation: '', signature: '' },
     ],
-    items: [
-      // Working Areas
-      { id: '1', category: 'WORKING AREAS', item: 'Housekeeping', rating: null, comments: '' },
-      {
-        id: '2',
-        category: 'WORKING AREAS',
-        item: 'Proper barrier/safety signs',
-        rating: null,
-        comments: '',
-      },
-      { id: '3', category: 'WORKING AREAS', item: 'Lighting adequacy', rating: null, comments: '' },
-      {
-        id: '4',
-        category: 'WORKING AREAS',
-        item: 'Site layout arrangement',
-        rating: null,
-        comments: '',
-      },
-      { id: '5', category: 'WORKING AREAS', item: 'Ventilation', rating: null, comments: '' },
-      {
-        id: '6',
-        category: 'WORKING AREAS',
-        item: 'Floor/ground/edge/opening condition',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '7',
-        category: 'WORKING AREAS',
-        item: 'Escape/working route condition',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '8',
-        category: 'WORKING AREAS',
-        item: 'Material storage/stacking',
-        rating: null,
-        comments: '',
-      },
-
-      // Site Office
-      { id: '9', category: 'SITE OFFICE', item: 'Office Ergonomics', rating: null, comments: '' },
-      {
-        id: '10',
-        category: 'SITE OFFICE',
-        item: 'Location and maintenance',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '11',
-        category: 'SITE OFFICE',
-        item: 'Fire extinguishers condition',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '12',
-        category: 'SITE OFFICE',
-        item: 'First aid box facility',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '13',
-        category: 'SITE OFFICE',
-        item: "Worker's legality / age",
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '14',
-        category: 'SITE OFFICE',
-        item: 'Green card (CIDB)/ NIOSH cert.',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '15',
-        category: 'SITE OFFICE',
-        item: 'PMA/ PMT/ JBE/ DOE approval',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '16',
-        category: 'SITE OFFICE',
-        item: 'Competent scaffolder',
-        rating: null,
-        comments: '',
-      },
-
-      // Hot Work/Electrical
-      {
-        id: '17',
-        category: 'HOT WORK/ ELECTRICAL',
-        item: 'Gas cylinders secured and upright',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '18',
-        category: 'HOT WORK/ ELECTRICAL',
-        item: 'Gauge functionality',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '19',
-        category: 'HOT WORK/ ELECTRICAL',
-        item: 'Flashback arrestors availability',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '20',
-        category: 'HOT WORK/ ELECTRICAL',
-        item: 'Cables insulation/ earthing',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '21',
-        category: 'HOT WORK/ ELECTRICAL',
-        item: 'Wiring condition-plugs, joints, DB',
-        rating: null,
-        comments: '',
-      },
-
-      // Fire Safety
-      {
-        id: '22',
-        category: 'FIRE SAFETY',
-        item: 'Fire extinguisher availability',
-        rating: null,
-        comments: '',
-      },
-      {
-        id: '23',
-        category: 'FIRE SAFETY',
-        item: 'Emergency exit signage',
-        rating: null,
-        comments: '',
-      },
-      { id: '24', category: 'FIRE SAFETY', item: 'Hot work permit', rating: null, comments: '' },
-      {
-        id: '25',
-        category: 'FIRE SAFETY',
-        item: 'Flammable material storage',
-        rating: null,
-        comments: '',
-      },
-    ],
+    inspectionItems: [],
+    commentsRemarks: '',
   });
 
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!inspectionId) return;
+    const savedFormData = localStorage.getItem(`hse-formdata-${inspectionId}`);
+    if (savedFormData) {
+      try {
+        const parsed = JSON.parse(savedFormData);
+        setFormData(parsed);
+      } catch (error) {
+        console.error('Error loading form data:', error);
+      }
+    }
+  }, [inspectionId]);
 
-  // Rating options with professional colors
-  const ratingOptions = [
-    { value: 'G', label: 'Good', color: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
-    { value: 'A', label: 'Acceptable', color: 'bg-blue-600 hover:bg-blue-700 text-white' },
-    { value: 'P', label: 'Poor', color: 'bg-amber-600 hover:bg-amber-700 text-white' },
-    { value: 'I', label: 'Irrelevant', color: 'bg-slate-500 hover:bg-slate-600 text-white' },
-    { value: 'SIN', label: 'SIN', color: 'bg-orange-600 hover:bg-orange-700 text-white' },
-    { value: 'SPS', label: 'SPS', color: 'bg-red-600 hover:bg-red-700 text-white' },
-    { value: 'SWO', label: 'SWO', color: 'bg-red-700 hover:bg-red-800 text-white' },
+  useEffect(() => {
+    if (!inspectionId) return;
+    localStorage.setItem(`hse-formdata-${inspectionId}`, JSON.stringify(formData));
+  }, [formData, inspectionId]);
+
+  const [expandedCategories, setExpandedCategories] = useState<Record<number, boolean>>({});
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentSignatureIndex, setCurrentSignatureIndex] = useState<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const categories = [
+    {
+      id: 1,
+      name: 'WORKING AREAS',
+      items: [
+        'Housekeeping',
+        'Proper barrier/ safety signs',
+        'Lighting adequacy',
+        'Site layout arrangement',
+        'Ventilation',
+        'Floor/ ground-edge/ opening condition',
+        'Escape/ working route condition',
+        'Material storage/ stacking',
+      ],
+    },
+    {
+      id: 2,
+      name: 'SITE OFFICE',
+      items: [
+        'Office ergonomics',
+        'Location and maintenance',
+        'Fire extinguishers condition',
+        'First aid box facility',
+        "Worker's legality / age",
+        'Green card (CIDB)/ NIOSH cert.',
+        'PMA/ PMT/ JBE/ DOE approval',
+        'Competent scaffolder',
+      ],
+    },
+    {
+      id: 3,
+      name: 'HOT WORK/ ELECTRICAL',
+      items: [
+        'Gas cylinders secured and upright',
+        'Gauge functionality',
+        'Flashback arrestors availability',
+        'Cables insulation/ earthing',
+        'Wiring condition-plugs, joints, DB',
+      ],
+    },
+    {
+      id: 4,
+      name: 'PERSONAL PROTECTIVE EQUIPMENT',
+      items: [
+        'Safety helmets',
+        'Safety footwear',
+        'Safety vest',
+        'Proper attire',
+        'Other; as per job requirements',
+      ],
+    },
+    {
+      id: 5,
+      name: 'EXCAVATIONS',
+      items: [
+        'Safely secured-sign, barrier covered',
+        'No material at 1m from edge',
+        'Proper & adequate access & egress',
+        'Adequate slope protection',
+        'Check for underground hazard',
+        'Inspection checklist',
+      ],
+    },
+    {
+      id: 6,
+      name: 'SCAFFOLDING',
+      items: [
+        'PE design requirement',
+        'Access condition',
+        'Walkways/ platform condition',
+        'Adequate slope protection',
+        'Means of fall protection',
+        'Ground/base condition',
+        'Inspection checklist',
+      ],
+    },
+    {
+      id: 7,
+      name: 'MACHINERY & PLANT',
+      items: [
+        'Machinery guarding',
+        'Machinery/ plant service record',
+        'Properly and safely sited',
+        'Skid tank condition',
+        'Lifting process/ gear condition',
+        "Vehicle's condition",
+      ],
+    },
+    {
+      id: 8,
+      name: 'TRAFFIC MANAGEMENT',
+      items: [
+        'Flagman availability & adequacy',
+        'Signages availability & adequacy',
+        'Vehicle route maintenance',
+        'Public road maintenance',
+        'Loads protection',
+        'Method of controlling',
+      ],
+    },
+    {
+      id: 9,
+      name: 'HEALTH',
+      items: [
+        'First aid box/ facility',
+        'First aider availability',
+        'Vector/ Pest control',
+        'Washing/ clean water facility',
+        'Toilet condition / availability',
+      ],
+    },
+    {
+      id: 10,
+      name: 'ENVIRONMENTAL',
+      items: [
+        'Control of oil pollution',
+        'Control of dust pollution / emission',
+        'Control of noise pollution / emission',
+        'Control of open burning',
+        'Control of debris / rubbish',
+        'Silt trap/drainage/culvert maintenance',
+      ],
+    },
+    {
+      id: 11,
+      name: 'SECURITY',
+      items: [
+        'Security personal adequacy',
+        'Security sign condition/ availability',
+        'Control of site access/ exit',
+        'Hoarding/ fencing condition',
+        'Emergency contact list',
+      ],
+    },
+    {
+      id: 12,
+      name: 'PUBLIC SAFETY',
+      items: [
+        'Warning signs',
+        'Control of public entry',
+        'Proper work planning toward public safety',
+        'Communication establishment',
+        'Training on public safety to worker',
+        'Catch platform',
+        'Pedestrian protection',
+      ],
+    },
   ];
 
-  // Check if inspection is editable
-  const isEditable = inspectionData.status === 'draft';
+  const ratingOptions = [
+    { value: 'G', label: 'G', color: 'bg-green-600', fullText: 'GOOD' },
+    { value: 'A', label: 'A', color: 'bg-blue-600', fullText: 'ACCEPTABLE' },
+    { value: 'P', label: 'P', color: 'bg-yellow-600', fullText: 'POOR' },
+    { value: 'I', label: 'I', color: 'bg-gray-500', fullText: 'IRRELEVANT' },
+    { value: 'SIN', label: 'SIN', color: 'bg-orange-600', fullText: 'SAFETY IMPROVEMENT NOTICE' },
+    { value: 'SPS', label: 'SPS', color: 'bg-red-600', fullText: 'SAFETY PENALTY SYSTEM' },
+    { value: 'SWO', label: 'SWO', color: 'bg-red-700', fullText: 'STOP WORK ORDER' },
+  ];
 
-  // Handle rating change
-  const handleRatingChange = (itemId: string, rating: RatingType) => {
-    if (!isEditable) return;
+  const getItemKey = (categoryId: number | string, item: string) => `${categoryId}-${item}`;
 
-    setInspectionData((prev) => ({
+  const getRating = (categoryId: number | string, item: string) => {
+    const key = getItemKey(categoryId, item);
+    const itemData: any = formData.inspectionItems.find((i: any) => i.key === key);
+    return itemData?.rating || null;
+  };
+
+  const getComment = (categoryId: number | string, item: string) => {
+    const key = getItemKey(categoryId, item);
+    const itemData: any = formData.inspectionItems.find((i: any) => i.key === key);
+    return itemData?.comment || '';
+  };
+
+  const setRating = (categoryId: number | string, item: string, rating: string) => {
+    const key = getItemKey(categoryId, item);
+    setFormData((prev: any) => {
+      const existingIndex = prev.inspectionItems.findIndex((i: any) => i.key === key);
+      const newItems = [...prev.inspectionItems];
+      if (existingIndex >= 0) {
+        newItems[existingIndex] = { ...newItems[existingIndex], rating };
+      } else {
+        newItems.push({ key, categoryId, item, rating, comment: '' });
+      }
+      return { ...prev, inspectionItems: newItems };
+    });
+  };
+
+  const setComment = (categoryId: number | string, item: string, comment: string) => {
+    const key = getItemKey(categoryId, item);
+    setFormData((prev: any) => {
+      const existingIndex = prev.inspectionItems.findIndex((i: any) => i.key === key);
+      const newItems = [...prev.inspectionItems];
+      if (existingIndex >= 0) {
+        newItems[existingIndex] = { ...newItems[existingIndex], comment };
+      } else {
+        newItems.push({ key, categoryId, item, rating: null, comment });
+      }
+      return { ...prev, inspectionItems: newItems };
+    });
+  };
+
+  const toggleCategory = (categoryId: number) => {
+    setExpandedCategories((prev) => ({
       ...prev,
-      items: prev.items.map((item) => (item.id === itemId ? { ...item, rating } : item)),
-      auditLog: [
-        ...prev.auditLog,
+      [categoryId]: !prev[categoryId],
+    }));
+  };
+
+  const updateTablePerson = (index: number, field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tablePersons: prev.tablePersons.map((person, i) =>
+        i === index ? { ...person, [field]: value } : person,
+      ),
+    }));
+  };
+
+  const addTablePerson = () => {
+    setFormData((prev) => ({
+      ...prev,
+      tablePersons: [
+        ...prev.tablePersons,
         {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'rating_changed',
-          details: `Rating changed for item ${itemId} to ${rating}`,
+          no: prev.tablePersons.length + 1,
+          name: '',
+          designation: '',
+          signature: '',
         },
       ],
     }));
   };
 
-  // Handle comment change
-  const handleCommentChange = (itemId: string, comments: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => (item.id === itemId ? { ...item, comments } : item)),
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'comment_changed',
-          details: `Comment updated for item ${itemId}`,
-        },
-      ],
-    }));
-  };
-
-  // Handle header data change
-  const handleHeaderChange = (field: string, value: string) => {
-    if (!isEditable) return;
-
-    setInspectionData((prev) => ({
-      ...prev,
-      [field]: value,
-      auditLog: [
-        ...prev.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'header_changed',
-          details: `${field} changed to ${value}`,
-        },
-      ],
-    }));
-  };
-
-  // Save inspection
-  const handleSave = () => {
-    // Validation
-    const missingFields = [];
-    if (!inspectionData.contractor) missingFields.push('Contractor');
-    if (!inspectionData.location) missingFields.push('Location');
-    if (!inspectionData.inspectedBy) missingFields.push('Inspected By');
-
-    const unratedItems = inspectionData.items.filter((item) => item.rating === null).length;
-
-    if (missingFields.length > 0) {
-      setSaveError(`Please fill in required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-
-    if (unratedItems > 0) {
-      setSaveError(`Please rate all items. ${unratedItems} items remaining.`);
-      return;
-    }
-
-    setShowSaveConfirmation(true);
-  };
-
-  // Confirm save
-  const confirmSave = () => {
-    const savedInspection = {
-      ...inspectionData,
-      status: 'completed' as InspectionStatus,
-      savedAt: new Date().toISOString(),
-      auditLog: [
-        ...inspectionData.auditLog,
-        {
-          timestamp: new Date().toISOString(),
-          user: user?.name || 'Unknown',
-          action: 'completed',
-          details: 'Inspection completed and saved',
-        },
-      ],
-    };
-
-    // Save to localStorage
-    const existingInspections = storage.load('inspections') || [];
-    const updatedInspections = [...existingInspections, savedInspection];
-    storage.save('inspections', updatedInspections);
-
-    setInspectionData(savedInspection);
-    setShowSaveConfirmation(false);
-    setSaveError(null);
-  };
-
-  // Clear all ratings
-  const handleClearAll = () => {
-    if (!isEditable) return;
-
-    if (confirm('Are you sure you want to clear all ratings and comments?')) {
-      setInspectionData((prev) => ({
+  const removeTablePerson = (index: number) => {
+    setFormData((prev) => {
+      const newPersons = prev.tablePersons.filter((_, i) => i !== index);
+      return {
         ...prev,
-        items: prev.items.map((item) => ({ ...item, rating: null, comments: '' })),
-        auditLog: [
-          ...prev.auditLog,
-          {
-            timestamp: new Date().toISOString(),
-            user: user?.name || 'Unknown',
-            action: 'cleared_all',
-            details: 'All ratings and comments cleared',
-          },
-        ],
-      }));
-    }
+        tablePersons: newPersons.map((person, i) => ({
+          ...person,
+          no: i + 1,
+        })),
+      };
+    });
   };
 
-  // Group items by category
-  const groupedItems = inspectionData.items.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, ChecklistItem[]>);
+  const startDrawing = (e: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setIsDrawing(true);
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
 
-  // Calculate statistics
-  const stats = {
-    total: inspectionData.items.length,
-    completed: inspectionData.items.filter((item) => item.rating !== null).length,
-    good: inspectionData.items.filter((item) => item.rating === 'G').length,
-    acceptable: inspectionData.items.filter((item) => item.rating === 'A').length,
-    poor: inspectionData.items.filter((item) => item.rating === 'P').length,
-    issues: inspectionData.items.filter((item) => ['SIN', 'SPS', 'SWO'].includes(item.rating || ''))
-      .length,
+  const draw = (e: any) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const saveSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas || currentSignatureIndex === null) return;
+    const dataUrl = canvas.toDataURL();
+    updateTablePerson(currentSignatureIndex, 'signature', dataUrl);
+    setCurrentSignatureIndex(null);
+  };
+
+  const getTotalRated = () => {
+    return formData.inspectionItems.filter((item: any) => item.rating).length;
+  };
+
+  const getTotalItems = () => {
+    return categories.reduce((sum, cat) => sum + cat.items.length, 0);
+  };
+
+  const getCompletionPercentage = () => {
+    const total = getTotalItems();
+    const rated = getTotalRated();
+    return total > 0 ? Number(((rated / total) * 100).toFixed(2)) : 0;
+  };
+
+  const handleAddObservation = (
+    categoryId: number | string,
+    categoryName: string,
+    item: string,
+  ) => {
+    if (!formData.location.trim()) {
+      alert('Please fill in the Location field before adding observations.');
+      return;
+    }
+    if (!formData.date) {
+      alert('Please select a Date before adding observations.');
+      return;
+    }
+    router.push({
+      pathname: '/hse-observation',
+      query: {
+        categoryId,
+        categoryName,
+        itemName: item,
+        inspectionId,
+        location: formData.location,
+        date: formData.date,
+      },
+    });
+  };
+
+  const handleEditObservation = (observation: any) => {
+    router.push({
+      pathname: '/hse-observation',
+      query: {
+        categoryId: observation.categoryId,
+        categoryName: observation.categoryName,
+        itemName: observation.itemName,
+        inspectionId,
+        location: formData.location,
+        date: formData.date,
+        editId: observation.id,
+      },
+    });
+  };
+
+  const getObservationsForItem = (categoryId: number | string, item: string) => {
+    return observations.filter((obs) => obs.categoryId === categoryId && obs.itemName === item);
+  };
+
+  const handleStartNewInspection = () => {
+    if (
+      observations.length > 0 ||
+      formData.contractor ||
+      formData.location ||
+      getTotalRated() > 0
+    ) {
+      const confirmed = window.confirm(
+        'Are you sure you want to start a new inspection? All current data will be cleared.',
+      );
+      if (!confirmed) return;
+    }
+    localStorage.removeItem(`hse-observations-${inspectionId}`);
+    localStorage.removeItem(`hse-formdata-${inspectionId}`);
+    localStorage.removeItem('active-hse-inspection-id');
+    window.location.reload();
   };
 
   return (
     <ProtectedRoute requiredPermission="canCreateInspections">
-      <BaseLayout title="HSE Inspection">
-        <div className="max-w-4xl mx-auto">
-          {/* Status Banner */}
-          {!isEditable && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <svg className="h-5 w-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-semibold text-green-800">Record Completed</h3>
-                  <p className="text-sm text-amber-700 mt-1">
-                    This inspection has been saved and cannot be edited. Status:{' '}
-                    <span className="font-medium capitalize">
-                      {inspectionData.status.replace('_', ' ')}
+      <InspectorLayout>
+        <div className="min-h-screen bg-gray-50 p-4 pb-20">
+          <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
+              <div className="flex items-center mb-6">
+                <button
+                  onClick={() => router.push('/inspector/forms')}
+                  className="mr-4 hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                  title="Go back to Forms"
+                >
+                  <ArrowLeft className="w-6 h-6 text-blue-600" />
+                </button>
+                <h1 className="text-xl font-bold text-gray-800 flex-1 text-center">
+                  HSE INSPECTION CHECKLIST
+                </h1>
+                <button
+                  onClick={handleStartNewInspection}
+                  className="hover:bg-gray-100 p-2 rounded-lg transition-colors"
+                  title="Start new inspection"
+                >
+                  <RefreshCw className="w-6 h-6 text-blue-600" />
+                </button>
+              </div>
+
+              {/* Observations Counter */}
+              {observations.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">
+                      Total Observations: {observations.length}
                     </span>
-                  </p>
+                  </div>
+                  <span className="text-xs text-gray-600">
+                    Observations will be saved with this inspection
+                  </span>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
-          {/* Error Message */}
-          {saveError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-red-700">{saveError}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Header Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-            <div className="px-6 py-5 border-b border-gray-200">
-              <h1 className="text-2xl font-bold text-gray-900">HSE Inspection</h1>
-              <p className="text-sm text-gray-600 mt-1">Health, Safety & Environment Checklist</p>
-            </div>
-
-            <div className="p-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              {/* Basic Info */}
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contractor <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    CONTRACTOR <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={inspectionData.contractor}
-                    onChange={(e) => handleHeaderChange('contractor', e.target.value)}
-                    disabled={!isEditable}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                    }`}
+                    value={formData.contractor}
+                    onChange={(e) => setFormData({ ...formData, contractor: e.target.value })}
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter contractor name"
                   />
                 </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      LOCATION <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter location"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      DATE <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Location <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    INSPECTED BY <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={inspectionData.location}
-                    onChange={(e) => handleHeaderChange('location', e.target.value)}
-                    disabled={!isEditable}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                    }`}
-                    placeholder="Enter location"
+                    value={formData.inspectedBy}
+                    onChange={(e) => setFormData({ ...formData, inspectedBy: e.target.value })}
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter inspector name"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Inspected By <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    WORK ACTIVITY <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={inspectionData.inspectedBy}
-                    onChange={(e) => handleHeaderChange('inspectedBy', e.target.value)}
-                    disabled={!isEditable}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                    }`}
-                    placeholder="Inspector name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                  <input
-                    type="date"
-                    value={inspectionData.date}
-                    onChange={(e) => handleHeaderChange('date', e.target.value)}
-                    disabled={!isEditable}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                    }`}
+                    value={formData.workActivity}
+                    onChange={(e) => setFormData({ ...formData, workActivity: e.target.value })}
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter work activity"
                   />
                 </div>
               </div>
-
-              {/* Progress Statistics */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Progress Overview</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">
-                      {stats.completed}/{stats.total}
-                    </div>
-                    <div className="text-xs text-gray-600">Completed</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-emerald-600">{stats.good}</div>
-                    <div className="text-xs text-gray-600">Good</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-blue-600">{stats.acceptable}</div>
-                    <div className="text-xs text-gray-600">Acceptable</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-amber-600">{stats.poor}</div>
-                    <div className="text-xs text-gray-600">Poor</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-red-600">{stats.issues}</div>
-                    <div className="text-xs text-gray-600">Issues</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">
-                      {Math.round((stats.completed / stats.total) * 100)}%
-                    </div>
-                    <div className="text-xs text-gray-600">Complete</div>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
 
-          {/* Rating Legend */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Rating Guide</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-              {ratingOptions.map((option) => (
-                <div key={option.value} className="flex items-center">
-                  <span className={`inline-block w-4 h-4 rounded mr-2 ${option.color}`} />
-                  <span className="text-xs text-gray-700">
-                    {option.value} - {option.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Checklist Items */}
-          <div className="space-y-4">
-            {Object.entries(groupedItems).map(([category, items]) => (
-              <div key={category} className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
-                </div>
-
-                <div className="p-6">
-                  <div className="space-y-4">
-                    {items.map((item) => (
-                      <div key={item.id} className="border-b border-gray-100 pb-4 last:border-b-0">
-                        {/* Item Description */}
-                        <div className="mb-3">
-                          <p className="text-sm font-medium text-gray-900">{item.item}</p>
-                        </div>
-
-                        {/* Rating Buttons - Mobile Optimized */}
-                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-3">
-                          {ratingOptions.map((option) => (
-                            <button
-                              key={option.value}
-                              onClick={() =>
-                                handleRatingChange(item.id, option.value as RatingType)
-                              }
-                              disabled={!isEditable}
-                              className={`
-                              px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 min-h-[44px] touch-manipulation
-                              ${
-                                !isEditable
-                                  ? 'cursor-not-allowed opacity-50'
-                                  : 'cursor-pointer active:scale-95'
-                              }
-                              ${
-                                item.rating === option.value
-                                  ? option.color
-                                  : isEditable
-                                  ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
-                                  : 'bg-gray-50 text-gray-400 border border-gray-200'
-                              }
-                            `}
-                            >
-                              {option.value}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Comments */}
-                        <div>
-                          <textarea
-                            placeholder="Comments (optional)"
-                            value={item.comments}
-                            onChange={(e) => handleCommentChange(item.id, e.target.value)}
-                            disabled={!isEditable}
-                            rows={2}
-                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none text-sm ${
-                              !isEditable ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
-                            }`}
+            {/* People Section */}
+            <div className="bg-white rounded-lg p-6 mb-6 shadow-sm">
+              <div className="space-y-3">
+                {formData.tablePersons.map((person, index) => (
+                  <div key={person.no} className="border border-gray-200 rounded-lg p-3 relative">
+                    {formData.tablePersons.length > 1 && (
+                      <button
+                        onClick={() => removeTablePerson(index)}
+                        className="absolute top-2 right-2 p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Remove person"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="flex items-center mb-2">
+                      <span className="text-sm font-semibold text-gray-700 w-8">{person.no}.</span>
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 pr-8">
+                        <input
+                          type="text"
+                          placeholder="Name"
+                          value={person.name}
+                          onChange={(e) => updateTablePerson(index, 'name', e.target.value)}
+                          className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Designation"
+                          value={person.designation}
+                          onChange={(e) => updateTablePerson(index, 'designation', e.target.value)}
+                          className="px-3 py-2 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                    <div className="ml-8">
+                      {person.signature ? (
+                        <div className="relative">
+                          <img
+                            src={person.signature}
+                            alt="Signature"
+                            className="h-20 border border-gray-300 rounded-md"
                           />
+                          <button
+                            onClick={() => {
+                              updateTablePerson(index, 'signature', '');
+                              setCurrentSignatureIndex(index);
+                            }}
+                            className="absolute top-1 right-1 bg-gray-700 text-white px-2 py-0.5 rounded text-xs hover:bg-gray-800"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setCurrentSignatureIndex(index)}
+                          className="w-full py-2 rounded-md border-2 border-dashed border-gray-300 text-sm text-gray-700 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                        >
+                          + Add Signature
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={addTablePerson}
+                className="mt-4 w-full py-2 rounded-lg border-2 border-dashed border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-blue-500 font-medium text-sm transition-colors"
+              >
+                + Add More Person
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium text-gray-700">Progress</span>
+                <span className="text-gray-600">
+                  {getTotalRated()} / {getTotalItems()} ({getCompletionPercentage()}%)
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${getCompletionPercentage()}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Inspection Categories */}
+            <div className="space-y-3">
+              {categories.map((category) => {
+                const isExpanded = expandedCategories[category.id];
+                const categoryRated = formData.inspectionItems.filter(
+                  (item: any) => item.categoryId === category.id && item.rating,
+                ).length;
+                return (
+                  <div
+                    key={category.id}
+                    className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm"
+                  >
+                    {/* Category Header */}
+                    <button
+                      onClick={() => toggleCategory(category.id)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center flex-1">
+                        <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold mr-3">
+                          {category.id}
+                        </span>
+                        <div className="text-left">
+                          <h3 className="font-medium text-gray-800 text-sm sm:text-base">
+                            {category.name}
+                          </h3>
+                          <p className="text-xs text-gray-600">
+                            {categoryRated} / {category.items.length} completed
+                          </p>
                         </div>
                       </div>
-                    ))}
+                      {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-gray-700" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-700" />
+                      )}
+                    </button>
+
+                    {/* Category Items */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-200">
+                        {category.items.map((item, itemIndex) => {
+                          const rating = getRating(category.id, item);
+                          const comment = getComment(category.id, item);
+                          return (
+                            <div
+                              key={itemIndex}
+                              className="p-4 border-b border-gray-200 last:border-b-0"
+                            >
+                              <div className="mb-3">
+                                <p className="text-sm text-gray-800 font-medium mb-2">{item}</p>
+                                {/* Rating Buttons */}
+                                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1">
+                                  {ratingOptions.map((option) => (
+                                    <button
+                                      key={option.value}
+                                      onClick={() => setRating(category.id, item, option.value)}
+                                      title={option.fullText}
+                                      className={`
+                                        px-2 py-1.5 rounded text-xs font-medium transition-all
+                                        ${
+                                          rating === option.value
+                                            ? `${option.color} text-white`
+                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                        }
+                                      `}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              {/* Comments */}
+                              <textarea
+                                placeholder="Comments (optional)"
+                                value={comment}
+                                onChange={(e) => setComment(category.id, item, e.target.value)}
+                                rows={2}
+                                className="w-full px-3 py-2 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                              />
+                              {/* Add Observation Button & List */}
+                              <div className="mt-3 space-y-2">
+                                <button
+                                  onClick={() =>
+                                    handleAddObservation(category.id, category.name, item)
+                                  }
+                                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Add Observation
+                                </button>
+                                {/* Show existing observations */}
+                                {getObservationsForItem(category.id, item).length > 0 && (
+                                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                    <p className="text-xs font-medium text-gray-800 mb-2">
+                                      Observations (
+                                      {getObservationsForItem(category.id, item).length})
+                                    </p>
+                                    <div className="space-y-2">
+                                      {getObservationsForItem(category.id, item).map((obs) => (
+                                        <div
+                                          key={obs.id}
+                                          className="bg-white rounded p-2 text-xs relative group"
+                                        >
+                                          <button
+                                            onClick={() => handleEditObservation(obs)}
+                                            className="absolute top-2 right-2 bg-blue-600 text-white p-1 rounded hover:bg-blue-700 transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Edit observation"
+                                          >
+                                            <Edit2 className="w-3 h-3" />
+                                          </button>
+                                          <p className="font-medium text-gray-900 pr-8">
+                                            {obs.observation}
+                                          </p>
+                                          <p className="text-gray-600 mt-1">
+                                            {obs.location} - {obs.date} {obs.time}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Observations Summary */}
+            {observations.length > 0 && (
+              <div className="mt-6 bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Observations Summary</h3>
+                  <span className="border border-gray-300 text-gray-700 px-3 py-1 text-sm font-semibold rounded">
+                    {observations.length} Total
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {observations.map((obs, index) => (
+                    <div
+                      key={obs.id}
+                      className="border border-gray-200 p-4 hover:border-blue-500 transition-colors group relative rounded-lg"
+                    >
+                      <button
+                        onClick={() => handleEditObservation(obs)}
+                        className="absolute top-3 right-3 bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700 transition-colors text-sm font-medium opacity-0 group-hover:opacity-100 rounded-md"
+                        title="Edit observation"
+                      >
+                        Edit
+                      </button>
+                      <div className="flex items-start gap-3">
+                        <div className="border border-gray-300 text-gray-700 w-8 h-8 flex items-center justify-center font-bold text-sm flex-shrink-0 rounded-md">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 pr-16">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p className="font-medium text-gray-900">{obs.categoryName}</p>
+                              <p className="text-sm text-gray-600">{obs.itemName}</p>
+                            </div>
+                            {obs.photo && (
+                              <div className="ml-2">
+                                <img
+                                  src={obs.photo}
+                                  alt="Observation"
+                                  className="w-16 h-16 object-cover rounded border border-gray-200"
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-gray-50 rounded p-3 space-y-1 text-sm">
+                            <p className="text-gray-900">
+                              <strong>Observation:</strong> {obs.observation}
+                            </p>
+                            <p className="text-gray-700">
+                              <strong>Location:</strong> {obs.location}
+                            </p>
+                            <p className="text-gray-700">
+                              <strong>Action Needed:</strong> {obs.actionNeeded}
+                            </p>
+                            <div className="flex gap-4 text-xs text-gray-600 mt-2">
+                              <span>{obs.date}</span>
+                              <span>{obs.time}</span>
+                              {obs.status && (
+                                <span className="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                                  {obs.status}
+                                </span>
+                              )}
+                              {obs.hazards && (
+                                <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded">
+                                  {obs.hazards}
+                                </span>
+                              )}
+                            </div>
+                            {obs.remarks && (
+                              <p className="text-gray-600 text-xs mt-2">
+                                <strong>Remarks:</strong> {obs.remarks}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="mt-8 mb-8">
-            {isEditable ? (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={handleSave}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors min-h-[52px] touch-manipulation active:scale-95"
-                >
-                  <svg
-                    className="inline w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Save Inspection
-                </button>
-
-                <button
-                  onClick={handleClearAll}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-6 py-4 rounded-lg font-semibold transition-colors min-h-[52px] touch-manipulation active:scale-95"
-                >
-                  <svg
-                    className="inline w-5 h-5 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  Clear All
-                </button>
-              </div>
-            ) : (
-              <div className="bg-gray-100 rounded-lg p-4 text-center">
-                <p className="text-gray-600 font-medium">
-                  Inspection saved on: {new Date(inspectionData.savedAt!).toLocaleString()}
-                </p>
-              </div>
             )}
+
+            {/* Comments/Remarks Section */}
+            <div className="mt-6 bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">COMMENTS / REMARKS</h3>
+              <textarea
+                value={formData.commentsRemarks}
+                onChange={(e) => setFormData({ ...formData, commentsRemarks: e.target.value })}
+                rows={6}
+                className="w-full px-4 py-3 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none rounded-md"
+                placeholder="Enter any additional comments or remarks here..."
+              />
+            </div>
+
+            {/* Export Buttons */}
+            {/* <div className="mt-6 bg-white border border-gray-200 p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Export Documents</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Export your inspection data as two separate documents: Inspection Checklist (Excel)
+                and Observation Form (PDF)
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  onClick={async () => {
+                    try {
+                      const checklistData = {
+                        contractor: formData.contractor,
+                        location: formData.location,
+                        date: formData.date,
+                        inspectedBy: formData.inspectedBy,
+                        workActivity: formData.workActivity,
+                        tablePersons: formData.tablePersons,
+                        inspectionItems: formData.inspectionItems,
+                        commentsRemarks: formData.commentsRemarks,
+                      };
+                      const observationData = {
+                        contractor: formData.contractor,
+                        location: formData.location,
+                        date: formData.date,
+                        inspectedBy: formData.inspectedBy,
+                        workActivity: formData.workActivity,
+                        observations: observations,
+                      };
+                      await downloadHSEInspectionChecklistWithTemplate(checklistData);
+                      setTimeout(async () => {
+                        await downloadHSEObservationForm(observationData);
+                      }, 1000);
+                    } catch (error) {
+                      console.error('Export error:', error);
+                      alert('Failed to export documents. Please try again.');
+                    }
+                  }}
+                  className="bg-blue-600 text-white py-3 px-4 font-medium hover:bg-blue-700 transition-colors rounded-md"
+                >
+                  Export Both
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const checklistData = {
+                        contractor: formData.contractor,
+                        location: formData.location,
+                        date: formData.date,
+                        inspectedBy: formData.inspectedBy,
+                        workActivity: formData.workActivity,
+                        tablePersons: formData.tablePersons,
+                        inspectionItems: formData.inspectionItems,
+                        commentsRemarks: formData.commentsRemarks,
+                      };
+                      await downloadHSEInspectionChecklistWithTemplate(checklistData);
+                    } catch (error) {
+                      console.error('Export error:', error);
+                      alert('Failed to export checklist. Please try again.');
+                    }
+                  }}
+                  className="border-2 border-blue-600 text-blue-600 py-3 px-4 font-medium hover:bg-blue-50 transition-colors rounded-md"
+                >
+                  Checklist Only
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const observationData = {
+                        contractor: formData.contractor,
+                        location: formData.location,
+                        date: formData.date,
+                        inspectedBy: formData.inspectedBy,
+                        workActivity: formData.workActivity,
+                        observations: observations,
+                      };
+                      await downloadHSEObservationForm(observationData);
+                    } catch (error) {
+                      console.error('Export error:', error);
+                      alert('Failed to export observation form. Please try again.');
+                    }
+                  }}
+                  className="border-2 border-blue-600 text-blue-600 py-3 px-4 font-medium hover:bg-blue-50 transition-colors rounded-md"
+                >
+                  Observation Form
+                </button>
+              </div>
+            </div> */}
+
+            {/* Submit Button */}
+            <div className="mt-4 bg-white rounded-lg shadow-sm p-4">
+              <button
+                onClick={async () => {
+                  if (!formData.contractor.trim()) {
+                    alert('Please enter Contractor name before submitting.');
+                    return;
+                  }
+                  if (!formData.location.trim()) {
+                    alert('Please enter Location before submitting.');
+                    return;
+                  }
+                  if (!formData.inspectedBy.trim()) {
+                    alert('Please enter Inspected By name before submitting.');
+                    return;
+                  }
+                  if (!formData.workActivity.trim()) {
+                    alert('Please enter Work Activity before submitting.');
+                    return;
+                  }
+                  if (getTotalRated() !== getTotalItems()) {
+                    const remainingItems = getTotalItems() - getTotalRated();
+                    const confirmed = confirm(
+                      `Warning: ${remainingItems} item(s) not rated yet.\n\nDo you want to continue with submission anyway?`,
+                    );
+                    if (!confirmed) return;
+                  }
+                  try {
+                    const authToken = storage.load('authToken', null);
+                    if (!authToken) {
+                      alert(
+                        'Authentication Error:\n\nYour session has expired. Please log in again.',
+                      );
+                      router.push('/login');
+                      return;
+                    }
+                    const response = await fetch('/api/inspections', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`,
+                      },
+                      credentials: 'include',
+                      body: JSON.stringify({
+                        formType: 'hse_general',
+                        formTemplateId: null,
+                        data: {
+                          contractor: formData.contractor,
+                          location: formData.location,
+                          date: formData.date,
+                          inspectedBy: formData.inspectedBy,
+                          workActivity: formData.workActivity,
+                          tablePersons: formData.tablePersons,
+                          inspectionItems: formData.inspectionItems,
+                          commentsRemarks: formData.commentsRemarks,
+                          observations: observations,
+                          totalObservations: observations.length,
+                        },
+                        signature: null,
+                        status: 'pending_review',
+                        locationId: null,
+                        assetId: null,
+                      }),
+                    });
+                    if (!response.ok) {
+                      const errorData = await response
+                        .json()
+                        .catch(() => ({ error: 'Unknown error' }));
+                      let errorMessage = 'Failed to submit inspection.';
+                      if (response.status === 401) {
+                        errorMessage =
+                          'Authentication Error: Your session has expired.\n\nPlease log in again.';
+                        setTimeout(() => router.push('/login'), 2000);
+                      } else if (response.status === 403) {
+                        errorMessage =
+                          'Permission Error: You do not have permission to create inspections.\n\nPlease contact your administrator.';
+                      } else if (response.status === 413) {
+                        errorMessage =
+                          'Data Too Large: Your submission contains too much data (likely due to photos/signatures).\n\nTry:\n1. Reducing the number of signatures\n2. Reducing the number of observation photos\n3. Using smaller/compressed images\n\nCurrent data will be saved locally. Please restart the server and try again.';
+                      } else if (response.status === 500) {
+                        errorMessage = `Server Error: ${
+                          errorData.error || errorData.details || 'Internal server error'
+                        }\n\nPlease try again or contact support.`;
+                      } else {
+                        errorMessage = `${
+                          errorData.error || errorData.details || 'Unknown error'
+                        }\n\nStatus: ${response.status}`;
+                      }
+                      alert(`Submission Error:\n\n${errorMessage}`);
+                      return;
+                    }
+                    const result = await response.json();
+                    console.log('Inspection saved successfully:', result);
+                    try {
+                      const checklistData = {
+                        contractor: formData.contractor,
+                        location: formData.location,
+                        date: formData.date,
+                        inspectedBy: formData.inspectedBy,
+                        workActivity: formData.workActivity,
+                        tablePersons: formData.tablePersons,
+                        inspectionItems: formData.inspectionItems,
+                        commentsRemarks: formData.commentsRemarks,
+                      };
+                      const observationData = {
+                        contractor: formData.contractor,
+                        location: formData.location,
+                        date: formData.date,
+                        inspectedBy: formData.inspectedBy,
+                        workActivity: formData.workActivity,
+                        observations: observations,
+                      };
+                      await downloadHSEInspectionChecklistWithTemplate(checklistData);
+                      setTimeout(async () => {
+                        await downloadHSEObservationForm(observationData);
+                      }, 1500);
+                    } catch (exportError) {
+                      console.error('Auto-export error:', exportError);
+                    }
+                    localStorage.removeItem(`hse-observations-${inspectionId}`);
+                    localStorage.removeItem(`hse-formdata-${inspectionId}`);
+                    localStorage.removeItem('active-hse-inspection-id');
+                    alert('Form submitted successfully! Documents are being downloaded.');
+                    setTimeout(() => {
+                      router.push('/inspector/forms');
+                    }, 2000);
+                  } catch (error) {
+                    console.error('Error saving inspection:', error);
+                    if (error instanceof Error) {
+                      alert(
+                        `Submission Error:\n\n${error.message}\n\nPlease check your internet connection and try again.`,
+                      );
+                    } else {
+                      alert(
+                        'Failed to submit inspection due to a network error. Please check your connection and try again.',
+                      );
+                    }
+                  }
+                }}
+                className="w-full bg-blue-600 text-white py-3 font-medium hover:bg-blue-700 transition-colors rounded-md"
+              >
+                Submit Inspection
+              </button>
+            </div>
           </div>
 
-          {/* Save Confirmation Modal */}
-          {showSaveConfirmation && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg max-w-md w-full mx-4">
-                <div className="p-6">
-                  <div className="flex items-start mb-4">
-                    <div className="flex-shrink-0 mt-1">
-                      <svg
-                        className="h-6 w-6 text-amber-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0l-8.898 12c-.77.833.192 2.5 1.732 2.5z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-lg font-semibold text-gray-900">Confirm Save</h3>
-                      <p className="text-gray-600 mt-2">
-                        <strong>Once saved, this record cannot be edited.</strong>
-                        <br />
-                        The inspection will be completed and saved.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                    <button
-                      onClick={() => setShowSaveConfirmation(false)}
-                      className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmSave}
-                      className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                    >
-                      Save Inspection
-                    </button>
-                  </div>
+          {/* Signature Modal */}
+          {currentSignatureIndex !== null && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Add Signature</h3>
+                <div className="border-2 border-gray-200 rounded-lg mb-4">
+                  <canvas
+                    ref={canvasRef}
+                    width={400}
+                    height={200}
+                    className="w-full touch-none bg-gray-50 rounded-md"
+                    onMouseDown={startDrawing}
+                    onMouseMove={draw}
+                    onMouseUp={stopDrawing}
+                    onMouseLeave={stopDrawing}
+                    onTouchStart={startDrawing}
+                    onTouchMove={draw}
+                    onTouchEnd={stopDrawing}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={clearSignature}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => setCurrentSignatureIndex(null)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveSignature}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
                 </div>
               </div>
             </div>
           )}
         </div>
-      </BaseLayout>
+      </InspectorLayout>
     </ProtectedRoute>
   );
 };
 
-export default ChecklistPage;
+export default HSEInspectionForm;

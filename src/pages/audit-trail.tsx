@@ -44,7 +44,7 @@ const AuditTrail: React.FC<AuditTrailProps> = ({ inspectionId, inspectionType })
       let allLogs: AuditLogEntry[] = [];
 
       // Load HSE inspection logs
-      const hseInspections = storage.load('inspections') || [];
+      const hseInspections = storage.load('inspections', []);
       hseInspections.forEach((inspection: any) => {
         inspection.auditLog.forEach((log: any) => {
           allLogs.push({
@@ -57,7 +57,7 @@ const AuditTrail: React.FC<AuditTrailProps> = ({ inspectionId, inspectionType })
       });
 
       // Load Fire Extinguisher inspection logs
-      const fireExtinguisherInspections = storage.load('fire_extinguisher_inspections') || [];
+      const fireExtinguisherInspections = storage.load('fire_extinguisher_inspections', []);
       fireExtinguisherInspections.forEach((inspection: any) => {
         inspection.auditLog.forEach((log: any) => {
           allLogs.push({
@@ -70,14 +70,14 @@ const AuditTrail: React.FC<AuditTrailProps> = ({ inspectionId, inspectionType })
       });
 
       // Load First Aid inspection logs
-      const firstAidInspections = storage.load('first_aid_inspections') || [];
+      const firstAidInspections = storage.load('first_aid_inspections', []);
       firstAidInspections.forEach((inspection: any) => {
         inspection.auditLog.forEach((log: any) => {
           allLogs.push({
             ...log,
             inspectionId: inspection.id,
             inspectionType: 'first_aid',
-            category: 'First Aid Kit Inspection',
+            category: 'First Aid Items Inspection',
           });
         });
       });
@@ -219,11 +219,11 @@ const AuditTrail: React.FC<AuditTrailProps> = ({ inspectionId, inspectionType })
   };
 
   // Get unique values for filter dropdowns
-  const uniqueUsers = [...new Set(auditLogs.map((log) => log.user))];
-  const uniqueActions = [...new Set(auditLogs.map((log) => log.action))];
-  const uniqueInspectionTypes = [
-    ...new Set(auditLogs.map((log) => log.inspectionType).filter(Boolean)),
-  ];
+  const uniqueUsers = Array.from(new Set(auditLogs.map((log) => log.user)));
+  const uniqueActions = Array.from(new Set(auditLogs.map((log) => log.action)));
+  const uniqueInspectionTypes = Array.from(
+    new Set(auditLogs.map((log) => log.inspectionType).filter(Boolean))
+  );
 
   if (loading) {
     return (
@@ -354,7 +354,7 @@ const AuditTrail: React.FC<AuditTrailProps> = ({ inspectionId, inspectionType })
                   <option value="">All Types</option>
                   <option value="hse">HSE Inspection</option>
                   <option value="fire_extinguisher">Fire Extinguisher</option>
-                  <option value="first_aid">First Aid Kit</option>
+                  <option value="first_aid">First Aid Items</option>
                 </select>
               </div>
 
