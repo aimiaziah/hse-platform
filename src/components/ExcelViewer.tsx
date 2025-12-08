@@ -197,17 +197,16 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         if (font.bold) style.fontWeight = 'bold';
         if (font.italic) style.fontStyle = 'italic';
         if (font.size) style.fontSize = `${font.size}px`;
-        const color = font.color as Record<string, string> | undefined;
-        if (color?.argb) {
+        const color = font.color as Record<string, unknown> | undefined;
+        if (color?.argb && typeof color.argb === 'string') {
           style.color = `#${color.argb.substring(2)}`;
         }
       }
       // Background color
-      const fill = cell.style.fill as
-        | Record<string, Record<string, Record<string, string>>>
-        | undefined;
-      if (fill?.fgColor?.argb) {
-        style.backgroundColor = `#${fill.fgColor.argb.substring(2)}`;
+      const fill = cell.style.fill as Record<string, unknown> | undefined;
+      const fgColor = fill?.fgColor as Record<string, unknown> | undefined;
+      if (fgColor?.argb && typeof fgColor.argb === 'string') {
+        style.backgroundColor = `#${fgColor.argb.substring(2)}`;
       }
       // Alignment
       const alignment = cell.style.alignment as Record<string, string> | undefined;
