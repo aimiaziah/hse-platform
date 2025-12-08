@@ -186,17 +186,15 @@ async function deleteInspection(
       return res.status(404).json({ error: 'Inspection not found' });
     }
 
-    // Check permission: inspectors can only delete their own drafts
+    // Check permission: inspectors can only delete their own inspections
     if (user.role === 'inspector' && (existingInspection as any).inspector_id !== user.id) {
       return res
         .status(403)
         .json({ error: 'Forbidden - You can only delete your own inspections' });
     }
 
-    // Can only delete drafts
-    if ((existingInspection as any).status !== 'draft') {
-      return res.status(400).json({ error: 'Can only delete draft inspections' });
-    }
+    // Note: Users can now delete inspections regardless of status (draft, completed, approved, etc.)
+    // This allows cleanup of historical data while maintaining ownership restrictions
 
     // Delete the inspection
     const { error: deleteError } = await supabase

@@ -5,7 +5,7 @@
  */
 
 const TEMPLATE_CACHE_PREFIX = 'template_cache_';
-const CACHE_VERSION = '1.0'; // Increment this when templates are updated
+const CACHE_VERSION = '2.0'; // Increment this when templates are updated
 
 /**
  * Cached template structure

@@ -1,3 +1,6 @@
+/* eslint-disable no-console */
+/* eslint-disable no-alert */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import InspectorLayout from '@/roles/inspector/layouts/InspectorLayout';
@@ -5,6 +8,7 @@ import { storage } from '@/utils/storage';
 import { exportInspectionOriginalFormat } from '@/utils/exportOriginalFormat';
 import { useAuth } from '@/hooks/useAuth';
 import { apiClient } from '@/lib/api-client';
+import { Trash2 } from 'lucide-react';
 
 type InspectionType = 'hse' | 'fire_extinguisher' | 'first_aid' | 'hse_observation' | 'manhours';
 type InspectionStatus = 'draft' | 'completed' | 'pending' | 'approved' | 'pending_review';
@@ -71,6 +75,8 @@ const SavedInspections: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   useEffect(() => {
     loadInspections();
@@ -324,6 +330,115 @@ const SavedInspections: React.FC = () => {
     }
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const filteredInspections = getFilteredInspections();
+    if (selectedIds.size === filteredInspections.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredInspections.map((i) => i.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${selectedIds.size} inspection${
+        selectedIds.size > 1 ? 's' : ''
+      }?\n\nThis action cannot be undone.`,
+    );
+    if (!confirmDelete) return;
+
+    const selectedInspections = inspections.filter((i) => selectedIds.has(i.id));
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const inspection of selectedInspections) {
+      try {
+        await deleteSingleInspection(inspection);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to delete ${inspection.id}:`, error);
+        failCount++;
+      }
+    }
+
+    // Reload inspections
+    await loadInspections();
+    setSelectedIds(new Set());
+    setIsSelectionMode(false);
+
+    if (failCount === 0) {
+      alert(`Successfully deleted ${successCount} inspection${successCount > 1 ? 's' : ''}!`);
+    } else {
+      alert(
+        `Deleted ${successCount} inspection${successCount > 1 ? 's' : ''}. ${failCount} failed.`,
+      );
+    }
+  };
+
+  const deleteSingleInspection = async (inspection: SavedInspection) => {
+    // Map inspection type to storage key
+    const storageKeyMap: Record<InspectionType, string> = {
+      fire_extinguisher: 'fire_extinguisher_inspections',
+      first_aid: 'first_aid_inspections',
+      manhours: 'manhours_reports',
+      hse: 'hse_inspections',
+      hse_observation: 'hse_observations',
+    };
+
+    const storageKey = storageKeyMap[inspection.type];
+
+    // Delete from database first
+    const response = await apiClient(`/api/inspections/${inspection.id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('❌ Failed to delete from database:', response.status, errorText);
+      throw new Error(`Failed to delete from database: ${response.status}`);
+    }
+
+    console.log('✅ Successfully deleted from database');
+
+    // Delete from localStorage
+    const items = storage.load<any[]>(storageKey, []);
+    const filteredItems = items.filter((item: any) => item.id !== inspection.id);
+    storage.save(storageKey, filteredItems);
+    console.log('✅ Successfully deleted from localStorage');
+  };
+
+  const handleDelete = async (inspection: SavedInspection) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete this ${inspection.title}?\n\nThis action cannot be undone.`,
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteSingleInspection(inspection);
+      await loadInspections();
+      alert('Inspection deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting inspection:', error);
+      alert(
+        'Failed to delete inspection from database. Please check your connection and try again.',
+      );
+    }
+  };
+
   const groupedInspections = groupInspectionsByMonth();
   const sortedMonths = Object.keys(groupedInspections).sort((a, b) => b.localeCompare(a));
 
@@ -351,8 +466,8 @@ const SavedInspections: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-0.5">View and download submissions</p>
               </div>
 
-              {/* Year Filter - Analytics Dashboard Style */}
-              <div className="flex-shrink-0">
+              <div className="flex items-center gap-2">
+                {/* Year Filter */}
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
@@ -365,9 +480,60 @@ const SavedInspections: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                {/* Select Mode Toggle */}
+                {!isSelectionMode ? (
+                  <button
+                    onClick={() => setIsSelectionMode(true)}
+                    className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 border border-blue-300 rounded transition-colors"
+                  >
+                    Select
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsSelectionMode(false);
+                      setSelectedIds(new Set());
+                    }}
+                    className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 border border-gray-300 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Bulk Actions Bar */}
+          {isSelectionMode && (
+            <div className="bg-blue-50 rounded-lg border border-blue-200 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedIds.size > 0 && selectedIds.size === getFilteredInspections().length
+                      }
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Select All</span>
+                  </label>
+                  <span className="text-sm text-gray-600">{selectedIds.size} selected</span>
+                </div>
+
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-colors"
+                  >
+                    Delete Selected ({selectedIds.size})
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Content */}
           {sortedMonths.length === 0 ? (
@@ -405,20 +571,41 @@ const SavedInspections: React.FC = () => {
                   <table className="w-full table-fixed">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="w-[45%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                        {isSelectionMode && <th className="w-[50px] px-4 py-3" />}
+                        <th
+                          className={`${
+                            isSelectionMode ? 'w-[35%]' : 'w-[40%]'
+                          } px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide`}
+                        >
                           Inspection Type
                         </th>
                         <th className="w-[25%] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                           Status
                         </th>
-                        <th className="w-[30%] px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide">
-                          Download
+                        <th
+                          className={`${
+                            isSelectionMode ? 'w-[30%]' : 'w-[35%]'
+                          } px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wide`}
+                        >
+                          Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {groupedInspections[monthKey].map((inspection) => (
                         <tr key={inspection.id} className="hover:bg-gray-50/50 transition-colors">
+                          {/* Checkbox (Selection Mode) */}
+                          {isSelectionMode && (
+                            <td className="px-4 py-4">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(inspection.id)}
+                                onChange={() => toggleSelection(inspection.id)}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                              />
+                            </td>
+                          )}
+
                           {/* Inspection Type */}
                           <td className="px-6 py-4">
                             <div className="text-sm font-medium text-gray-900">
@@ -455,16 +642,27 @@ const SavedInspections: React.FC = () => {
                             </div>
                           </td>
 
-                          {/* Download */}
+                          {/* Actions */}
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() =>
-                                exportInspectionOriginalFormat(inspection.id, inspection.type)
-                              }
-                              className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors hover:underline"
-                            >
-                              {inspection.type === 'hse_observation' ? 'PDF' : 'Excel'}
-                            </button>
+                            <div className="flex items-center justify-end gap-3">
+                              <button
+                                onClick={() =>
+                                  exportInspectionOriginalFormat(inspection.id, inspection.type)
+                                }
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors hover:underline"
+                              >
+                                {inspection.type === 'hse_observation' ? 'PDF' : 'Excel'}
+                              </button>
+                              {!isSelectionMode && (
+                                <button
+                                  onClick={() => handleDelete(inspection)}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete this inspection"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

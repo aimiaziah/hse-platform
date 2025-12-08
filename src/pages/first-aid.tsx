@@ -17,7 +17,6 @@ interface FirstAidItem {
   quantity: string;
   previousQuantity?: string;
   status: RatingType;
-  capturedImages?: CapturedImage[];
 }
 
 interface FirstAidKitInspection {
@@ -103,7 +102,6 @@ const FirstAidInspection: React.FC = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [photographingKitIndex, setPhotographingKitIndex] = useState<number | null>(null);
-  const [photographingItemIndex, setPhotographingItemIndex] = useState<number | null>(null);
 
   const loadPreviousInspectionData = () => {
     try {
@@ -320,57 +318,29 @@ const FirstAidInspection: React.FC = () => {
 
   const startPhotoCapture = (kitIndex: number) => {
     setPhotographingKitIndex(kitIndex);
-    setPhotographingItemIndex(null);
-    setShowCamera(true);
-  };
-
-  const startItemPhotoCapture = (kitIndex: number, itemIndex: number) => {
-    setPhotographingKitIndex(kitIndex);
-    setPhotographingItemIndex(itemIndex);
     setShowCamera(true);
   };
 
   const handlePhotoCaptureComplete = (images: CapturedImage[]) => {
     if (photographingKitIndex === null) return;
 
-    // If capturing for a specific item
-    if (photographingItemIndex !== null) {
-      setInspectionData((prev) => ({
-        ...prev,
-        kits: prev.kits.map((kit, kIdx) =>
-          kIdx === photographingKitIndex
-            ? {
-                ...kit,
-                items: kit.items.map((item, iIdx) =>
-                  iIdx === photographingItemIndex
-                    ? { ...item, capturedImages: [...(item.capturedImages || []), ...images] }
-                    : item,
-                ),
-              }
-            : kit,
-        ),
-      }));
-    } else {
-      // Capturing for the kit
-      setInspectionData((prev) => ({
-        ...prev,
-        kits: prev.kits.map((kit, idx) =>
-          idx === photographingKitIndex
-            ? { ...kit, capturedImages: [...(kit.capturedImages || []), ...images] }
-            : kit,
-        ),
-      }));
-    }
+    // Capturing for the kit
+    setInspectionData((prev) => ({
+      ...prev,
+      kits: prev.kits.map((kit, idx) =>
+        idx === photographingKitIndex
+          ? { ...kit, capturedImages: [...(kit.capturedImages || []), ...images] }
+          : kit,
+      ),
+    }));
 
     setShowCamera(false);
     setPhotographingKitIndex(null);
-    setPhotographingItemIndex(null);
   };
 
   const handlePhotoCaptureCancel = () => {
     setShowCamera(false);
     setPhotographingKitIndex(null);
-    setPhotographingItemIndex(null);
   };
 
   const deleteKitImage = (kitIndex: number, imageIndex: number) => {
@@ -381,27 +351,6 @@ const FirstAidInspection: React.FC = () => {
           ? {
               ...kit,
               capturedImages: kit.capturedImages?.filter((_, i) => i !== imageIndex),
-            }
-          : kit,
-      ),
-    }));
-  };
-
-  const deleteItemImage = (kitIndex: number, itemIndex: number, imageIndex: number) => {
-    setInspectionData((prev) => ({
-      ...prev,
-      kits: prev.kits.map((kit, kIdx) =>
-        kIdx === kitIndex
-          ? {
-              ...kit,
-              items: kit.items.map((item, iIdx) =>
-                iIdx === itemIndex
-                  ? {
-                      ...item,
-                      capturedImages: item.capturedImages?.filter((_, i) => i !== imageIndex),
-                    }
-                  : item,
-              ),
             }
           : kit,
       ),
@@ -756,66 +705,6 @@ const FirstAidInspection: React.FC = () => {
                                 </button>
                               </div>
                               <div className="space-y-3">
-                                {/* Photo Capture Section */}
-                                <div>
-                                  <button
-                                    onClick={() => startItemPhotoCapture(kitIndex, itemIndex)}
-                                    disabled={(item.capturedImages?.length || 0) >= 2}
-                                    className={`w-full rounded-md py-2 px-3 font-medium text-sm transition-all ${
-                                      (item.capturedImages?.length || 0) >= 2
-                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        : 'bg-green-600 text-white hover:bg-green-700'
-                                    }`}
-                                  >
-                                    {(item.capturedImages?.length || 0) >= 2
-                                      ? 'Max 2 photos reached'
-                                      : item.capturedImages && item.capturedImages.length > 0
-                                      ? `Add Photo (${item.capturedImages.length}/2)`
-                                      : 'Capture Photo'}
-                                  </button>
-                                  {item.capturedImages && item.capturedImages.length > 0 && (
-                                    <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-2">
-                                      <p className="text-xs text-green-800 font-medium mb-2">
-                                        {item.capturedImages.length} photo(s) captured
-                                      </p>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        {item.capturedImages.map((image, imgIdx) => (
-                                          <div key={imgIdx} className="relative group">
-                                            <img
-                                              src={image.dataUrl}
-                                              alt={`${item.name} - Photo ${imgIdx + 1}`}
-                                              className="w-full h-20 object-cover rounded-md border border-gray-300"
-                                            />
-                                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 rounded-b-md">
-                                              {new Date(image.timestamp).toLocaleTimeString()}
-                                            </div>
-                                            <button
-                                              onClick={() =>
-                                                deleteItemImage(kitIndex, itemIndex, imgIdx)
-                                              }
-                                              className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                              <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                className="h-3 w-3"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                              >
-                                                <path
-                                                  strokeLinecap="round"
-                                                  strokeLinejoin="round"
-                                                  strokeWidth={2}
-                                                  d="M6 18L18 6M6 6l12 12"
-                                                />
-                                              </svg>
-                                            </button>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
                                 <div>
                                   <label className="block text-xs font-medium text-gray-700 mb-1">
                                     Expiry Date
@@ -1131,16 +1020,7 @@ const FirstAidInspection: React.FC = () => {
             <SimpleCameraCapture
               onComplete={handlePhotoCaptureComplete}
               onCancel={handlePhotoCaptureCancel}
-              maxPhotos={
-                photographingItemIndex !== null
-                  ? Math.max(
-                      0,
-                      2 -
-                        (inspectionData.kits[photographingKitIndex]?.items[photographingItemIndex]
-                          ?.capturedImages?.length || 0),
-                    )
-                  : 10
-              }
+              maxPhotos={10}
             />
           )}
         </div>

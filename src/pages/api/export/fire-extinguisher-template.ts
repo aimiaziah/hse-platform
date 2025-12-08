@@ -1,4 +1,5 @@
 // API endpoint for template-based fire extinguisher export
+/* eslint-disable no-console */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import ExcelJS from 'exceljs';
@@ -166,6 +167,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (ext) => ext.aiCapturedImages && ext.aiCapturedImages.length > 0,
     );
 
+    console.log('Fire Extinguisher Export - Total extinguishers:', formData.extinguishers.length);
+    console.log(
+      'Fire Extinguisher Export - Extinguishers with images:',
+      extinguishersWithImages.length,
+    );
+    if (extinguishersWithImages.length > 0) {
+      console.log(
+        'Fire Extinguisher Export - Total images:',
+        extinguishersWithImages.reduce((sum, ext) => sum + (ext.aiCapturedImages?.length || 0), 0),
+      );
+    }
+
     if (extinguishersWithImages.length > 0) {
       // Create a new worksheet for AI images
       const aiWorksheet = workbook.addWorksheet('AI Scan Images');
@@ -257,7 +270,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             // Try to add the image
             try {
+              if (!image.dataUrl) {
+                console.error('Image dataUrl is missing for extinguisher', ext.no);
+                continue;
+              }
+
               const base64Data = image.dataUrl.replace(/^data:image\/\w+;base64,/, '');
+
+              if (!base64Data || base64Data === image.dataUrl) {
+                console.error('Invalid base64 data for extinguisher', ext.no);
+                continue;
+              }
+
               const imageId = workbook.addImage({
                 base64: base64Data,
                 extension: 'png',
@@ -271,8 +295,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 tl: { col: 6, row: currentRow - 1 },
                 ext: { width: 200, height: 150 },
               });
+
+              console.log(
+                `Successfully added image for extinguisher #${ext.no} at row ${currentRow}`,
+              );
             } catch (error) {
-              console.error('Error adding image to Excel:', error);
+              console.error(`Error adding image for extinguisher #${ext.no}:`, error);
             }
 
             currentRow++;

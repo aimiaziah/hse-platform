@@ -1,13 +1,25 @@
 // src/components/InspectionPreviewModal.tsx - Mobile Preview Modal for Supervisor Reviews
-import React, { useState, useEffect, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
+/* eslint-disable no-alert */
+/* eslint-disable @typescript-eslint/no-use-before-define */
+/* eslint-disable no-param-reassign */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-shadow */
+/* eslint-disable react/button-has-type */
+/* eslint-disable react/no-array-index-key */
+/* eslint-disable no-nested-ternary */
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable jsx-a11y/img-redundant-alt */
+/* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
+import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { exportToGoogleDrive, isGoogleDriveConfigured } from '@/utils/googleDrive';
 import { storage } from '@/utils/storage';
-import {
-  compressSignature,
-  compressPhoto,
-  compressObservationPhotos,
-} from '@/utils/imageCompression';
+import { compressSignature, compressObservationPhotos } from '@/utils/imageCompression';
 import SignaturePinVerificationModal from '@/components/SignaturePinVerificationModal';
+import { prepareExcelPreviewData } from '@/utils/excelPreviewHelper';
 import { useAuth } from '@/hooks/useAuth';
 
 type InspectionType = 'hse' | 'fire_extinguisher' | 'first_aid' | 'hse_observation' | 'manhours';
@@ -63,6 +75,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
   onApprove,
   onReject,
 }) => {
+  const router = useRouter();
   const { verifySignaturePin } = useAuth();
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -522,6 +535,20 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
       alert('Error exporting file. Please try again.');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handlePreviewExcel = () => {
+    try {
+      // Prepare and store preview data
+      const previewData = prepareExcelPreviewData(inspection, user);
+      sessionStorage.setItem('excelPreviewData', JSON.stringify(previewData));
+
+      // Navigate using Next.js router
+      router.push('/supervisor/excel-preview');
+    } catch (error) {
+      console.error('Error opening Excel preview:', error);
+      alert('Error opening preview. Please try again.');
     }
   };
 
@@ -1580,27 +1607,28 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                     Export Approved Inspection
                   </h3>
                   <p className="text-xs text-gray-600">
-                    Re-download the approved inspection report
+                    Preview or re-download the approved inspection report
                   </p>
                 </div>
 
-                <button
-                  onClick={handleReExport}
-                  disabled={processing}
-                  className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                  <span className="text-sm font-semibold">
-                    {processing ? 'Exporting...' : 'Download Excel Report'}
-                  </span>
-                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handlePreviewExcel}
+                    className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center"
+                  >
+                    <span className="text-sm font-semibold">Preview Excel</span>
+                  </button>
+
+                  <button
+                    onClick={handleReExport}
+                    disabled={processing}
+                    className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md flex items-center justify-center"
+                  >
+                    <span className="text-sm font-semibold">
+                      {processing ? 'Exporting...' : 'Download Excel'}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

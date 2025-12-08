@@ -1,8 +1,14 @@
 // API endpoint for template-based first aid export
+/* eslint-disable no-console */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServiceSupabase } from '@/lib/supabase';
 import ExcelJS from 'exceljs';
 import { convertExcelToPDF } from '@/utils/excelToPdfConverter';
+
+interface CapturedImage {
+  dataUrl: string;
+  timestamp: number;
+}
 
 interface FirstAidItem {
   id: string;
@@ -21,6 +27,7 @@ interface FirstAidKitInspection {
   modelNo: string;
   items: FirstAidItem[];
   remarks: string;
+  capturedImages?: CapturedImage[];
 }
 
 interface FirstAidInspectionData {
@@ -234,6 +241,146 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       quantityRow.getCell(FIRST_AID_MAPPING.columns.remarks).value = kit.remarks || '';
       currentRow++;
     });
+
+    // Create Kit Images sheet if there are any captured images
+    const kitsWithImages = formData.kits.filter(
+      (kit) => kit.capturedImages && kit.capturedImages.length > 0,
+    );
+
+    console.log('First Aid Export - Total kits:', formData.kits.length);
+    console.log('First Aid Export - Kits with images:', kitsWithImages.length);
+    if (kitsWithImages.length > 0) {
+      console.log(
+        'First Aid Export - Total images:',
+        kitsWithImages.reduce((sum, kit) => sum + (kit.capturedImages?.length || 0), 0),
+      );
+    }
+
+    if (kitsWithImages.length > 0) {
+      // Create a new worksheet for kit images
+      const imgWorksheet = workbook.addWorksheet('Kit Images');
+
+      // Set column widths
+      imgWorksheet.columns = [
+        { header: 'Kit #', key: 'kitNo', width: 10 },
+        { header: 'Model', key: 'model', width: 20 },
+        { header: 'Location', key: 'location', width: 15 },
+        { header: 'Model No', key: 'modelNo', width: 15 },
+        { header: 'Capture Time', key: 'captureTime', width: 22 },
+      ];
+
+      // Add title
+      imgWorksheet.mergeCells('A1:E1');
+      imgWorksheet.getCell('A1').value = 'KIT IMAGES - FIRST AID INSPECTION';
+      imgWorksheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+      imgWorksheet.getCell('A1').fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF3B82F6' },
+      };
+      imgWorksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+
+      // Add inspection info
+      imgWorksheet.mergeCells('A3:B3');
+      imgWorksheet.getCell('A3').value = 'Inspection Date:';
+      imgWorksheet.getCell('C3').value = formattedDate;
+
+      imgWorksheet.mergeCells('D3:D3');
+      imgWorksheet.getCell('D3').value = 'Inspector:';
+      imgWorksheet.getCell('E3').value = formData.inspectedBy;
+
+      // Add note
+      imgWorksheet.mergeCells('A5:E5');
+      imgWorksheet.getCell('A5').value =
+        'Note: Images are embedded below. Each image shows the photo capture for the corresponding first aid kit.';
+      imgWorksheet.getCell('A5').font = { italic: true, size: 10 };
+      imgWorksheet.getCell('A5').fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF3F4F6' },
+      };
+
+      // Add column headers
+      const headerRow = imgWorksheet.getRow(7);
+      headerRow.values = ['Kit #', 'Model', 'Location', 'Model No', 'Capture Time'];
+      headerRow.font = { bold: true };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE5E7EB' },
+      };
+      headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+
+      let currentImgRow = 8;
+
+      // Add image data for each kit
+      for (const kit of kitsWithImages) {
+        if (kit.capturedImages) {
+          for (const image of kit.capturedImages) {
+            // Add row data
+            const row = imgWorksheet.getRow(currentImgRow);
+            row.values = [
+              kit.no,
+              kit.model,
+              kit.location,
+              kit.modelNo,
+              new Date(image.timestamp).toLocaleString(),
+            ];
+
+            // Try to add the image
+            try {
+              if (!image.dataUrl) {
+                console.error('Image dataUrl is missing for kit', kit.no);
+                continue;
+              }
+
+              const base64Data = image.dataUrl.replace(/^data:image\/\w+;base64,/, '');
+
+              if (!base64Data || base64Data === image.dataUrl) {
+                console.error('Invalid base64 data for kit', kit.no);
+                continue;
+              }
+
+              const imageId = workbook.addImage({
+                base64: base64Data,
+                extension: 'png',
+              });
+
+              // Set row height to accommodate image
+              row.height = 120;
+
+              // Add image to the worksheet at the end of the row
+              imgWorksheet.addImage(imageId, {
+                tl: { col: 5, row: currentImgRow - 1 },
+                ext: { width: 200, height: 150 },
+              });
+
+              console.log(`Successfully added image for kit #${kit.no} at row ${currentImgRow}`);
+            } catch (error) {
+              console.error(`Error adding image for kit #${kit.no}:`, error);
+            }
+
+            currentImgRow++;
+          }
+        }
+      }
+
+      // Add summary at the end
+      currentImgRow += 2;
+      imgWorksheet.mergeCells(`A${currentImgRow}:B${currentImgRow}`);
+      imgWorksheet.getCell(`A${currentImgRow}`).value = 'Total Images:';
+      imgWorksheet.getCell(`A${currentImgRow}`).font = { bold: true };
+      imgWorksheet.getCell(`C${currentImgRow}`).value = kitsWithImages.reduce(
+        (sum, kit) => sum + (kit.capturedImages?.length || 0),
+        0,
+      );
+
+      currentImgRow++;
+      imgWorksheet.mergeCells(`A${currentImgRow}:B${currentImgRow}`);
+      imgWorksheet.getCell(`A${currentImgRow}`).value = 'Kits Photographed:';
+      imgWorksheet.getCell(`A${currentImgRow}`).font = { bold: true };
+      imgWorksheet.getCell(`C${currentImgRow}`).value = kitsWithImages.length;
+    }
 
     // Prepare filename
     const date = new Date(formData.inspectionDate);

@@ -209,11 +209,6 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
       setCapturedImages(allCaptures);
       setShowPreview(false);
       setCurrentPreview(null);
-
-      // If we've reached max photos, complete
-      if (allCaptures.length >= maxPhotos) {
-        stopCamera();
-      }
     }
   };
 
@@ -382,7 +377,7 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
 
             {/* Capture button */}
             <div className="absolute bottom-0 left-0 right-0 pb-8 pt-6 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-center gap-4 px-4">
-              {canTakeMore ? (
+              {canTakeMore && (
                 <button
                   onClick={capturePhoto}
                   className="bg-white text-green-600 rounded-full active:scale-95 shadow-2xl flex items-center justify-center border-8 border-green-600 transition-transform"
@@ -390,7 +385,7 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
                 >
                   <Camera className="w-10 h-10" />
                 </button>
-              ) : null}
+              )}
               {capturedImages.length > 0 && (
                 <button
                   onClick={handleComplete}
