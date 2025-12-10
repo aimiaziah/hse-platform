@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, CheckCircle2, Zap, ZapOff, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export interface CapturedImage {
   dataUrl: string;
@@ -25,7 +25,6 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreview, setCurrentPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [torchEnabled, setTorchEnabled] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -138,30 +137,7 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
       setIsCameraActive(false);
     }
     setIsInitializing(false);
-    setTorchEnabled(false);
   }, [stream]);
-
-  // Toggle flashlight/torch
-  const toggleTorch = async () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-        try {
-          const capabilities = videoTrack.getCapabilities() as any;
-          if (capabilities.torch) {
-            await videoTrack.applyConstraints({
-              advanced: [{ torch: !torchEnabled } as any],
-            });
-            setTorchEnabled(!torchEnabled);
-          } else {
-            alert('Flash/torch not supported on this device');
-          }
-        } catch (err) {
-          console.error('Failed to toggle torch:', err);
-        }
-      }
-    }
-  };
 
   // Capture photo
   const capturePhoto = () => {
@@ -262,23 +238,24 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
   return (
     <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-4 flex items-center justify-between">
+      <div className="bg-gray-900 text-white px-6 py-4 flex items-center justify-between border-b border-gray-800">
         <div>
-          <h3 className="text-lg font-bold">Take Photos</h3>
-          <p className="text-sm opacity-90">
-            {capturedImages.length} / {maxPhotos} photos
+          <h3 className="text-lg font-semibold">Capture Images</h3>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {capturedImages.length} of {maxPhotos} images
           </p>
         </div>
         <button
           onClick={handleCancel}
-          className="p-2 hover:bg-white/20 rounded-full transition-colors"
+          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          aria-label="Close"
         >
-          <X className="w-6 h-6" />
+          <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* Camera View */}
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 relative bg-black overflow-hidden">
         <video
           ref={videoRef}
           autoPlay
@@ -291,18 +268,20 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
 
         {isInitializing && !error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
-            <Camera className="w-12 h-12 text-white mb-4 animate-pulse" />
-            <p className="text-white">Initializing camera...</p>
+            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-white text-sm">Initializing camera...</p>
           </div>
         )}
 
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black p-6">
-            <Camera className="w-12 h-12 text-red-500 mb-4" />
-            <p className="text-white text-center mb-4">{error}</p>
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+              <div className="w-8 h-8 border-2 border-red-500 rounded-full"></div>
+            </div>
+            <p className="text-white text-center mb-6 text-sm">{error}</p>
             <button
               onClick={startCamera}
-              className="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold"
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Try Again
             </button>
@@ -311,21 +290,21 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
 
         {showPreview && currentPreview && (
           <div className="absolute inset-0 flex flex-col bg-black">
-            <div className="flex-1 overflow-hidden flex items-center justify-center">
-              <img src={currentPreview} alt="Preview" className="max-w-full max-h-full object-contain" />
+            <div className="flex-1 overflow-hidden flex items-center justify-center p-4">
+              <img src={currentPreview} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg" />
             </div>
-            <div className="p-6 bg-gradient-to-t from-black via-black to-transparent flex gap-4">
+            <div className="p-6 bg-gray-900 border-t border-gray-800 flex gap-3">
               <button
                 onClick={retakePhoto}
-                className="flex-1 bg-gray-600 text-white py-4 px-4 rounded-xl font-bold active:bg-gray-700"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3.5 px-4 rounded-lg font-medium transition-colors"
               >
                 Retake
               </button>
               <button
                 onClick={confirmCapture}
-                className="flex-1 bg-green-600 text-white py-4 px-4 rounded-xl font-bold active:bg-green-700"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-4 rounded-lg font-medium transition-colors"
               >
-                Keep Photo
+                Confirm
               </button>
             </div>
           </div>
@@ -333,67 +312,67 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
 
         {isCameraActive && !showPreview && (
           <>
-            {/* Crosshair */}
+            {/* Center focus indicator */}
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-white/60"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-white/60"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white/40 rounded-full animate-pulse"></div>
-              </div>
+              <div className="w-64 h-64 border-2 border-white/30 rounded-lg"></div>
             </div>
 
-            {/* Flash toggle */}
-            <div className="absolute top-4 right-4">
-              <button
-                onClick={toggleTorch}
-                className={`p-4 rounded-full transition-all ${
-                  torchEnabled ? 'bg-yellow-500 text-white' : 'bg-black/60 text-white'
-                }`}
-              >
-                {torchEnabled ? <Zap className="w-6 h-6" /> : <ZapOff className="w-6 h-6" />}
-              </button>
-            </div>
-
-            {/* Captured images thumbnail strip */}
+            {/* Captured images indicator */}
             {capturedImages.length > 0 && (
-              <div className="absolute top-4 left-4 flex gap-2 max-w-[calc(100%-8rem)]">
-                {capturedImages.map((img, idx) => (
-                  <div key={idx} className="relative group">
-                    <img
-                      src={img.dataUrl}
-                      alt={`Captured ${idx + 1}`}
-                      className="w-16 h-16 object-cover rounded-lg border-2 border-white"
-                    />
-                    <button
-                      onClick={() => deleteImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+              <div className="absolute top-4 left-4 right-4">
+                <div className="bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2 flex-1">
+                      {capturedImages.map((img, idx) => (
+                        <div key={idx} className="relative">
+                          <img
+                            src={img.dataUrl}
+                            alt={`Image ${idx + 1}`}
+                            className="w-12 h-12 object-cover rounded border border-gray-700"
+                          />
+                          <button
+                            onClick={() => deleteImage(idx)}
+                            className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-700 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs transition-colors"
+                            aria-label="Delete image"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-white text-sm font-medium">
+                      {capturedImages.length}/{maxPhotos}
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
-            {/* Capture button */}
-            <div className="absolute bottom-0 left-0 right-0 pb-8 pt-6 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-center gap-4 px-4">
-              {canTakeMore && (
-                <button
-                  onClick={capturePhoto}
-                  className="bg-white text-green-600 rounded-full active:scale-95 shadow-2xl flex items-center justify-center border-8 border-green-600 transition-transform"
-                  style={{ width: '90px', height: '90px' }}
-                >
-                  <Camera className="w-10 h-10" />
-                </button>
-              )}
-              {capturedImages.length > 0 && (
-                <button
-                  onClick={handleComplete}
-                  className="bg-green-600 text-white px-8 py-4 rounded-full font-bold shadow-lg flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  Done ({capturedImages.length})
-                </button>
+            {/* Bottom controls */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/95 to-transparent">
+              <div className="flex items-center justify-center gap-4">
+                {canTakeMore && (
+                  <button
+                    onClick={capturePhoto}
+                    className="w-20 h-20 bg-white rounded-full active:scale-95 shadow-lg transition-transform flex items-center justify-center border-4 border-gray-200"
+                    aria-label="Capture photo"
+                  >
+                    <div className="w-14 h-14 bg-white rounded-full border-2 border-gray-300"></div>
+                  </button>
+                )}
+                {capturedImages.length > 0 && (
+                  <button
+                    onClick={handleComplete}
+                    className="ml-4 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-lg font-semibold shadow-lg transition-colors min-w-[140px]"
+                  >
+                    Submit ({capturedImages.length})
+                  </button>
+                )}
+              </div>
+              {capturedImages.length === 0 && (
+                <p className="text-center text-white/70 text-sm mt-3">
+                  Tap the button to capture an image
+                </p>
               )}
             </div>
           </>

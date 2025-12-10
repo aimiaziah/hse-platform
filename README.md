@@ -57,7 +57,6 @@ The PWA Inspection Platform is a modern, secure web application designed for man
 - **Export & Reporting**
   - Excel export with formatting
   - PDF generation
-  - Google Drive integration
   - SharePoint integration
 
 ### 🔒 Security Features

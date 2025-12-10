@@ -25,6 +25,14 @@ const Card: React.FC<CardProps> = ({
         ${completed ? 'opacity-75' : ''}
       `}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      role="button"
+      tabIndex={onClick ? 0 : undefined}
     >
       <div className="flex justify-between items-start mb-2">
         <h2 className="text-xl font-bold text-bits-dark flex-1">{title}</h2>
@@ -36,9 +44,9 @@ const Card: React.FC<CardProps> = ({
       <div className="flex justify-between items-center">
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {tags.map((tag, index) => (
+            {tags.map((tag) => (
               <span
-                key={index}
+                key={tag}
                 className="px-2 py-1 bg-bits-light-gray text-xs rounded text-bits-gray"
               >
                 {tag}

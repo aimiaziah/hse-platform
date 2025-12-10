@@ -21,7 +21,7 @@ const RoleBasedNav: React.FC = () => {
   const adminNavItems: NavItem[] = [
     {
       label: 'Home',
-      href: '/analytics',
+      href: '/admin',
       icon: 'home',
       iconClass: 'text-purple-600',
     },
@@ -114,11 +114,13 @@ const RoleBasedNav: React.FC = () => {
   const isActiveRoute = (href: string) => {
     if (
       href === '/admin' ||
-      href === '/analytics' ||
       href === '/supervisor' ||
       href === '/inspector'
     ) {
       return router.pathname === href;
+    }
+    if (href === '/analytics') {
+      return router.pathname === '/analytics';
     }
     return router.pathname.startsWith(href);
   };
@@ -147,9 +149,9 @@ const RoleBasedNav: React.FC = () => {
                 /* Admin navigation with dropdown */
                 <>
                   <Link
-                    href="/analytics"
+                    href="/admin"
                     className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                      isActiveRoute('/analytics')
+                      isActiveRoute('/admin')
                         ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-700'
                         : 'text-gray-700 hover:bg-gray-50'
                     }`}

@@ -73,6 +73,7 @@ module.exports = withPWA({
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Allow Google Fonts
               "font-src 'self' https://fonts.gstatic.com", // Allow Google Fonts
               "img-src 'self' data: blob: https:", // Allow images from various sources
+              "object-src 'self' data: blob:", // Allow data URIs for objects/embeds (fixes CSP violation)
               "connect-src 'self' https://*.supabase.co https://login.microsoftonline.com https://*.cloudflarestorage.com https://*.digitaloceanspaces.com", // Allow API calls
               "frame-ancestors 'none'", // Prevent embedding
             ].join('; '),

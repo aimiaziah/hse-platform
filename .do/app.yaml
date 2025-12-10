@@ -1,0 +1,155 @@
+# DigitalOcean App Platform Specification
+# This file defines how your app should be built and deployed on DigitalOcean
+
+name: pwa-inspection-platform
+region: sgp
+
+# Services - defines the components of your application
+services:
+  - name: web
+    # Source code configuration
+    github:
+      repo: aimiaziah/pwa-inspection
+      branch: main
+      deploy_on_push: true
+
+    # Build configuration
+    build_command: npm ci && npm run build
+
+    # Run configuration
+    run_command: npm start
+
+    # Environment configuration
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs  # $5/month - suitable for small apps
+
+    # HTTP configuration
+    http_port: 8080
+
+    # Health check configuration
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 20
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Environment variables (configure these in DigitalOcean dashboard)
+    envs:
+      # Node.js configuration
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+
+      - key: NODE_VERSION
+        value: "18"
+        scope: BUILD_TIME
+
+      # Next.js configuration
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+        scope: RUN_AND_BUILD_TIME
+
+      # Supabase configuration (set these in App Platform UI)
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        scope: RUN_AND_BUILD_TIME
+        type: SECRET
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # Authentication configuration
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: JWT_EXPIRES_IN
+        value: "7d"
+        scope: RUN_TIME
+
+      - key: ALLOWED_EMAIL_DOMAINS
+        value: "theta-edge.com"
+        scope: RUN_TIME
+
+      # Feature flags
+      - key: ENABLE_PIN_AUTH
+        value: "true"
+        scope: RUN_TIME
+
+      - key: ENABLE_MICROSOFT_AUTH
+        value: "true"
+        scope: RUN_TIME
+
+      - key: PREFER_MICROSOFT_AUTH
+        value: "true"
+        scope: RUN_TIME
+
+      # DigitalOcean Spaces configuration (optional - for image storage)
+      - key: DO_SPACES_NAME
+        value: "inspection-images"
+        scope: RUN_TIME
+
+      - key: DO_SPACES_REGION
+        value: "sgp1"
+        scope: RUN_TIME
+
+      - key: DO_SPACES_ENDPOINT
+        value: "https://sgp1.digitaloceanspaces.com"
+        scope: RUN_TIME
+
+      - key: DO_SPACES_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: DO_SPACES_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
+      # SharePoint OAuth (optional)
+      - key: NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID
+        scope: RUN_TIME
+        type: SECRET
+
+      - key: NEXT_PUBLIC_SHAREPOINT_TENANT_ID
+        value: "common"
+        scope: RUN_TIME
+
+      - key: NEXT_PUBLIC_SHAREPOINT_SITE_URL
+        value: "https://thetaedgebhd.sharepoint.com/sites/ThetaEdge"
+        scope: RUN_TIME
+
+      - key: NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME
+        value: "Shared Documents"
+        scope: RUN_TIME
+
+      - key: NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER
+        value: "HSE"
+        scope: RUN_TIME
+
+      # Logging
+      - key: LOG_LEVEL
+        value: "info"
+        scope: RUN_TIME
+
+      # Application settings
+      - key: NEXT_PUBLIC_APP_NAME
+        value: "PWA Inspection Platform"
+        scope: RUN_AND_BUILD_TIME
+
+      - key: NEXT_PUBLIC_APP_VERSION
+        value: "1.0.0"
+        scope: RUN_AND_BUILD_TIME
+
+# Alerts configuration
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DEPLOYMENT_LIVE
+  - rule: DOMAIN_FAILED
+  - rule: DOMAIN_LIVE

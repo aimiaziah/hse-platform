@@ -1,5 +1,6 @@
 // Microsoft OAuth Authentication Utility
 import { UserRole } from '@/hooks/useAuth';
+import { isInspectorEmail, isAdminEmail, isSupervisorEmail } from '@/lib/auth-config';
 
 export interface MicrosoftAuthConfig {
   clientId: string;
@@ -127,10 +128,24 @@ export async function getMicrosoftUserInfo(accessToken: string): Promise<Microso
 }
 
 /**
- * Map Microsoft user to app role based on job title or department
- * You can customize this logic based on your company's structure
+ * Map Microsoft user to app role based on email whitelist or job title/department
+ * Priority: Email whitelist > Job title/department mapping
  */
 export function mapMicrosoftUserToRole(userInfo: MicrosoftUserInfo): UserRole {
+  // PRIORITY 1: Check email whitelists (highest priority)
+  if (isAdminEmail(userInfo.mail)) {
+    return 'admin';
+  }
+
+  if (isSupervisorEmail(userInfo.mail)) {
+    return 'supervisor';
+  }
+
+  if (isInspectorEmail(userInfo.mail)) {
+    return 'inspector';
+  }
+
+  // PRIORITY 2: Job title/department mapping (fallback)
   const jobTitle = userInfo.jobTitle?.toLowerCase() || '';
   const department = userInfo.department?.toLowerCase() || '';
 

@@ -67,9 +67,9 @@ export default function TestSharePointConfig() {
           <div className="bg-blue-50 border border-blue-200 rounded p-4 mt-6">
             <h3 className="font-semibold text-blue-900 mb-2">✅ What Should Be True:</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-blue-800">
-              <li>Client ID should NOT be "NOT SET"</li>
-              <li>Tenant ID should NOT be "NOT SET"</li>
-              <li>Is Configured should be "✅ YES"</li>
+              <li>Client ID should NOT be &quot;NOT SET&quot;</li>
+              <li>Tenant ID should NOT be &quot;NOT SET&quot;</li>
+              <li>Is Configured should be &quot;✅ YES&quot;</li>
               <li>The redirect URI above should be added in Azure Portal</li>
             </ul>
           </div>

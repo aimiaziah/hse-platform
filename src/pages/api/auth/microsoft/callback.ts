@@ -3,12 +3,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import {
   exchangeCodeForToken,
   getMicrosoftUserInfo,
-  mapMicrosoftUserToRole,
 } from '@/utils/microsoft-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { generateToken } from '@/lib/jwt';
-import { isEmailDomainAllowed, isAuthMethodEnabled } from '@/lib/auth-config';
+import { isEmailDomainAllowed, isAuthMethodEnabled, isAdminEmail } from '@/lib/auth-config';
 import { rateLimitMiddleware, resetRateLimit } from '@/lib/rate-limiter';
 import { serialize } from 'cookie';
 
@@ -62,8 +61,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
 
-    // Map user to app role
-    const role = mapMicrosoftUserToRole(userInfo);
+    // For new users: Check if admin, otherwise default to employee
+    // Existing users keep their database-assigned role (managed via admin panel)
+    const initialRole = isAdminEmail(userInfo.mail) ? 'admin' : 'employee';
 
     // Check if user exists in database
     const supabase = getServiceSupabase();
@@ -119,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             name: userInfo.displayName,
             email: userInfo.mail,
             pin: null, // No PIN for Microsoft-only users
-            role,
+            role: initialRole,
             microsoft_id: userInfo.id,
             microsoft_access_token: accessToken,
             microsoft_refresh_token: refreshToken,

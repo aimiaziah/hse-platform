@@ -49,7 +49,6 @@ async function fetchTemplateFromStorage(
   try {
     return await loadTemplate(bucketName, filePath);
   } catch (error) {
-    console.error('Error fetching template:', error);
     throw error;
   }
 }
@@ -77,11 +76,9 @@ export async function generateHSEObservationExcel(
 ): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from storage
-    console.log('Fetching HSE Observation template from storage...');
     const templateBuffer = await fetchTemplateFromStorage('templates', 'observation-template.xlsx');
 
     // Load the template with ExcelJS
-    console.log('Loading template with ExcelJS...');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(templateBuffer);
 
@@ -155,7 +152,7 @@ export async function generateHSEObservationExcel(
       ws.getCell(`L${currentRow}`).value =
         obs.photos.length > 0 ? `${obs.photos.length} photos` : '';
 
-      currentRow++;
+      currentRow += 1;
     });
 
     // ==========================================
@@ -170,7 +167,7 @@ export async function generateHSEObservationExcel(
       ws.getCell(`D${currentRow}`).value = data.preparedDate ? formatDate(data.preparedDate) : '';
     }
 
-    currentRow++;
+    currentRow += 1;
 
     if (data.reviewedBy) {
       ws.getCell(`B${currentRow}`).value = 'Reviewed By:';
@@ -258,28 +255,26 @@ export async function generateHSEObservationExcel(
             imgWs.getCell(`E${imageRow}`).value = photoIndex + 1;
             imgWs.getCell(`F${imageRow}`).value = new Date().toLocaleString();
             imgWs.getCell(`G${imageRow}`).value = photo; // Full base64 data URL
-            imageRow++;
-            totalPhotos++;
+            imageRow += 1;
+            totalPhotos += 1;
           });
         }
       });
 
       // Add summary section
-      imageRow++;
+      imageRow += 1;
       imgWs.getCell(`A${imageRow}`).value = 'Total Photos:';
       imgWs.getCell(`B${imageRow}`).value = totalPhotos;
       imgWs.getCell(`A${imageRow}`).font = { bold: true };
 
-      imageRow++;
+      imageRow += 1;
       imgWs.getCell(`A${imageRow}`).value = 'Observations with Photos:';
       imgWs.getCell(`B${imageRow}`).value = observationsWithPhotos.length;
       imgWs.getCell(`A${imageRow}`).font = { bold: true };
     }
 
-    console.log('HSE Observation template filled successfully');
     return wb;
   } catch (error) {
-    console.error('Error loading HSE Observation template:', error);
     throw new Error(
       'Could not load HSE Observation template. Please ensure "observation-template.xlsx" exists in the templates storage.',
     );
@@ -317,9 +312,9 @@ export async function downloadHSEObservationForm(
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    console.log('HSE Observation form downloaded successfully');
+    // HSE Observation form downloaded successfully
   } catch (error) {
-    console.error('Error generating HSE Observation Excel:', error);
+    // Error generating HSE Observation Excel
     throw error;
   }
 }
@@ -328,6 +323,6 @@ export async function downloadHSEObservationForm(
  * Print function (opens in new window) - Not applicable for Excel, kept for compatibility
  */
 export async function printHSEObservationForm(data: HSEObservationFormData): Promise<void> {
-  console.warn('Print function not supported for Excel format. Use download instead.');
+  // Print function not supported for Excel format. Use download instead.
   await downloadHSEObservationForm(data);
 }

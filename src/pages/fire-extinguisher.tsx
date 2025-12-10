@@ -575,33 +575,126 @@ const FireExtinguisherChecklist: React.FC = () => {
   };
 
   const handleAICaptureComplete = async (images: CapturedImage[]) => {
-    if (scanningExtinguisherIndex === null) return;
+    console.log('[Fire Extinguisher] handleAICaptureComplete called with', images?.length || 0, 'images');
+    
+    if (scanningExtinguisherIndex === null) {
+      console.error('[Fire Extinguisher] No extinguisher index set for AI scan');
+      alert('Error: No extinguisher selected for scanning');
+      return;
+    }
+
+    if (!images || images.length === 0) {
+      console.error('[Fire Extinguisher] No images provided');
+      alert('No images captured. Please capture at least one image.');
+      return;
+    }
+
+    // Validate image data
+    const validImages = images.filter(img => img && img.dataUrl && img.dataUrl.length > 100);
+    if (validImages.length === 0) {
+      console.error('[Fire Extinguisher] No valid images found');
+      alert('Invalid image data. Please try capturing again.');
+      return;
+    }
+
+    console.log('[Fire Extinguisher] Starting AI analysis with', validImages.length, 'valid images');
+    console.log('[Fire Extinguisher] Image details:', validImages.map(img => ({
+      stepId: img.stepId,
+      dataUrlLength: img.dataUrl?.length || 0,
+      timestamp: img.timestamp
+    })));
+    
+    // Close camera modal first
     setShowAIScanner(false);
+    
+    // Small delay to ensure modal closes before showing processing loader
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     setIsProcessingAI(true);
+
     try {
       const extinguisher = checklistData.extinguishers[scanningExtinguisherIndex];
+      if (!extinguisher) {
+        throw new Error('Extinguisher not found at index ' + scanningExtinguisherIndex);
+      }
+      
+      console.log('[Fire Extinguisher] Analyzing extinguisher:', extinguisher.serialNo);
+      console.log('[Fire Extinguisher] Sending request to API with', validImages.length, 'images');
+
+      const requestBody = {
+        images: validImages,
+        extinguisherInfo: {
+          serialNo: extinguisher.serialNo,
+          location: extinguisher.location,
+          typeSize: extinguisher.typeSize,
+        },
+      };
+      
+      console.log('[Fire Extinguisher] Request body prepared:', {
+        imageCount: requestBody.images.length,
+        extinguisherInfo: requestBody.extinguisherInfo
+      });
+
       const response = await fetch('/api/ai/analyze-extinguisher', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images,
-          extinguisherInfo: {
-            serialNo: extinguisher.serialNo,
-            location: extinguisher.location,
-            typeSize: extinguisher.typeSize,
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
-      if (!response.ok) throw new Error(`API returned ${response.status}`);
-      const result: AIInspectionResult = await response.json();
+
+      console.log('[Fire Extinguisher] API response status:', response.status);
+      console.log('[Fire Extinguisher] API response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        let errorMessage = `API returned ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          console.error('[Fire Extinguisher] API error response:', errorData);
+        } catch (e) {
+          const text = await response.text().catch(() => '');
+          console.error('[Fire Extinguisher] API error text:', text);
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      let result: AIInspectionResult;
+      try {
+        const responseText = await response.text();
+        console.log('[Fire Extinguisher] API response text length:', responseText.length);
+        result = JSON.parse(responseText);
+        console.log('[Fire Extinguisher] AI result parsed successfully:', result);
+      } catch (parseError) {
+        console.error('[Fire Extinguisher] Failed to parse API response:', parseError);
+        throw new Error('Invalid response from AI service. Please try again.');
+      }
+      
+      if (!result) {
+        throw new Error('Empty response from AI service');
+      }
+      
+      console.log('[Fire Extinguisher] AI result:', result);
+
       if (result.success) {
-        applyAIResults(scanningExtinguisherIndex, result, images);
+        console.log('[Fire Extinguisher] AI analysis successful!');
+        console.log('[Fire Extinguisher] Detections:', result.detections.length);
+        console.log('[Fire Extinguisher] Detection details:', result.detections);
+        
+        if (result.detections.length === 0) {
+          console.warn('[Fire Extinguisher] No detections returned from AI');
+          alert('AI analysis completed but no components were detected. Please verify the image quality.');
+        }
+        
+        applyAIResults(scanningExtinguisherIndex, result, validImages);
         setCurrentAIResults(result);
         setShowAIResults(true);
+        console.log('[Fire Extinguisher] AI results applied successfully');
       } else {
+        console.error('[Fire Extinguisher] AI analysis failed:', result.error);
         alert(`AI Analysis failed: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
+      console.error('[Fire Extinguisher] Error processing AI analysis:', error);
       alert(
         `Failed to process images with AI: ${
           error instanceof Error ? error.message : 'Unknown error'
@@ -613,11 +706,15 @@ const FireExtinguisherChecklist: React.FC = () => {
   };
 
   const applyAIResults = (index: number, result: AIInspectionResult, images: CapturedImage[]) => {
+    console.log('[Fire Extinguisher] Applying AI results to extinguisher index:', index);
+    console.log('[Fire Extinguisher] Detections to apply:', result.detections);
+
     const updatedExtinguisher: Partial<FireExtinguisherRow> = {
       aiScanned: true,
       aiCapturedImages: images,
       aiConfidence: {},
     };
+
     result.detections.forEach((detection) => {
       const fieldMap: { [key: string]: keyof FireExtinguisherRow } = {
         shell: 'shell',
@@ -633,24 +730,34 @@ const FireExtinguisherChecklist: React.FC = () => {
       };
       const fieldKey = fieldMap[detection.field];
       if (fieldKey) {
+        console.log(`[Fire Extinguisher] Setting ${fieldKey} to ${detection.value} (confidence: ${detection.confidence})`);
         (updatedExtinguisher as any)[fieldKey] = detection.value;
         if (updatedExtinguisher.aiConfidence) {
           updatedExtinguisher.aiConfidence[detection.field] = detection.confidence;
         }
+      } else {
+        console.warn(`[Fire Extinguisher] Unknown field: ${detection.field}`);
       }
     });
-    if (result.extractedData.expiryDate) {
+
+    if (result.extractedData.expiryDate && result.extractedData.expiryDate.value) {
+      console.log('[Fire Extinguisher] Setting expiry date:', result.extractedData.expiryDate.value);
       updatedExtinguisher.expiryDate = result.extractedData.expiryDate.value;
       if (updatedExtinguisher.aiConfidence) {
         updatedExtinguisher.aiConfidence.expiryDate = result.extractedData.expiryDate.confidence;
       }
     }
-    setChecklistData((prev) => ({
-      ...prev,
-      extinguishers: prev.extinguishers.map((ext, i) =>
-        i === index ? { ...ext, ...updatedExtinguisher } : ext,
-      ),
-    }));
+
+    setChecklistData((prev) => {
+      const updated = {
+        ...prev,
+        extinguishers: prev.extinguishers.map((ext, i) =>
+          i === index ? { ...ext, ...updatedExtinguisher } : ext,
+        ),
+      };
+      console.log('[Fire Extinguisher] Updated extinguisher data:', updated.extinguishers[index]);
+      return updated;
+    });
   };
 
   const handleAICaptureCancel = () => {

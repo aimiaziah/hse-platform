@@ -35,8 +35,6 @@ interface BaseDashboardProps {
 const BaseDashboard: React.FC<BaseDashboardProps> = ({
   title,
   subtitle,
-  userName,
-  userRole,
   timeframe = 'Last 30 days',
   onTimeframeChange,
   statCards,
@@ -44,6 +42,25 @@ const BaseDashboard: React.FC<BaseDashboardProps> = ({
   children,
   showTimeframeSelector = true,
 }) => {
+  const getGridColsClass = (length: number): string => {
+    if (length === 2) return 'sm:grid-cols-2';
+    if (length === 3) return 'sm:grid-cols-3';
+    if (length === 6) return 'sm:grid-cols-2 lg:grid-cols-3';
+    return 'sm:grid-cols-2 lg:grid-cols-4';
+  };
+
+  const getQuickActionsGridClass = (length: number): string => {
+    if (length >= 4) return 'md:grid-cols-4';
+    if (length === 3) return 'md:grid-cols-3';
+    return 'md:grid-cols-2';
+  };
+
+  const getTrendColorClass = (trend?: 'up' | 'down' | 'neutral'): string => {
+    if (trend === 'up') return 'text-green-600';
+    if (trend === 'down') return 'text-red-600';
+    return 'text-gray-600';
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -68,19 +85,11 @@ const BaseDashboard: React.FC<BaseDashboardProps> = ({
 
         {/* Stat Cards - Mobile First Design */}
         <div
-          className={`grid grid-cols-1 ${
-            statCards.length === 2
-              ? 'sm:grid-cols-2'
-              : statCards.length === 3
-              ? 'sm:grid-cols-3'
-              : statCards.length === 6
-              ? 'sm:grid-cols-2 lg:grid-cols-3'
-              : 'sm:grid-cols-2 lg:grid-cols-4'
-          } gap-4 md:gap-6`}
+          className={`grid grid-cols-1 ${getGridColsClass(statCards.length)} gap-4 md:gap-6`}
         >
           {statCards.map((stat, index) => (
             <div
-              key={index}
+              key={`stat-${stat.label}-${index}`}
               className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all"
             >
               <div className="space-y-3">
@@ -130,15 +139,7 @@ const BaseDashboard: React.FC<BaseDashboardProps> = ({
                         </svg>
                       )}
                       {stat.trendValue && (
-                        <span
-                          className={`text-xs font-semibold ${
-                            stat.trend === 'up'
-                              ? 'text-green-600'
-                              : stat.trend === 'down'
-                              ? 'text-red-600'
-                              : 'text-gray-600'
-                          }`}
-                        >
+                        <span className={`text-xs font-semibold ${getTrendColorClass(stat.trend)}`}>
                           {stat.trendValue}
                         </span>
                       )}
@@ -160,18 +161,11 @@ const BaseDashboard: React.FC<BaseDashboardProps> = ({
         {quickActions.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Forms</h2>
-            <div
-              className={`grid grid-cols-1 ${
-                quickActions.length >= 4
-                  ? 'md:grid-cols-4'
-                  : quickActions.length === 3
-                  ? 'md:grid-cols-3'
-                  : 'md:grid-cols-2'
-              } gap-4`}
-            >
+            <div className={`grid grid-cols-1 ${getQuickActionsGridClass(quickActions.length)} gap-4`}>
               {quickActions.map((action, index) => (
                 <button
-                  key={index}
+                  type="button"
+                  key={`action-${action.label}-${index}`}
                   onClick={action.onClick}
                   className="flex items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all text-left group"
                 >

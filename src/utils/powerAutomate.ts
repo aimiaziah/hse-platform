@@ -23,10 +23,18 @@ interface PowerAutomateResponse {
  * Upload inspection files to SharePoint via Power Automate webhook
  * No user authentication needed - works automatically in background
  */
+interface InspectionData {
+  id: string;
+  type: string;
+  inspectionDate?: string;
+  inspectedBy?: string;
+  reviewedBy?: string;
+}
+
 export const uploadToSharePointViaPowerAutomate = async (
   excelBlob: Blob,
   pdfBlob: Blob,
-  inspection: any,
+  inspection: InspectionData,
 ): Promise<PowerAutomateResponse> => {
   try {
     // Get Power Automate webhook URL from environment
@@ -61,7 +69,7 @@ export const uploadToSharePointViaPowerAutomate = async (
     const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
     const typePrefix = inspection.type
       .replace('_', ' ')
-      .replace(/\b\w/g, (l: string) => l.toUpperCase())
+      .replace(/\b\w/g, (letter: string) => letter.toUpperCase())
       .replace(/ /g, '_');
     const fileName = `${typePrefix}_${monthYear}_${inspection.id}`;
 
@@ -77,7 +85,7 @@ export const uploadToSharePointViaPowerAutomate = async (
       fileName,
     };
 
-    console.log('📤 Sending files to Power Automate webhook...');
+    // Sending files to Power Automate webhook
 
     // Send to Power Automate
     const response = await fetch(webhookUrl, {
@@ -95,11 +103,11 @@ export const uploadToSharePointViaPowerAutomate = async (
 
     const result: PowerAutomateResponse = await response.json();
 
-    console.log('✅ Files uploaded to SharePoint via Power Automate:', result);
+    // Files uploaded to SharePoint via Power Automate
 
     return result;
   } catch (error) {
-    console.error('❌ Error uploading to SharePoint via Power Automate:', error);
+    // Error uploading to SharePoint via Power Automate
     throw error;
   }
 };

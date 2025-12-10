@@ -89,11 +89,6 @@ const envSchema = z.object({
   NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME: z.string().optional(),
   NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER: z.string().optional(),
 
-  // ═══════════════════════════════════════════════════════════
-  // OPTIONAL - Google Drive
-  // ═══════════════════════════════════════════════════════════
-  NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().optional(),
-  NEXT_PUBLIC_GOOGLE_API_KEY: z.string().optional(),
 
   // ═══════════════════════════════════════════════════════════
   // OPTIONAL - Cloudflare R2 Storage
@@ -292,14 +287,12 @@ export function hasStorageConfig(provider: 'r2' | 'digitalocean'): boolean {
 /**
  * Validate that OAuth configuration exists
  */
-export function hasOAuthConfig(provider: 'microsoft' | 'google'): boolean {
+export function hasOAuthConfig(provider: 'microsoft'): boolean {
   if (!env) return false;
 
   switch (provider) {
     case 'microsoft':
       return !!(env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID && env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID);
-    case 'google':
-      return !!(env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && env.NEXT_PUBLIC_GOOGLE_API_KEY);
     default:
       return false;
   }

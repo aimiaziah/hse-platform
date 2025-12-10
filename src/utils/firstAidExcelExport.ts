@@ -47,7 +47,6 @@ async function fetchTemplateFromStorage(
   try {
     return await loadTemplate(bucketName, filePath);
   } catch (error) {
-    console.error('Error fetching template:', error);
     throw error;
   }
 }
@@ -89,11 +88,9 @@ export async function generateFirstAidExcel(
 ): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from storage
-    console.log('Fetching First Aid template from storage...');
     const templateBuffer = await fetchTemplateFromStorage('templates', 'first-aid-template.xlsx');
 
     // Load the template with ExcelJS
-    console.log('Loading template with ExcelJS...');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(templateBuffer);
 
@@ -135,7 +132,7 @@ export async function generateFirstAidExcel(
     data.kits.forEach((kit, kitIndex) => {
       // Add empty separator row between kits (except before first kit)
       if (kitIndex > 0) {
-        currentRow++;
+        currentRow += 1;
       }
 
       // Status row
@@ -157,7 +154,7 @@ export async function generateFirstAidExcel(
         ws.getCell(`${col}${currentRow}`).value = statusValue;
       });
 
-      currentRow++;
+      currentRow += 1;
 
       // Expiry Date row
       ws.getCell(`C${currentRow}`).value = 'Expiry Date';
@@ -169,7 +166,7 @@ export async function generateFirstAidExcel(
         }
       });
 
-      currentRow++;
+      currentRow += 1;
 
       // Quantity row
       ws.getCell(`C${currentRow}`).value = 'Quantity';
@@ -182,7 +179,7 @@ export async function generateFirstAidExcel(
       // Remarks at column AH (index 33)
       ws.getCell(`AH${currentRow}`).value = kit.remarks || '';
 
-      currentRow++;
+      currentRow += 1;
     });
 
     // ==========================================
@@ -263,13 +260,13 @@ export async function generateFirstAidExcel(
             imgWs.getCell(`D${imageRow}`).value = kit.modelNo;
             imgWs.getCell(`E${imageRow}`).value = new Date(image.timestamp).toLocaleString();
             imgWs.getCell(`F${imageRow}`).value = image.dataUrl; // Full base64 data URL
-            imageRow++;
+            imageRow += 1;
           });
         }
       });
 
       // Add summary section
-      imageRow++;
+      imageRow += 1;
       imgWs.getCell(`A${imageRow}`).value = 'Total Images:';
       imgWs.getCell(`B${imageRow}`).value = kitsWithImages.reduce(
         (sum, kit) => sum + (kit.capturedImages?.length || 0),
@@ -277,16 +274,14 @@ export async function generateFirstAidExcel(
       );
       imgWs.getCell(`A${imageRow}`).font = { bold: true };
 
-      imageRow++;
+      imageRow += 1;
       imgWs.getCell(`A${imageRow}`).value = 'Kits Photographed:';
       imgWs.getCell(`B${imageRow}`).value = kitsWithImages.length;
       imgWs.getCell(`A${imageRow}`).font = { bold: true };
     }
 
-    console.log('First Aid template filled successfully');
     return wb;
   } catch (error) {
-    console.error('Error loading First Aid template:', error);
     throw new Error(
       'Could not load First Aid template. Please ensure "first-aid-template.xlsx" exists in the templates storage.',
     );
@@ -336,9 +331,9 @@ export async function downloadFirstAidExcel(data: FirstAidInspectionData, filena
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    console.log('First Aid checklist downloaded successfully');
+    // First Aid checklist downloaded successfully
   } catch (error) {
-    console.error('Error generating First Aid Excel:', error);
+    // Error generating First Aid Excel
     throw error;
   }
 }

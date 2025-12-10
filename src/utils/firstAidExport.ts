@@ -67,10 +67,65 @@ const STANDARD_FIRST_AID_ITEMS = [
 ];
 
 /**
- * Generate First Aid Inspection PDF matching the official template
+ * Format date for display (e.g., "02 September 2025")
  */
-export function generateFirstAidPDF(data: FirstAidInspectionData): jsPDF {
-  const doc = new jsPDF('landscape', 'mm', 'a4');
+function formatDateForDisplay(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+/**
+ * Format expiry date (e.g., "02/29")
+ */
+function formatExpiryDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${month}/${year}`;
+  } catch {
+    return 'N/A';
+  }
+}
+
+/**
+ * Format date for filename
+ */
+function formatDateForFilename(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    return date
+      .toLocaleDateString('en-GB', {
+        month: 'long',
+        year: 'numeric',
+      })
+      .replace(' ', '_');
+  } catch {
+    return 'report';
+  }
+}
+
+/**
+ * Build the main inspection table with all kits and items
+ */
+function buildInspectionTable(doc: jsPDF, kits: FirstAidKitInspection[], startY: number) {
+  // Prepare table headers
+  const headers = ['No', 'Model', 'Location', ...STANDARD_FIRST_AID_ITEMS];
+
+  // Prepare table body - each kit has 3 rows: status row, expiry date row, quantity row
+  const tableBody: Array<Array<string | number>> = [];
+
+  kits.forEach((kit) => {
+    // Group kits by location for the template format
+    // Each kit location gets 3 rows: checkmarks, expiry dates, quantities
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -95,7 +150,7 @@ export function generateFirstAidPDF(data: FirstAidInspectionData): jsPDF {
   // Section 1: General Information
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  const section1Y = yPosition;
+  const section1Y = currentYPosition;
 
   // Draw section 1 box
   doc.setFillColor(153, 50, 204); // Purple color
@@ -103,11 +158,11 @@ export function generateFirstAidPDF(data: FirstAidInspectionData): jsPDF {
   doc.setTextColor(255, 255, 255);
   doc.text('Section 1 : General Information', 12, section1Y + 4);
 
-  yPosition = section1Y + 8;
+  currentYPosition = section1Y + 8;
 
   // Company info and inspector details in a table
   doc.setTextColor(0, 0, 0);
-  const companyInfo: any[][] = [
+  const companyInfo: Array<Array<{ content: string; colSpan: number; styles: { fontSize: number; fontStyle?: 'normal' | 'bold' | 'italic' } }>> = [
     [
       {
         content:
@@ -131,7 +186,7 @@ export function generateFirstAidPDF(data: FirstAidInspectionData): jsPDF {
   ];
 
   autoTable(doc, {
-    startY: yPosition,
+    startY: currentYPosition,
     body: companyInfo,
     theme: 'grid',
     styles: {
@@ -146,30 +201,31 @@ export function generateFirstAidPDF(data: FirstAidInspectionData): jsPDF {
     },
   });
 
-  yPosition = (doc as any).lastAutoTable.finalY + 8;
+  const lastTable = (doc as { lastAutoTable?: { finalY: number } }).lastAutoTable;
+  currentYPosition = lastTable ? lastTable.finalY + 8 : currentYPosition + 8;
 
   // Section 2: Inspection Details
   doc.setFillColor(153, 50, 204); // Purple color
-  doc.rect(10, yPosition, pageWidth - 20, 6, 'F');
+  doc.rect(10, currentYPosition, pageWidth - 20, 6, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Section 2 : Inspection Details', 12, yPosition + 4);
+  doc.text('Section 2 : Inspection Details', 12, currentYPosition + 4);
 
-  yPosition += 8;
+  currentYPosition += 8;
 
   // Legend
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(7);
-  doc.text('LEGEND :', 12, yPosition);
-  doc.text('√ = OK / Available', 30, yPosition);
-  doc.text('X = Not available', 65, yPosition);
-  doc.text('NA = Not Applicable', 95, yPosition);
+  doc.text('LEGEND :', 12, currentYPosition);
+  doc.text('√ = OK / Available', 30, currentYPosition);
+  doc.text('X = Not available', 65, currentYPosition);
+  doc.text('NA = Not Applicable', 95, currentYPosition);
 
-  yPosition += 5;
+  currentYPosition += 5;
 
   // Build the main inspection table
-  buildInspectionTable(doc, data.kits, yPosition);
+  buildInspectionTable(doc, data.kits, currentYPosition);
 
   // Add footer
   doc.setFontSize(7);
@@ -192,9 +248,9 @@ function buildInspectionTable(doc: jsPDF, kits: FirstAidKitInspection[], startY:
   const headers = ['No', 'Model', 'Location', ...STANDARD_FIRST_AID_ITEMS];
 
   // Prepare table body - each kit has 3 rows: status row, expiry date row, quantity row
-  const tableBody: any[] = [];
+  const tableBody: Array<Array<string | number>> = [];
 
-  kits.forEach((kit, kitIndex) => {
+  kits.forEach((kit) => {
     // Group kits by location for the template format
     // Each kit location gets 3 rows: checkmarks, expiry dates, quantities
 
@@ -243,7 +299,7 @@ function buildInspectionTable(doc: jsPDF, kits: FirstAidKitInspection[], startY:
 
   // Create the table
   autoTable(doc, {
-    startY,
+    startY: startYPosition,
     head: [headers],
     body: tableBody,
     theme: 'grid',
@@ -274,26 +330,26 @@ function buildInspectionTable(doc: jsPDF, kits: FirstAidKitInspection[], startY:
         ]),
       ),
     },
-    didParseCell(data) {
+    didParseCell(cellData) {
       // Style the location/expiry/quantity label cells
       if (
-        data.column.index === 2 &&
-        (data.cell.raw === 'Expiry Date' || data.cell.raw === 'Quantity')
+        cellData.column.index === 2 &&
+        (cellData.cell.raw === 'Expiry Date' || cellData.cell.raw === 'Quantity')
       ) {
-        data.cell.styles.fontStyle = 'italic';
-        data.cell.styles.fontSize = 5;
+        cellData.cell.styles.fontStyle = 'italic';
+        cellData.cell.styles.fontSize = 5;
       }
 
       // Bold checkmarks
-      if (data.cell.raw === '√') {
-        data.cell.styles.textColor = [0, 128, 0];
-        data.cell.styles.fontStyle = 'bold';
+      if (cellData.cell.raw === '√') {
+        cellData.cell.styles.textColor = [0, 128, 0];
+        cellData.cell.styles.fontStyle = 'bold';
       }
 
       // Red X marks
-      if (data.cell.raw === 'X') {
-        data.cell.styles.textColor = [255, 0, 0];
-        data.cell.styles.fontStyle = 'bold';
+      if (cellData.cell.raw === 'X') {
+        cellData.cell.styles.textColor = [255, 0, 0];
+        cellData.cell.styles.fontStyle = 'bold';
       }
     },
     margin: { left: 10, right: 10 },

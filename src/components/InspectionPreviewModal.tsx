@@ -17,7 +17,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { exportToGoogleDrive, isGoogleDriveConfigured } from '@/utils/googleDrive';
 import { storage } from '@/utils/storage';
 import { compressSignature, compressObservationPhotos } from '@/utils/imageCompression';
 import SignaturePinVerificationModal from '@/components/SignaturePinVerificationModal';
@@ -347,50 +346,6 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
         alert('Warning: Failed to download Excel file, but inspection was still approved.');
       }
 
-      // Export to Google Drive if configured
-      try {
-        if (!isGoogleDriveConfigured()) {
-          console.warn('Google Drive not configured. Skipping document upload.');
-        } else {
-          // Prepare inspection data with review information (using compressed images)
-          const inspectionWithReview = {
-            ...inspection,
-            formData: compressedFormData,
-            signature: compressedFormData.inspectorSignature || inspection.signature,
-            reviewedBy: user.name,
-            reviewedAt: reviewDate,
-            reviewerSignature: compressedSignature,
-          };
-
-          // Export to Google Drive (generates Excel internally with compressed images)
-          console.log('Step 1/2: Generating Excel with compressed images...');
-          console.log('Inspection type:', inspection.type);
-          const fileId = await exportToGoogleDrive(inspectionWithReview);
-          console.log('Step 2/2: Upload complete!');
-
-          console.log('Document uploaded successfully to Google Drive:', {
-            fileId,
-            fileUrl: `https://drive.google.com/file/d/${fileId}/view`,
-          });
-        }
-      } catch (exportError) {
-        console.error('Document export error:', exportError);
-        // Only show alert if it's not a configuration issue
-        const errorMsg = exportError instanceof Error ? exportError.message : 'Unknown error';
-        if (
-          !errorMsg.includes('not enabled') &&
-          !errorMsg.includes('not configured') &&
-          !errorMsg.includes('Invalid') &&
-          !errorMsg.includes('credentials')
-        ) {
-          alert(
-            `Warning: Document upload to Google Drive failed: ${errorMsg}. The inspection was still approved.`,
-          );
-        } else {
-          // Just log configuration errors, don't alert the user
-          console.warn('Google Drive upload skipped due to configuration issue:', errorMsg);
-        }
-      }
       createNotification(
         inspection.inspectorId || inspection.inspectedBy || '',
         'approval',
@@ -398,13 +353,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
           user.name
         }${reviewComments ? `: ${reviewComments}` : ''}`,
       );
-      if (isGoogleDriveConfigured()) {
-        alert(
-          'Inspection approved successfully! Excel file downloaded and exported to Google Drive.',
-        );
-      } else {
-        alert('Inspection approved successfully! Excel file has been downloaded.');
-      }
+      alert('Inspection approved successfully! Excel file has been downloaded.');
       setShowApproveModal(false);
       if (onApprove) onApprove();
       onClose();
@@ -517,21 +466,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
       URL.revokeObjectURL(url);
 
       console.log('Excel file re-exported successfully!');
-
-      // Optionally export to Google Drive
-      try {
-        if (isGoogleDriveConfigured()) {
-          console.log('Uploading to Google Drive...');
-          const fileId = await exportToGoogleDrive(inspection);
-          console.log('Upload complete! File ID:', fileId);
-          alert('Excel file downloaded and uploaded to Google Drive successfully!');
-        } else {
-          alert('Excel file downloaded successfully!');
-        }
-      } catch (driveError) {
-        console.error('Google Drive upload failed:', driveError);
-        alert('Excel file downloaded successfully! (Google Drive upload failed)');
-      }
+      alert('Excel file downloaded successfully!');
     } catch (error) {
       console.error('Error re-exporting inspection:', error);
       alert('Error exporting file. Please try again.');
@@ -948,15 +883,8 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                               {/* AI Captured Images Section */}
                               {item.aiCapturedImages && item.aiCapturedImages.length > 0 && (
                                 <div className="mt-4">
-                                  <p className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                    <svg
-                                      className="w-4 h-4 text-purple-600"
-                                      viewBox="0 0 24 24"
-                                      fill="currentColor"
-                                    >
-                                      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 22.5l-.394-1.933a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                                    </svg>
-                                    AI Scan Images ({item.aiCapturedImages.length})
+                                  <p className="text-xs font-bold text-gray-700 mb-2">
+                                    Images ({item.aiCapturedImages.length})
                                   </p>
                                   <div className="grid grid-cols-2 gap-2">
                                     {item.aiCapturedImages.map((image: any, imgIdx: number) => (
@@ -970,18 +898,6 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                                         <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">
                                           {image.stepId.replace(/_/g, ' ')}
                                         </div>
-                                        {image.timestamp && (
-                                          <div className="absolute top-2 right-2 bg-purple-600/90 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1">
-                                            <svg
-                                              className="w-3 h-3"
-                                              fill="currentColor"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                                            </svg>
-                                            AI
-                                          </div>
-                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -1638,6 +1554,16 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
           {/* Supervisor Action Section */}
           {user && inspection.status === 'pending_review' && (
             <div className="bg-white border-t-2 border-gray-200 rounded-xl shadow-sm p-5 space-y-5">
+              {/* Preview Excel Button */}
+              <div>
+                <button
+                  onClick={handlePreviewExcel}
+                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center"
+                >
+                  <span className="text-sm font-semibold">Preview Excel</span>
+                </button>
+              </div>
+
               {/* Review Comments */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

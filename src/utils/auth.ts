@@ -1,23 +1,7 @@
 // src/utils/auth.ts - Authentication utilities
-export const generateSecurePIN = (): string => {
-  // Generate a 4-digit PIN that's not sequential or repeated
-  let pin: string;
-  do {
-    pin = Math.floor(1000 + Math.random() * 9000).toString();
-  } while (
-    // Avoid sequential numbers
-    isSequential(pin) ||
-    // Avoid repeated digits
-    hasRepeatedDigits(pin) ||
-    // Avoid common PINs
-    isCommonPIN(pin)
-  );
-  return pin;
-};
-
 const isSequential = (pin: string): boolean => {
   const digits = pin.split('').map(Number);
-  for (let i = 1; i < digits.length; i++) {
+  for (let i = 1; i < digits.length; i += 1) {
     if (digits[i] !== digits[i - 1] + 1 && digits[i] !== digits[i - 1] - 1) {
       return false;
     }
@@ -50,13 +34,31 @@ const isCommonPIN = (pin: string): boolean => {
   return commonPINs.includes(pin);
 };
 
+export const generateSecurePIN = (): string => {
+  // Generate a 4-digit PIN that's not sequential or repeated
+  let pin: string;
+  do {
+    pin = Math.floor(1000 + Math.random() * 9000).toString();
+  } while (
+    // Avoid sequential numbers
+    isSequential(pin) ||
+    // Avoid repeated digits
+    hasRepeatedDigits(pin) ||
+    // Avoid common PINs
+    isCommonPIN(pin)
+  );
+  return pin;
+};
+
 export const hashPIN = (pin: string): string => {
   // Simple hash for demo - in production, use bcrypt or similar
   let hash = 0;
-  for (let i = 0; i < pin.length; i++) {
+  for (let i = 0; i < pin.length; i += 1) {
     const char = pin.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash &= hash; // Convert to 32-bit integer
+    // eslint-disable-next-line no-bitwise
+    hash = (hash * 32) - hash + char;
+    // eslint-disable-next-line no-bitwise
+    hash = hash & hash; // Convert to 32-bit integer
   }
   return Math.abs(hash).toString();
 };

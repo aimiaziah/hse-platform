@@ -1,5 +1,5 @@
 // src/roles/admin/layouts/AdminLayout.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -48,7 +48,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
       logout();
       router.push('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      // Logout error
     }
   };
 
@@ -122,6 +122,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   className="px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors inline-flex items-center gap-2"
                 >

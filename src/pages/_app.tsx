@@ -28,11 +28,11 @@ function MyApp({ Component, pageProps }: AppProps) {
     ) {
       navigator.serviceWorker
         .register('/sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered successfully:', registration);
+        .then(() => {
+          // Service Worker registered successfully
         })
-        .catch((error) => {
-          console.error('Service worker registration failed:', error);
+        .catch(() => {
+          // Service worker registration failed
         });
     }
   }, []);
@@ -50,22 +50,32 @@ function MyApp({ Component, pageProps }: AppProps) {
 }
 
 // Report Core Web Vitals
-export function reportWebVitals(metric: any) {
+export function reportWebVitals(metric: {
+  name: string;
+  value: number;
+  id: string;
+  delta?: number;
+  entries?: PerformanceEntry[];
+}) {
   // Log to console (development)
   if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
     console.log(metric);
   }
 
   // Send to analytics (production)
   if (process.env.NODE_ENV === 'production') {
     // Option 1: Send to Google Analytics
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', metric.name, {
-        event_category: 'Web Vitals',
-        value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
-        event_label: metric.id,
-        non_interaction: true,
-      });
+    if (typeof window !== 'undefined') {
+      const windowWithGtag = window as unknown as { gtag?: (event: string, name: string, options: unknown) => void };
+      if (windowWithGtag.gtag) {
+        windowWithGtag.gtag('event', metric.name, {
+          event_category: 'Web Vitals',
+          value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
+          event_label: metric.id,
+          non_interaction: true,
+        });
+      }
     }
 
     // Option 2: Send to your own analytics API
@@ -73,7 +83,9 @@ export function reportWebVitals(metric: any) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(metric),
-    }).catch((err) => console.error('Failed to send web vitals:', err));
+    }).catch(() => {
+      // Failed to send web vitals
+    });
   }
 }
 

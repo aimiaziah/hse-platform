@@ -6,6 +6,7 @@ import ExcelJS from 'exceljs';
 import { convertExcelToPDF } from '@/utils/excelToPdfConverter';
 import { validateBody, FireExtinguisherExportSchema } from '@/lib/validation';
 import { logger } from '@/lib/logger';
+import sharp from 'sharp';
 
 interface CapturedImage {
   stepId: string;
@@ -46,6 +47,116 @@ interface FireExtinguisherFormData {
   reviewedAt?: string;
   reviewerSignature?: string;
 }
+
+// Helper function to convert image URL to base64
+async function getImageAsBase64(imageUrl: string): Promise<string | null> {
+  try {
+    // If it's already a data URL, extract the base64 part
+    if (imageUrl.startsWith('data:image/')) {
+      return imageUrl.replace(/^data:image\/\w+;base64,/, '');
+    }
+
+    // If it's a URL, fetch it and convert to base64
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.error(`Failed to fetch image from URL: ${imageUrl}`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return buffer.toString('base64');
+  } catch (error) {
+    console.error(`Error converting image URL to base64: ${imageUrl}`, error);
+    return null;
+  }
+}
+
+// Helper function to add timestamp overlay to image
+async function addTimestampToImage(
+  base64Image: string,
+  timestamp: number,
+): Promise<string | null> {
+  try {
+    // Decode base64 image
+    const imageBuffer = Buffer.from(base64Image, 'base64');
+    
+    // Format timestamp
+    const date = new Date(timestamp);
+    const timestampText = date.toLocaleString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+
+    // Get image metadata to determine dimensions
+    const metadata = await sharp(imageBuffer).metadata();
+    const width = metadata.width || 800;
+    const height = metadata.height || 600;
+
+    // Create SVG text overlay with background for better visibility
+    const fontSize = Math.max(18, Math.round(width / 45)); // Responsive font size
+    const padding = 15;
+    const textX = padding;
+    const textY = height - padding;
+    const textWidth = timestampText.length * (fontSize * 0.6); // Approximate text width
+    const textHeight = fontSize + 8;
+
+    const svgText = `
+      <svg width="${width}" height="${height}">
+        <rect 
+          x="${textX - 5}" 
+          y="${textY - textHeight + 5}" 
+          width="${textWidth + 10}" 
+          height="${textHeight}" 
+          fill="rgba(0, 0, 0, 0.6)" 
+          rx="3"
+        />
+        <text 
+          x="${textX}" 
+          y="${textY}" 
+          font-family="Arial, sans-serif" 
+          font-size="${fontSize}" 
+          font-weight="bold"
+          fill="white"
+        >
+          ${timestampText}
+        </text>
+      </svg>
+    `;
+
+    // Composite the image with timestamp overlay
+    const imageWithTimestamp = await sharp(imageBuffer)
+      .composite([
+        {
+          input: Buffer.from(svgText),
+          top: 0,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    // Convert back to base64
+    return imageWithTimestamp.toString('base64');
+  } catch (error) {
+    console.error('Error adding timestamp to image:', error);
+    // Return original image if timestamp overlay fails
+    return base64Image;
+  }
+}
+
+// Increase body size limit to handle large image data
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Increase from default 1mb to 10mb
+    },
+  },
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
@@ -180,22 +291,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (extinguishersWithImages.length > 0) {
-      // Create a new worksheet for AI images
-      const aiWorksheet = workbook.addWorksheet('AI Scan Images');
+      // Create a new worksheet for captured images
+      const aiWorksheet = workbook.addWorksheet('Images');
 
       // Set column widths
       aiWorksheet.columns = [
         { header: 'Extinguisher #', key: 'extNo', width: 15 },
         { header: 'Serial No', key: 'serialNo', width: 18 },
-        { header: 'Location', key: 'location', width: 15 },
-        { header: 'Image Type', key: 'imageType', width: 25 },
+        { header: 'Location', key: 'location', width: 20 },
         { header: 'Capture Time', key: 'captureTime', width: 22 },
-        { header: 'AI Confidence', key: 'confidence', width: 15 },
       ];
 
       // Add title
-      aiWorksheet.mergeCells('A1:F1');
-      aiWorksheet.getCell('A1').value = 'AI SCAN IMAGES - FIRE EXTINGUISHER INSPECTION';
+      aiWorksheet.mergeCells('A1:D1');
+      aiWorksheet.getCell('A1').value = 'CAPTURED IMAGES - FIRE EXTINGUISHER INSPECTION';
       aiWorksheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
       aiWorksheet.getCell('A1').fill = {
         type: 'pattern',
@@ -209,14 +318,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       aiWorksheet.getCell('A3').value = 'Inspection Date:';
       aiWorksheet.getCell('C3').value = formattedDate;
 
-      aiWorksheet.mergeCells('D3:E3');
-      aiWorksheet.getCell('D3').value = 'Inspector:';
-      aiWorksheet.getCell('F3').value = formData.inspectedBy;
+      aiWorksheet.getCell('D3').value = `Inspector: ${formData.inspectedBy}`;
 
       // Add note
-      aiWorksheet.mergeCells('A5:F5');
+      aiWorksheet.mergeCells('A5:D5');
       aiWorksheet.getCell('A5').value =
-        'Note: Images are embedded below. Each image shows the AI scan capture for the corresponding extinguisher.';
+        'Note: Images are embedded below. Each image shows the captured photo for the corresponding extinguisher.';
       aiWorksheet.getCell('A5').font = { italic: true, size: 10 };
       aiWorksheet.getCell('A5').fill = {
         type: 'pattern',
@@ -230,9 +337,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         'Extinguisher #',
         'Serial No',
         'Location',
-        'Image Type',
         'Capture Time',
-        'AI Confidence',
       ];
       headerRow.font = { bold: true };
       headerRow.fill = {
@@ -244,67 +349,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       let currentRow = 8;
 
-      // Add image data for each extinguisher
+      // Add image data for each extinguisher (one row per extinguisher with all images side by side)
       for (const ext of extinguishersWithImages) {
-        if (ext.aiCapturedImages) {
-          for (const image of ext.aiCapturedImages) {
-            // Calculate average confidence for this extinguisher
-            let avgConfidence = 'N/A';
-            if (ext.aiConfidence && Object.keys(ext.aiConfidence).length > 0) {
-              const confidenceValues = Object.values(ext.aiConfidence);
-              const avg =
-                confidenceValues.reduce((sum, val) => sum + val, 0) / confidenceValues.length;
-              avgConfidence = `${Math.round(avg * 100)}%`;
-            }
+        if (ext.aiCapturedImages && ext.aiCapturedImages.length > 0) {
+          // Get the earliest timestamp for display
+          const earliestTimestamp = ext.aiCapturedImages.reduce((earliest, img) => 
+            img.timestamp < earliest ? img.timestamp : earliest, 
+            ext.aiCapturedImages[0].timestamp
+          );
 
-            // Add row data
-            const row = aiWorksheet.getRow(currentRow);
-            row.values = [
-              ext.no,
-              ext.serialNo,
-              ext.location,
-              image.stepId.replace(/_/g, ' '),
-              new Date(image.timestamp).toLocaleString(),
-              avgConfidence,
-            ];
+          // Create one row for this extinguisher
+          const row = aiWorksheet.getRow(currentRow);
+          row.values = [
+            ext.no,
+            ext.serialNo,
+            ext.location,
+            new Date(earliestTimestamp).toLocaleString(),
+          ];
 
-            // Try to add the image
+          // Set row height to accommodate images
+          row.height = 120;
+
+          // Add all images side by side in the same row
+          const imageWidth = 200;
+          const imageHeight = 150;
+          let imageCol = 4; // Start from column D (index 4, which is after the data columns)
+
+          for (let imgIndex = 0; imgIndex < ext.aiCapturedImages.length; imgIndex++) {
+            const image = ext.aiCapturedImages[imgIndex];
             try {
-              if (!image.dataUrl) {
+              if (image.dataUrl) {
+                // Convert image URL to base64 (handles both data URLs and regular URLs)
+                let base64Data = await getImageAsBase64(image.dataUrl);
+
+                if (base64Data) {
+                  // Add timestamp overlay to the image
+                  const imageWithTimestamp = await addTimestampToImage(base64Data, image.timestamp);
+                  if (imageWithTimestamp) {
+                    base64Data = imageWithTimestamp;
+                  }
+
+                  // Determine image extension (always PNG after timestamp overlay)
+                  const extension: 'png' = 'png';
+
+                  const imageId = workbook.addImage({
+                    base64: base64Data,
+                    extension: extension,
+                  });
+
+                  // Add image to the worksheet at the calculated column position
+                  aiWorksheet.addImage(imageId, {
+                    tl: { col: imageCol, row: currentRow - 1 },
+                    ext: { width: imageWidth, height: imageHeight },
+                  });
+
+                  // Move to next column position for next image
+                  // Each 200px image spans approximately 3 columns (default Excel column width ~64px)
+                  // We increment by 3 to place images side by side with minimal overlap
+                  imageCol += 3;
+
+                  console.log(
+                    `Successfully added image ${imgIndex + 1}/${ext.aiCapturedImages.length} for extinguisher #${ext.no} at row ${currentRow}, col ${imageCol - 3}`,
+                  );
+                } else {
+                  console.error('Failed to convert image to base64 for extinguisher', ext.no);
+                }
+              } else {
                 console.error('Image dataUrl is missing for extinguisher', ext.no);
-                continue;
               }
-
-              const base64Data = image.dataUrl.replace(/^data:image\/\w+;base64,/, '');
-
-              if (!base64Data || base64Data === image.dataUrl) {
-                console.error('Invalid base64 data for extinguisher', ext.no);
-                continue;
-              }
-
-              const imageId = workbook.addImage({
-                base64: base64Data,
-                extension: 'png',
-              });
-
-              // Set row height to accommodate image
-              row.height = 120;
-
-              // Add image to the worksheet at the end of the row
-              aiWorksheet.addImage(imageId, {
-                tl: { col: 6, row: currentRow - 1 },
-                ext: { width: 200, height: 150 },
-              });
-
-              console.log(
-                `Successfully added image for extinguisher #${ext.no} at row ${currentRow}`,
-              );
             } catch (error) {
-              console.error(`Error adding image for extinguisher #${ext.no}:`, error);
+              console.error(`Error adding image ${imgIndex + 1} for extinguisher #${ext.no}:`, error);
             }
-
-            currentRow++;
           }
+
+          currentRow++;
         }
       }
 

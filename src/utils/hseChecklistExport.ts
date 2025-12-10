@@ -190,7 +190,6 @@ async function fetchTemplateFromStorage(
   try {
     return await loadTemplate(bucketName, filePath);
   } catch (error) {
-    console.error('Error fetching template:', error);
     throw error;
   }
 }
@@ -218,14 +217,12 @@ export async function generateHSEInspectionChecklistExcel(
 ): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from storage
-    console.log('Fetching HSE Inspection template from storage...');
     const templateBuffer = await fetchTemplateFromStorage(
       'templates',
       'hse-inspection-template.xlsx',
     );
 
     // Load the template with ExcelJS
-    console.log('Loading template with ExcelJS...');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(templateBuffer);
 
@@ -287,13 +284,13 @@ export async function generateHSEInspectionChecklistExcel(
 
     categories.forEach((category) => {
       // Category header row
-      currentRow++;
+      currentRow += 1;
       ws.getCell(`A${currentRow}`).value = `${category.id}. ${category.name}`;
       ws.getCell(`A${currentRow}`).font = { bold: true };
 
       // Items for this category
       category.items.forEach((item) => {
-        currentRow++;
+        currentRow += 1;
         const key = `${category.id}-${item}`;
         const itemData = data.inspectionItems.find((i) => i.key === key);
         const rating = itemData?.rating;
@@ -322,14 +319,12 @@ export async function generateHSEInspectionChecklistExcel(
       currentRow += 3;
       ws.getCell(`A${currentRow}`).value = 'Comments/Remarks:';
       ws.getCell(`A${currentRow}`).font = { bold: true };
-      currentRow++;
+      currentRow += 1;
       ws.getCell(`A${currentRow}`).value = data.commentsRemarks;
     }
 
-    console.log('HSE Inspection template filled successfully');
     return wb;
   } catch (error) {
-    console.error('Error loading HSE Inspection template:', error);
     throw new Error(
       'Could not load HSE Inspection template. Please ensure "hse-inspection-template.xlsx" exists in the templates storage.',
     );
@@ -368,10 +363,9 @@ export async function downloadHSEInspectionChecklist(
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    console.log('HSE Inspection checklist downloaded successfully');
+    // HSE Inspection checklist downloaded successfully
   } catch (error) {
-    console.error('Error downloading HSE Inspection checklist:', error);
-    alert('Failed to download HSE Inspection Checklist. Please try again.');
+    // Error downloading HSE Inspection checklist
     throw error;
   }
 }
@@ -427,10 +421,9 @@ export async function downloadHSEInspectionChecklistWithTemplate(
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    console.log('HSE Inspection Checklist downloaded successfully');
+    // HSE Inspection Checklist downloaded successfully
   } catch (error) {
-    console.error('Error downloading HSE Inspection checklist with template:', error);
-    alert('Failed to download HSE Inspection Checklist. Please try again.');
+    // Error downloading HSE Inspection checklist with template
     throw error;
   }
 }

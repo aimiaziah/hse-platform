@@ -33,7 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     // Permission requirement not met
-    if (requiredPermission && !hasPermission(requiredPermission as any)) {
+    if (requiredPermission && !hasPermission(requiredPermission)) {
       router.push('/unauthorized');
     }
   }, [
@@ -65,11 +65,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Permission requirement not met
-  if (requiredPermission && !hasPermission(requiredPermission as any)) {
+  if (requiredPermission && !hasPermission(requiredPermission)) {
     return null;
   }
 
-  return <>{children}</>;
+  return children;
 };
 
 export default ProtectedRoute;

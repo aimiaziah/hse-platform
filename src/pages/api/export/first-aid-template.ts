@@ -105,6 +105,39 @@ function getColumnLetter(columnIndex: number): string {
   return columnLetter;
 }
 
+// Helper function to convert image URL to base64
+async function getImageAsBase64(imageUrl: string): Promise<string | null> {
+  try {
+    // If it's already a data URL, extract the base64 part
+    if (imageUrl.startsWith('data:image/')) {
+      return imageUrl.replace(/^data:image\/\w+;base64,/, '');
+    }
+
+    // If it's a URL, fetch it and convert to base64
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.error(`Failed to fetch image from URL: ${imageUrl}`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    return buffer.toString('base64');
+  } catch (error) {
+    console.error(`Error converting image URL to base64: ${imageUrl}`, error);
+    return null;
+  }
+}
+
+// Increase body size limit to handle large image data
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Increase from default 1mb to 10mb
+    },
+  },
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {
@@ -329,33 +362,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             // Try to add the image
             try {
-              if (!image.dataUrl) {
+              if (image.dataUrl) {
+                // Convert image URL to base64 (handles both data URLs and regular URLs)
+                const base64Data = await getImageAsBase64(image.dataUrl);
+
+                if (base64Data) {
+                  // Determine image extension from dataUrl or default to png
+                  let extension: 'png' | 'jpeg' | 'gif' = 'png';
+                  if (image.dataUrl.startsWith('data:image/')) {
+                    const match = image.dataUrl.match(/data:image\/(\w+);/);
+                    if (match && ['png', 'jpeg', 'jpg', 'gif'].includes(match[1].toLowerCase())) {
+                      extension = match[1].toLowerCase() === 'jpg' ? 'jpeg' : (match[1].toLowerCase() as 'png' | 'jpeg' | 'gif');
+                    }
+                  } else if (image.dataUrl.match(/\.(jpg|jpeg)$/i)) {
+                    extension = 'jpeg';
+                  } else if (image.dataUrl.match(/\.gif$/i)) {
+                    extension = 'gif';
+                  }
+
+                  const imageId = workbook.addImage({
+                    base64: base64Data,
+                    extension: extension,
+                  });
+
+                  // Set row height to accommodate image
+                  row.height = 120;
+
+                  // Add image to the worksheet at the end of the row
+                  imgWorksheet.addImage(imageId, {
+                    tl: { col: 5, row: currentImgRow - 1 },
+                    ext: { width: 200, height: 150 },
+                  });
+
+                  console.log(`Successfully added image for kit #${kit.no} at row ${currentImgRow}`);
+                } else {
+                  console.error('Failed to convert image to base64 for kit', kit.no);
+                }
+              } else {
                 console.error('Image dataUrl is missing for kit', kit.no);
-                continue;
               }
-
-              const base64Data = image.dataUrl.replace(/^data:image\/\w+;base64,/, '');
-
-              if (!base64Data || base64Data === image.dataUrl) {
-                console.error('Invalid base64 data for kit', kit.no);
-                continue;
-              }
-
-              const imageId = workbook.addImage({
-                base64: base64Data,
-                extension: 'png',
-              });
-
-              // Set row height to accommodate image
-              row.height = 120;
-
-              // Add image to the worksheet at the end of the row
-              imgWorksheet.addImage(imageId, {
-                tl: { col: 5, row: currentImgRow - 1 },
-                ext: { width: 200, height: 150 },
-              });
-
-              console.log(`Successfully added image for kit #${kit.no} at row ${currentImgRow}`);
             } catch (error) {
               console.error(`Error adding image for kit #${kit.no}:`, error);
             }

@@ -31,12 +31,12 @@ interface ReviewInspection {
   reviewerSignature?: string;
   createdAt: string;
   submittedAt?: string;
-  formData?: any;
-  items?: any[];
-  extinguishers?: any[];
-  kits?: any[];
-  kitInspections?: any[];
-  observations?: any[];
+  formData?: unknown;
+  items?: unknown[];
+  extinguishers?: unknown[];
+  kits?: unknown[];
+  kitInspections?: unknown[];
+  observations?: unknown[];
   signature?: string;
   inspectedBy?: string;
   inspectionDate?: string;
@@ -50,7 +50,6 @@ interface GroupedInspections {
 
 const SupervisorReviews: React.FC = () => {
   const { user } = useAuth();
-  const router = useRouter();
   const [inspections, setInspections] = useState<ReviewInspection[]>([]);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [availableYears, setAvailableYears] = useState<string[]>([]);
@@ -58,90 +57,7 @@ const SupervisorReviews: React.FC = () => {
   const [previewInspection, setPreviewInspection] = useState<ReviewInspection | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  useEffect(() => {
-    loadInspections();
-  }, [user]);
-
-  useEffect(() => {
-    const years = Array.from(
-      new Set(inspections.map((inspection) => new Date(inspection.date).getFullYear().toString())),
-    ).sort((a, b) => Number(b) - Number(a));
-    setAvailableYears(years);
-    if (!selectedYear && years.length > 0) {
-      const currentYear = new Date().getFullYear().toString();
-      setSelectedYear(years.includes(currentYear) ? currentYear : years[0]);
-    }
-  }, [inspections]);
-
-  const loadInspections = async () => {
-    setLoading(true);
-    try {
-      const allInspections: ReviewInspection[] = [];
-      const response = await fetch('/api/inspections');
-      if (response.ok) {
-        const result = await response.json();
-        const dbInspections = result.inspections || [];
-        dbInspections.forEach((inspection: any) => {
-          if (['pending_review', 'approved', 'rejected'].includes(inspection.status)) {
-            const isObservation =
-              inspection.inspection_type === 'hse_general' &&
-              inspection.form_data?.isObservation === true;
-            const type = isObservation
-              ? 'hse_observation'
-              : mapDbTypeToLocal(inspection.inspection_type);
-            allInspections.push({
-              id: inspection.id,
-              type,
-              title: isObservation ? 'HSE Observation' : getInspectionTypeName(type),
-              location: inspection.form_data?.location || inspection.form_data?.contractor || 'N/A',
-              inspector: inspection.inspected_by,
-              date: inspection.inspection_date || inspection.created_at?.split('T')[0],
-              status: inspection.status,
-              reviewedBy: inspection.reviewed_by,
-              reviewedAt: inspection.reviewed_at,
-              reviewComments: inspection.review_comments,
-              createdAt: inspection.created_at,
-              submittedAt: inspection.submitted_at,
-            });
-          }
-        });
-      }
-
-      // LocalStorage fallback for manhours reports only
-      const manhoursReports = storage.load<any[]>('manhours_reports', []);
-      manhoursReports.forEach((report: any) => {
-        if (
-          ['pending_review', 'approved', 'rejected'].includes(report.status) &&
-          !allInspections.find((i) => i.id === report.id)
-        ) {
-          allInspections.push({
-            id: report.id,
-            type: 'manhours',
-            title: 'Manhours Report',
-            location: report.department || 'N/A',
-            inspector: report.preparedBy,
-            date: report.reportMonth || report.createdAt,
-            status: report.status,
-            reviewedBy: report.reviewedBy,
-            reviewedAt: report.reviewedAt,
-            reviewComments: report.reviewComments,
-            createdAt: report.createdAt,
-            submittedAt: report.submittedAt,
-          });
-        }
-      });
-
-      allInspections.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
-      setInspections(allInspections);
-    } catch (error) {
-      console.error('Error loading inspections:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Helper functions - defined before use
   const mapDbTypeToLocal = (dbType: string): InspectionType => {
     switch (dbType) {
       case 'hse_general':
@@ -176,6 +92,92 @@ const SupervisorReviews: React.FC = () => {
         return type;
     }
   };
+
+  const loadInspections = async () => {
+    setLoading(true);
+    try {
+      const allInspections: ReviewInspection[] = [];
+      const response = await fetch('/api/inspections');
+      if (response.ok) {
+        const result = await response.json();
+        const dbInspections = result.inspections || [];
+        dbInspections.forEach((inspection: Record<string, unknown>) => {
+          if (['pending_review', 'approved', 'rejected'].includes(inspection.status)) {
+            const isObservation =
+              inspection.inspection_type === 'hse_general' &&
+              inspection.form_data?.isObservation === true;
+            const type = isObservation
+              ? 'hse_observation'
+              : mapDbTypeToLocal(inspection.inspection_type);
+            allInspections.push({
+              id: inspection.id,
+              type,
+              title: isObservation ? 'HSE Observation' : getInspectionTypeName(type),
+              location: inspection.form_data?.location || inspection.form_data?.contractor || 'N/A',
+              inspector: inspection.inspected_by,
+              date: inspection.inspection_date || inspection.created_at?.split('T')[0],
+              status: inspection.status,
+              reviewedBy: inspection.reviewed_by,
+              reviewedAt: inspection.reviewed_at,
+              reviewComments: inspection.review_comments,
+              createdAt: inspection.created_at,
+              submittedAt: inspection.submitted_at,
+            });
+          }
+        });
+      }
+
+      // LocalStorage fallback for manhours reports only
+      const manhoursReports = storage.load<ReviewInspection[]>('manhours_reports', []);
+      manhoursReports.forEach((report: ReviewInspection) => {
+        if (
+          ['pending_review', 'approved', 'rejected'].includes(report.status) &&
+          !allInspections.find((i) => i.id === report.id)
+        ) {
+          allInspections.push({
+            id: report.id,
+            type: 'manhours',
+            title: 'Manhours Report',
+            location: report.department || 'N/A',
+            inspector: report.preparedBy,
+            date: report.reportMonth || report.createdAt,
+            status: report.status,
+            reviewedBy: report.reviewedBy,
+            reviewedAt: report.reviewedAt,
+            reviewComments: report.reviewComments,
+            createdAt: report.createdAt,
+            submittedAt: report.submittedAt,
+          });
+        }
+      });
+
+      allInspections.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      setInspections(allInspections);
+    } catch (error) {
+      // Error loading inspections
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInspections();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  useEffect(() => {
+    const years = Array.from(
+      new Set(inspections.map((inspection) => new Date(inspection.date).getFullYear().toString())),
+    ).sort((a, b) => Number(b) - Number(a));
+    setAvailableYears(years);
+    if (!selectedYear && years.length > 0) {
+      const currentYear = new Date().getFullYear().toString();
+      setSelectedYear(years.includes(currentYear) ? currentYear : years[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inspections]);
 
   const getFilteredInspections = (): ReviewInspection[] => {
     if (!selectedYear) return inspections;
@@ -269,7 +271,7 @@ const SupervisorReviews: React.FC = () => {
       // Fallback to localStorage
       // ... (Keep the rest of the fallback logic as-is)
     } catch (error) {
-      console.error('Error loading inspection details:', error);
+      // Error loading inspection details
       const basicInspection: ReviewInspection = {
         ...inspection,
         inspectedBy: inspection.inspector,
@@ -410,6 +412,7 @@ const SupervisorReviews: React.FC = () => {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-right">
                                 <button
+                                  type="button"
                                   onClick={() => handleViewClick(inspection)}
                                   className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
                                 >

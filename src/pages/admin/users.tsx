@@ -27,7 +27,6 @@ interface UserFormData {
     canEditInspections: boolean;
     canViewInspections: boolean;
     canViewAnalytics: boolean;
-    canViewGoogleDriveStatus: boolean;
     canAddDigitalSignature: boolean;
     canExportReports: boolean;
   };
@@ -66,7 +65,6 @@ const UserManagement: React.FC = () => {
       canEditInspections: true,
       canViewInspections: true,
       canViewAnalytics: true,
-      canViewGoogleDriveStatus: true,
       canAddDigitalSignature: true,
       canExportReports: true,
     },
@@ -159,7 +157,6 @@ const UserManagement: React.FC = () => {
         canManageSystem: (user.permissions as any).canManageSystem ?? false,
         canBackupRestore: (user.permissions as any).canBackupRestore ?? false,
         canEditInspections: (user.permissions as any).canEditInspections ?? false,
-        canViewGoogleDriveStatus: (user.permissions as any).canViewGoogleDriveStatus ?? false,
         canAddDigitalSignature: (user.permissions as any).canAddDigitalSignature ?? false,
         canExportReports: (user.permissions as any).canExportReports ?? false,
       },
@@ -169,29 +166,45 @@ const UserManagement: React.FC = () => {
 
   const handleSaveUser = async () => {
     try {
-      if (!userFormData.name || !userFormData.pin) {
-        alert('Please fill in all required fields.');
+      // Name is always required
+      if (!userFormData.name) {
+        alert('Name is required.');
         return;
       }
 
-      // Check for duplicate PIN
-      const existingPinUser = users.find(
-        (u) => u.pin === userFormData.pin && u.id !== editingUser?.id,
-      );
-      if (existingPinUser) {
-        alert('This PIN is already in use. Please choose a different PIN.');
+      // PIN is only required for new PIN-based users (not Microsoft users)
+      const isMicrosoftUser = editingUser && (editingUser as any).email;
+      if (!editingUser && !userFormData.pin) {
+        alert('PIN is required for new users.');
         return;
+      }
+
+      // Check for duplicate PIN (only if PIN is provided)
+      if (userFormData.pin) {
+        const existingPinUser = users.find(
+          (u) => u.pin === userFormData.pin && u.id !== editingUser?.id,
+        );
+        if (existingPinUser) {
+          alert('This PIN is already in use. Please choose a different PIN.');
+          return;
+        }
       }
 
       if (editingUser) {
         // Update existing user via API
-        await apiPut(`/api/admin/users/${editingUser.id}`, {
+        const updateData: any = {
           name: userFormData.name,
-          pin: userFormData.pin,
           role: userFormData.role,
           is_active: userFormData.status === 'active',
           permissions: userFormData.permissions,
-        });
+        };
+
+        // Only update PIN if user has one (PIN-based users)
+        if (userFormData.pin) {
+          updateData.pin = userFormData.pin;
+        }
+
+        await apiPut(`/api/admin/users/${editingUser.id}`, updateData);
       } else {
         // Create new user via API
         const data = await apiPost<{ tempPIN: string }>('/api/admin/users', {
@@ -286,7 +299,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
-          canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
         };
@@ -305,7 +317,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
-          canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
         };
@@ -324,7 +335,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
-          canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
         };
@@ -515,6 +525,9 @@ const UserManagement: React.FC = () => {
                         User
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email / Login Method
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         PIN
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -553,8 +566,16 @@ const UserManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {(user as any).email || 'N/A'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {(user as any).email ? 'Microsoft' : 'PIN'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                            {user.pin}
+                            {user.pin || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -646,12 +667,12 @@ const UserManagement: React.FC = () => {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          PIN Code *
+                          PIN Code {editingUser && (editingUser as any).email ? '(Microsoft user - no PIN needed)' : '*'}
                         </label>
                         <div className="flex">
                           <input
                             type="text"
-                            value={userFormData.pin}
+                            value={userFormData.pin || ''}
                             onChange={(e) =>
                               setUserFormData({
                                 ...userFormData,
@@ -659,19 +680,26 @@ const UserManagement: React.FC = () => {
                               })
                             }
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="4-digit PIN"
+                            placeholder={editingUser && (editingUser as any).email ? 'N/A (Microsoft user)' : '4-digit PIN'}
                             maxLength={4}
+                            disabled={editingUser && (editingUser as any).email}
                           />
                           <button
                             type="button"
                             onClick={() =>
                               setUserFormData({ ...userFormData, pin: generateRandomPIN() })
                             }
-                            className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 text-sm"
+                            className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={editingUser && (editingUser as any).email}
                           >
                             Generate
                           </button>
                         </div>
+                        {editingUser && (editingUser as any).email && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            This user logs in with Microsoft account - no PIN required
+                          </p>
+                        )}
                       </div>
 
                       <div>

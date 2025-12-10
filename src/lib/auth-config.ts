@@ -67,3 +67,78 @@ export function getRateLimitConfig() {
     windowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
   };
 }
+
+/**
+ * Get inspector email whitelist from environment
+ */
+export function getInspectorEmailWhitelist(): string[] {
+  const emails = process.env.INSPECTOR_EMAIL_WHITELIST || '';
+  return emails
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
+}
+
+/**
+ * Check if email is in inspector whitelist
+ */
+export function isInspectorEmail(email: string): boolean {
+  const whitelist = getInspectorEmailWhitelist();
+
+  // If no whitelist configured, return false (no auto-inspector assignment)
+  if (whitelist.length === 0) {
+    return false;
+  }
+
+  return whitelist.includes(email.toLowerCase());
+}
+
+/**
+ * Get admin email whitelist from environment
+ */
+export function getAdminEmailWhitelist(): string[] {
+  const emails = process.env.ADMIN_EMAIL_WHITELIST || '';
+  return emails
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
+}
+
+/**
+ * Check if email is in admin whitelist
+ */
+export function isAdminEmail(email: string): boolean {
+  const whitelist = getAdminEmailWhitelist();
+
+  // If no whitelist configured, return false (no auto-admin assignment)
+  if (whitelist.length === 0) {
+    return false;
+  }
+
+  return whitelist.includes(email.toLowerCase());
+}
+
+/**
+ * Get supervisor email whitelist from environment
+ */
+export function getSupervisorEmailWhitelist(): string[] {
+  const emails = process.env.SUPERVISOR_EMAIL_WHITELIST || '';
+  return emails
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
+}
+
+/**
+ * Check if email is in supervisor whitelist
+ */
+export function isSupervisorEmail(email: string): boolean {
+  const whitelist = getSupervisorEmailWhitelist();
+
+  // If no whitelist configured, return false (no auto-supervisor assignment)
+  if (whitelist.length === 0) {
+    return false;
+  }
+
+  return whitelist.includes(email.toLowerCase());
+}

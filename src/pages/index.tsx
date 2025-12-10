@@ -4,8 +4,9 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 
 /**
- * This page acts as a router that redirects all authenticated users to the analytics dashboard
- * All roles → /analytics (unified home page)
+ * This page acts as a router that redirects authenticated users to their role-specific dashboard
+ * Admin → /admin (Home section)
+ * Other roles → /analytics (unified home page)
  */
 const DashboardPage: React.FC = () => {
   const router = useRouter();
@@ -18,8 +19,13 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
-    // All authenticated users redirect to analytics (unified home page)
-    router.replace('/analytics');
+    // Admin users redirect to /admin (Home section)
+    if (user.role === 'admin') {
+      router.replace('/admin');
+    } else {
+      // Other authenticated users redirect to analytics (unified home page)
+      router.replace('/analytics');
+    }
   }, [user, router]);
 
   // Show a loading spinner while redirecting

@@ -31,12 +31,6 @@ export interface InspectionSubmission {
   submittedAt?: string;
   createdAt: string;
   updatedAt: string;
-  googleDriveExport?: {
-    status: 'pending' | 'success' | 'failed';
-    fileId?: string;
-    exportedAt?: string;
-    error?: string;
-  };
 }
 
 /**

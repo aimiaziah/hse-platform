@@ -1020,7 +1020,7 @@ const FirstAidInspection: React.FC = () => {
             <SimpleCameraCapture
               onComplete={handlePhotoCaptureComplete}
               onCancel={handlePhotoCaptureCancel}
-              maxPhotos={10}
+              maxPhotos={2}
             />
           )}
         </div>

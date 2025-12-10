@@ -1,5 +1,5 @@
 // src/roles/supervisor/layouts/SupervisorLayout.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -55,7 +55,7 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
       logout();
       router.push('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      // Logout error
     }
   };
 
@@ -137,6 +137,7 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
                   </div>
                 </Link>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   className="px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors inline-flex items-center gap-2"
                 >

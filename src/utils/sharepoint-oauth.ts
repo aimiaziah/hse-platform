@@ -347,8 +347,8 @@ const uploadToSharePoint = async (
         id: result.id,
         webUrl: result.webUrl,
       };
-    } catch (error) {
-      console.error('SharePoint site upload failed, falling back to OneDrive:', error);
+      } catch (error) {
+        // SharePoint site upload failed, falling back to OneDrive
       // Fall back to OneDrive if SharePoint upload fails
     }
   }
@@ -432,12 +432,12 @@ const createSharePointFolder = async (
 
       if (!createResponse.ok) {
         const errorData = await createResponse.json();
-        console.warn(`Failed to create folder ${folderName}:`, errorData);
+        // Failed to create folder - continue without folder
       }
 
       currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
     } catch (error) {
-      console.warn(`Error with folder ${folderName}:`, error);
+      // Error with folder - continue without folder
     }
   }
 };
@@ -486,7 +486,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
         }
       }
     } catch (error) {
-      console.warn('SharePoint folder creation failed, falling back to OneDrive:', error);
+      // SharePoint folder creation failed, falling back to OneDrive
     }
   }
 
@@ -533,7 +533,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
 
       currentPath = `${currentPath}/${folderName}`;
     } catch (error) {
-      console.warn(`Error with folder ${folderName}:`, error);
+      // Error with folder - continue without folder
     }
   }
 };
@@ -609,7 +609,7 @@ export const exportToSharePoint = async (
       uploadToSharePoint(pdfBlob, pdfFilename, folderPath),
     ]);
 
-    console.log('✅ Files uploaded to SharePoint:', {
+    // Files uploaded to SharePoint
       excel: excelResult.webUrl,
       pdf: pdfResult.webUrl,
     });
@@ -633,7 +633,7 @@ export const exportToSharePoint = async (
       pdf: pdfResult,
     };
   } catch (error) {
-    console.error('Error exporting to SharePoint:', error);
+    // Error exporting to SharePoint
     throw error;
   }
 };
@@ -662,5 +662,5 @@ export const signOutSharePoint = (): void => {
   storage.remove('sharepoint_token_expiry');
   storage.remove('sharepoint_refresh_token');
   storage.remove('sharepoint_oauth_state');
-  console.log('✅ Signed out from SharePoint');
+  // Signed out from SharePoint
 };

@@ -5,7 +5,6 @@ import SupervisorLayout from '@/roles/supervisor/layouts/SupervisorLayout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
 import { useAuth } from '@/hooks/useAuth';
-import { exportToGoogleDrive } from '@/utils/googleDrive';
 import {
   exportToSharePoint as exportToSharePointOAuth,
   isSharePointAuthenticated,
@@ -56,13 +55,13 @@ interface Inspection {
   reviewedBy?: string;
   rejectionReason?: string;
   reviewComments?: string;
-  items: any[];
+  items: unknown[];
   location?: string;
   signature?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-const InspectionReview: React.FC = () => {
+const InspectionReview: React.FC = (): JSX.Element => {
   const { user, updateSignature } = useAuth();
   const router = useRouter();
   const { id } = router.query;
@@ -75,7 +74,6 @@ const InspectionReview: React.FC = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [reviewComments, setReviewComments] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [pdfDocument, setPdfDocument] = useState<jsPDF | null>(null);
   const [excelData, setExcelData] = useState<ArrayBuffer | null>(null);
   const [supervisorSignature, setSupervisorSignature] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string>('');
@@ -83,6 +81,43 @@ const InspectionReview: React.FC = () => {
   const [viewMode, setViewMode] = useState<'mobile' | 'excel' | 'pdf'>('mobile');
   const [signatureCanvasRef, setSignatureCanvasRef] = useState<HTMLCanvasElement | null>(null);
   const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
+
+  // Helper functions - defined before use
+  // Map database inspection types to local types
+  const mapDbTypeToLocal = (dbType: string): InspectionType => {
+    switch (dbType) {
+      case 'hse_general':
+        return 'hse';
+      case 'fire_extinguisher':
+        return 'fire_extinguisher';
+      case 'first_aid':
+        return 'first_aid';
+      case 'hse_observation':
+        return 'hse_observation';
+      case 'manhours':
+      case 'manhours_report':
+        return 'manhours';
+      default:
+        return 'hse';
+    }
+  };
+
+  const getInspectionTypeName = (type: InspectionType): string => {
+    switch (type) {
+      case 'hse':
+        return 'HSE Inspection';
+      case 'fire_extinguisher':
+        return 'Fire Extinguisher';
+      case 'first_aid':
+        return 'First Aid Items';
+      case 'hse_observation':
+        return 'HSE Observation';
+      case 'manhours':
+        return 'Manhours Report';
+      default:
+        return type;
+    }
+  };
 
   // Load saved signature when component mounts
   useEffect(() => {
@@ -93,11 +128,250 @@ const InspectionReview: React.FC = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (id && inspectionType) {
-      loadInspection();
+  // Load HSE Excel preview
+  const loadHSEExcelPreview = async (inspectionData: Inspection) => {
+    try {
+      const formData = inspectionData.formData as Record<string, unknown> | undefined;
+      const requestBody = {
+        contractor: inspectionData.company || (formData?.contractor as string | undefined) || '',
+        location: inspectionData.location || (formData?.location as string | undefined) || '',
+        date: inspectionData.inspectionDate,
+        inspectedBy: inspectionData.inspectedBy,
+        workActivity: (formData?.workActivity as string | undefined) || '',
+        tablePersons: (formData?.tablePersons as unknown[] | undefined) || [],
+        inspectionItems: inspectionData.items || (formData?.inspectionItems as unknown[] | undefined) || [],
+        commentsRemarks: (formData?.commentsRemarks as string | undefined) || '',
+        observations: inspectionData.observations || (formData?.observations as unknown[] | undefined) || [],
+        reviewedBy: inspectionData.reviewedBy || user?.name,
+        reviewedAt: inspectionData.reviewedAt,
+        reviewerSignature: supervisorSignature || inspectionData.reviewerSignature,
+      };
+
+      // Generate Excel data for download
+      const excelResponse = await fetch('/api/export/hse-inspection-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...requestBody,
+          format: 'excel',
+        }),
+      });
+
+      if (excelResponse.ok) {
+        const arrayBuffer = await excelResponse.arrayBuffer();
+        setExcelData(arrayBuffer);
+      }
+
+      // Generate PDF for Excel tab preview
+      const pdfResponse = await fetch('/api/export/hse-inspection-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...requestBody,
+          format: 'pdf',
+        }),
+      });
+
+      if (pdfResponse.ok) {
+        const pdfBlob = await pdfResponse.blob();
+        const pdfBlobUrl = URL.createObjectURL(pdfBlob);
+        setExcelPdfUrl(pdfBlobUrl);
+      }
+    } catch (error) {
+      // Error loading HSE Excel preview - continue even if Excel preview fails
     }
-  }, [id, inspectionType]);
+  };
+
+  // Load Excel preview for fire extinguisher and first aid inspections
+  const loadExcelPreview = async (inspectionData: Inspection) => {
+    try {
+      const apiEndpoint =
+        inspectionType === 'fire_extinguisher'
+          ? '/api/export/fire-extinguisher-template'
+          : '/api/export/first-aid-template';
+
+      const requestBody = {
+        inspectedBy: inspectionData.inspectedBy,
+        inspectionDate: inspectionData.inspectionDate,
+        designation: inspectionData.designation,
+        signature: inspectionData.signature,
+        extinguishers: inspectionData.extinguishers || [],
+        kits: inspectionData.kitInspections || inspectionData.kits || [],
+        reviewedBy: inspectionData.reviewedBy || user?.name,
+        reviewedAt: inspectionData.reviewedAt,
+        reviewerSignature: supervisorSignature || inspectionData.reviewerSignature,
+      };
+
+      // Generate Excel data for download
+      const excelResponse = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...requestBody,
+          format: 'excel',
+        }),
+      });
+
+      if (excelResponse.ok) {
+        const arrayBuffer = await excelResponse.arrayBuffer();
+        setExcelData(arrayBuffer);
+      }
+
+      // Generate PDF for Excel tab preview
+      const pdfResponse = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...requestBody,
+          format: 'pdf',
+        }),
+      });
+
+      if (pdfResponse.ok) {
+        const pdfBlob = await pdfResponse.blob();
+        const pdfBlobUrl = URL.createObjectURL(pdfBlob);
+        setExcelPdfUrl(pdfBlobUrl);
+      }
+    } catch (error) {
+      // Error loading Excel preview - continue even if Excel preview fails - user can still download
+    }
+  };
+
+  // Generate document (Excel or PDF) with supervisor info for ALL inspection types
+  const generateDocument = async (
+    inspectionData: Inspection,
+    supervisorName: string,
+    reviewDate: string,
+    signature: string,
+    format: 'excel' | 'pdf',
+  ): Promise<Buffer> => {
+    let apiEndpoint = '';
+    let requestBody: Record<string, unknown> = {};
+
+    // Determine API endpoint and prepare request body based on inspection type
+    switch (inspectionType) {
+      case 'fire_extinguisher':
+        apiEndpoint = '/api/export/fire-extinguisher-template';
+        requestBody = {
+          inspectedBy: inspectionData.inspectedBy,
+          inspectionDate: inspectionData.inspectionDate,
+          designation: inspectionData.designation,
+          signature: inspectionData.signature,
+          extinguishers: inspectionData.extinguishers || [],
+          reviewedBy: supervisorName,
+          reviewedAt: reviewDate,
+          reviewerSignature: signature,
+          format,
+        };
+        break;
+
+      case 'first_aid':
+        apiEndpoint = '/api/export/first-aid-template';
+        requestBody = {
+          inspectedBy: inspectionData.inspectedBy,
+          inspectionDate: inspectionData.inspectionDate,
+          designation: inspectionData.designation,
+          signature: inspectionData.signature,
+          kits: inspectionData.kitInspections || inspectionData.kits || [],
+          reviewedBy: supervisorName,
+          reviewedAt: reviewDate,
+          reviewerSignature: signature,
+          format,
+        };
+        break;
+
+      case 'hse':
+        apiEndpoint = '/api/export/hse-inspection-template';
+        const formData = inspectionData.formData as Record<string, unknown> | undefined;
+        requestBody = {
+          contractor: inspectionData.company || (formData?.contractor as string | undefined) || '',
+          location: inspectionData.location || (formData?.location as string | undefined) || '',
+          date: inspectionData.inspectionDate,
+          inspectedBy: inspectionData.inspectedBy,
+          workActivity: (formData?.workActivity as string | undefined) || '',
+          tablePersons: (formData?.tablePersons as unknown[] | undefined) || [],
+          inspectionItems: inspectionData.items || (formData?.inspectionItems as unknown[] | undefined) || [],
+          commentsRemarks: (formData?.commentsRemarks as string | undefined) || '',
+          observations: inspectionData.observations || (formData?.observations as unknown[] | undefined) || [],
+          reviewedBy: supervisorName,
+          reviewedAt: reviewDate,
+          reviewerSignature: signature,
+          format,
+        };
+        break;
+
+      case 'hse_observation':
+        apiEndpoint = '/api/export/hse-observation-template';
+        const obsFormData = inspectionData.formData as Record<string, unknown> | undefined;
+        requestBody = {
+          observation: inspectionData.observation || (obsFormData?.observation as string | undefined) || '',
+          location: inspectionData.location || '',
+          observedBy: inspectionData.inspectedBy,
+          observedDate: inspectionData.inspectionDate,
+          actionNeeded: inspectionData.actionNeeded || (obsFormData?.actionNeeded as string | undefined) || '',
+          hazards: inspectionData.hazards || (obsFormData?.hazards as string | undefined) || '',
+          remarks: inspectionData.remarks || (obsFormData?.remarks as string | undefined) || '',
+          status: inspectionData.status || 'Open',
+          photos: inspectionData.photos || (obsFormData?.photos as unknown[] | undefined) || [],
+          itemNo: inspectionData.itemNo || '1',
+          categoryName: inspectionData.categoryName || 'General',
+          itemName: inspectionData.itemName || 'Observation',
+          reviewedBy: supervisorName,
+          reviewedAt: reviewDate,
+          reviewerSignature: signature,
+          format,
+        };
+        break;
+
+      case 'manhours':
+        apiEndpoint = '/api/export/manhours-template';
+        requestBody = {
+          preparedBy: inspectionData.inspectedBy || inspectionData.preparedBy,
+          preparedDate: inspectionData.inspectionDate,
+          reviewedBy: supervisorName,
+          reviewedAt: reviewDate,
+          reportMonth: inspectionData.reportMonth || '',
+          reportYear: inspectionData.reportYear || new Date().getFullYear().toString(),
+          numEmployees: inspectionData.numEmployees || '0',
+          monthlyManHours: inspectionData.monthlyManHours || '0',
+          yearToDateManHours: inspectionData.yearToDateManHours || '0',
+          totalAccumulatedManHours: inspectionData.totalAccumulatedManHours || '0',
+          annualTotalManHours: inspectionData.annualTotalManHours || '0',
+          workdaysLost: inspectionData.workdaysLost || '0',
+          ltiCases: inspectionData.ltiCases || '0',
+          noLTICases: inspectionData.noLTICases || '0',
+          nearMissAccidents: inspectionData.nearMissAccidents || '0',
+          dangerousOccurrences: inspectionData.dangerousOccurrences || '0',
+          occupationalDiseases: inspectionData.occupationalDiseases || '0',
+          formulaLtiCases: inspectionData.formulaLtiCases || '0',
+          formulaAnnualAvgEmployees: inspectionData.formulaAnnualAvgEmployees || '0',
+          formulaAnnualTotalManHours: inspectionData.formulaAnnualTotalManHours || '0',
+          formulaWorkdaysLost: inspectionData.formulaWorkdaysLost || '0',
+          projectName: inspectionData.projectName || '',
+          monthlyData: inspectionData.monthlyData || [],
+          remarks: inspectionData.remarks || '',
+          reviewerSignature: signature,
+          format,
+        };
+        break;
+
+      default:
+        throw new Error(`Unsupported inspection type: ${inspectionType}`);
+    }
+
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate ${format.toUpperCase()} for ${inspectionType}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  };
 
   const loadInspection = async () => {
     setLoading(true);
@@ -158,6 +432,8 @@ const InspectionReview: React.FC = () => {
           case 'manhours':
             storageKey = 'manhours_reports';
             break;
+          default:
+            storageKey = 'inspections';
         }
 
         const inspections = storage.load(storageKey, []);
@@ -174,159 +450,34 @@ const InspectionReview: React.FC = () => {
           if (inspectionType === 'fire_extinguisher' || inspectionType === 'first_aid') {
             // Load Excel preview for fire extinguisher and first aid
             loadExcelPreview(found);
-            setPdfDocument(null);
           } else if (inspectionType === 'hse') {
             // For HSE inspections, load Excel preview if it has checklist data
             loadHSEExcelPreview(found);
           }
         } catch (previewError) {
-          console.error('Error generating preview:', previewError);
-          // Continue even if preview generation fails
+          // Error generating preview - continue even if preview generation fails
         }
       } else {
-        alert('Inspection not found');
+        // Inspection not found
         router.back();
       }
     } catch (error) {
-      console.error('Error loading inspection:', error);
-      alert('Error loading inspection');
+      // Error loading inspection
     } finally {
       setLoading(false);
     }
   };
 
-  // Map database inspection types to local types
-  const mapDbTypeToLocal = (dbType: string): InspectionType => {
-    switch (dbType) {
-      case 'hse_general':
-        return 'hse';
-      case 'fire_extinguisher':
-        return 'fire_extinguisher';
-      case 'first_aid':
-        return 'first_aid';
-      case 'hse_observation':
-        return 'hse_observation';
-      case 'manhours':
-      case 'manhours_report':
-        return 'manhours';
-      default:
-        return 'hse';
+  useEffect(() => {
+    if (id && inspectionType) {
+      loadInspection();
     }
-  };
-
-  // Load HSE Excel preview
-  const loadHSEExcelPreview = async (inspection: Inspection) => {
-    try {
-      const requestBody = {
-        contractor: inspection.company || inspection.formData?.contractor || '',
-        location: inspection.location || inspection.formData?.location || '',
-        date: inspection.inspectionDate,
-        inspectedBy: inspection.inspectedBy,
-        workActivity: inspection.formData?.workActivity || '',
-        tablePersons: inspection.formData?.tablePersons || [],
-        inspectionItems: inspection.items || inspection.formData?.inspectionItems || [],
-        commentsRemarks: inspection.formData?.commentsRemarks || '',
-        observations: inspection.observations || inspection.formData?.observations || [],
-        reviewedBy: inspection.reviewedBy || user?.name,
-        reviewedAt: inspection.reviewedAt,
-        reviewerSignature: supervisorSignature || inspection.reviewerSignature,
-      };
-
-      // Generate Excel data for download
-      const excelResponse = await fetch('/api/export/hse-inspection-template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...requestBody,
-          format: 'excel',
-        }),
-      });
-
-      if (excelResponse.ok) {
-        const arrayBuffer = await excelResponse.arrayBuffer();
-        setExcelData(arrayBuffer);
-      }
-
-      // Generate PDF for Excel tab preview
-      const pdfResponse = await fetch('/api/export/hse-inspection-template', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...requestBody,
-          format: 'pdf',
-        }),
-      });
-
-      if (pdfResponse.ok) {
-        const pdfBlob = await pdfResponse.blob();
-        const pdfBlobUrl = URL.createObjectURL(pdfBlob);
-        setExcelPdfUrl(pdfBlobUrl);
-      }
-    } catch (error) {
-      console.error('Error loading HSE Excel preview:', error);
-      // Continue even if Excel preview fails
-    }
-  };
-
-  // Load Excel preview for fire extinguisher and first aid inspections
-  const loadExcelPreview = async (inspection: Inspection) => {
-    try {
-      const apiEndpoint =
-        inspectionType === 'fire_extinguisher'
-          ? '/api/export/fire-extinguisher-template'
-          : '/api/export/first-aid-template';
-
-      const requestBody = {
-        inspectedBy: inspection.inspectedBy,
-        inspectionDate: inspection.inspectionDate,
-        designation: inspection.designation,
-        signature: inspection.signature,
-        extinguishers: inspection.extinguishers || [],
-        kits: inspection.kitInspections || inspection.kits || [],
-        reviewedBy: inspection.reviewedBy || user?.name,
-        reviewedAt: inspection.reviewedAt,
-        reviewerSignature: supervisorSignature || inspection.reviewerSignature,
-      };
-
-      // Generate Excel data for download
-      const excelResponse = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...requestBody,
-          format: 'excel',
-        }),
-      });
-
-      if (excelResponse.ok) {
-        const arrayBuffer = await excelResponse.arrayBuffer();
-        setExcelData(arrayBuffer);
-      }
-
-      // Generate PDF for Excel tab preview
-      const pdfResponse = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...requestBody,
-          format: 'pdf',
-        }),
-      });
-
-      if (pdfResponse.ok) {
-        const pdfBlob = await pdfResponse.blob();
-        const pdfBlobUrl = URL.createObjectURL(pdfBlob);
-        setExcelPdfUrl(pdfBlobUrl);
-      }
-    } catch (error) {
-      console.error('Error loading Excel preview:', error);
-      // Continue even if Excel preview fails - user can still download
-    }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, inspectionType]);
 
   // Generate both Excel and PDF with supervisor review information for ALL inspection types
   const generateApprovedDocuments = async (
-    inspection: Inspection,
+    inspectionData: Inspection,
     supervisorName: string,
     reviewDate: string,
     signature: string,
@@ -334,145 +485,11 @@ const InspectionReview: React.FC = () => {
     // Generate both Excel and PDF from the same template
     // This ensures they match exactly
     const [excelBuffer, pdfBuffer] = await Promise.all([
-      generateDocument(inspection, supervisorName, reviewDate, signature, 'excel'),
-      generateDocument(inspection, supervisorName, reviewDate, signature, 'pdf'),
+      generateDocument(inspectionData, supervisorName, reviewDate, signature, 'excel'),
+      generateDocument(inspectionData, supervisorName, reviewDate, signature, 'pdf'),
     ]);
 
     return { excelBuffer, pdfBuffer };
-  };
-
-  // Generate document (Excel or PDF) with supervisor info for ALL inspection types
-  const generateDocument = async (
-    inspection: Inspection,
-    supervisorName: string,
-    reviewDate: string,
-    signature: string,
-    format: 'excel' | 'pdf',
-  ): Promise<Buffer> => {
-    let apiEndpoint = '';
-    let requestBody: any = {};
-
-    // Determine API endpoint and prepare request body based on inspection type
-    switch (inspectionType) {
-      case 'fire_extinguisher':
-        apiEndpoint = '/api/export/fire-extinguisher-template';
-        requestBody = {
-          inspectedBy: inspection.inspectedBy,
-          inspectionDate: inspection.inspectionDate,
-          designation: inspection.designation,
-          signature: inspection.signature,
-          extinguishers: inspection.extinguishers || [],
-          reviewedBy: supervisorName,
-          reviewedAt: reviewDate,
-          reviewerSignature: signature,
-          format,
-        };
-        break;
-
-      case 'first_aid':
-        apiEndpoint = '/api/export/first-aid-template';
-        requestBody = {
-          inspectedBy: inspection.inspectedBy,
-          inspectionDate: inspection.inspectionDate,
-          designation: inspection.designation,
-          signature: inspection.signature,
-          kits: inspection.kitInspections || inspection.kits || [],
-          reviewedBy: supervisorName,
-          reviewedAt: reviewDate,
-          reviewerSignature: signature,
-          format,
-        };
-        break;
-
-      case 'hse':
-        apiEndpoint = '/api/export/hse-inspection-template';
-        requestBody = {
-          contractor: inspection.company || inspection.formData?.contractor || '',
-          location: inspection.location || inspection.formData?.location || '',
-          date: inspection.inspectionDate,
-          inspectedBy: inspection.inspectedBy,
-          workActivity: inspection.formData?.workActivity || '',
-          tablePersons: inspection.formData?.tablePersons || [],
-          inspectionItems: inspection.items || inspection.formData?.inspectionItems || [],
-          commentsRemarks: inspection.formData?.commentsRemarks || '',
-          observations: inspection.observations || inspection.formData?.observations || [],
-          reviewedBy: supervisorName,
-          reviewedAt: reviewDate,
-          reviewerSignature: signature,
-          format,
-        };
-        break;
-
-      case 'hse_observation':
-        apiEndpoint = '/api/export/hse-observation-template';
-        requestBody = {
-          observation: inspection.observation || inspection.formData?.observation || '',
-          location: inspection.location || '',
-          observedBy: inspection.inspectedBy,
-          observedDate: inspection.inspectionDate,
-          actionNeeded: inspection.actionNeeded || inspection.formData?.actionNeeded || '',
-          hazards: inspection.hazards || inspection.formData?.hazards || '',
-          remarks: inspection.remarks || inspection.formData?.remarks || '',
-          status: inspection.status || 'Open',
-          photos: inspection.photos || inspection.formData?.photos || [],
-          itemNo: inspection.itemNo || '1',
-          categoryName: inspection.categoryName || 'General',
-          itemName: inspection.itemName || 'Observation',
-          reviewedBy: supervisorName,
-          reviewedAt: reviewDate,
-          reviewerSignature: signature,
-          format,
-        };
-        break;
-
-      case 'manhours':
-        apiEndpoint = '/api/export/manhours-template';
-        requestBody = {
-          preparedBy: inspection.inspectedBy || inspection.preparedBy,
-          preparedDate: inspection.inspectionDate,
-          reviewedBy: supervisorName,
-          reviewedAt: reviewDate,
-          reportMonth: inspection.reportMonth || '',
-          reportYear: inspection.reportYear || new Date().getFullYear().toString(),
-          numEmployees: inspection.numEmployees || '0',
-          monthlyManHours: inspection.monthlyManHours || '0',
-          yearToDateManHours: inspection.yearToDateManHours || '0',
-          totalAccumulatedManHours: inspection.totalAccumulatedManHours || '0',
-          annualTotalManHours: inspection.annualTotalManHours || '0',
-          workdaysLost: inspection.workdaysLost || '0',
-          ltiCases: inspection.ltiCases || '0',
-          noLTICases: inspection.noLTICases || '0',
-          nearMissAccidents: inspection.nearMissAccidents || '0',
-          dangerousOccurrences: inspection.dangerousOccurrences || '0',
-          occupationalDiseases: inspection.occupationalDiseases || '0',
-          formulaLtiCases: inspection.formulaLtiCases || '0',
-          formulaAnnualAvgEmployees: inspection.formulaAnnualAvgEmployees || '0',
-          formulaAnnualTotalManHours: inspection.formulaAnnualTotalManHours || '0',
-          formulaWorkdaysLost: inspection.formulaWorkdaysLost || '0',
-          projectName: inspection.projectName || '',
-          monthlyData: inspection.monthlyData || [],
-          remarks: inspection.remarks || '',
-          reviewerSignature: signature,
-          format,
-        };
-        break;
-
-      default:
-        throw new Error(`Unsupported inspection type: ${inspectionType}`);
-    }
-
-    const response = await fetch(apiEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to generate ${format.toUpperCase()} for ${inspectionType}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
   };
 
   // Download Excel file for preview
@@ -481,7 +498,7 @@ const InspectionReview: React.FC = () => {
 
     try {
       let apiEndpoint = '';
-      let requestBody: any = {};
+      let requestBody: Record<string, unknown> = {};
 
       if (inspectionType === 'fire_extinguisher') {
         apiEndpoint = '/api/export/fire-extinguisher-template';
@@ -932,7 +949,7 @@ const InspectionReview: React.FC = () => {
 
     try {
       let apiEndpoint = '';
-      let requestBody: any = {};
+      let requestBody: Record<string, unknown> = {};
 
       if (inspectionType === 'fire_extinguisher') {
         apiEndpoint = '/api/export/fire-extinguisher-template';
@@ -1002,7 +1019,7 @@ const InspectionReview: React.FC = () => {
     try {
       // Use the appropriate API endpoint based on inspection type
       let apiEndpoint = '';
-      let requestBody: any = {};
+      let requestBody: Record<string, unknown> = {};
 
       if (inspectionType === 'fire_extinguisher') {
         apiEndpoint = '/api/export/fire-extinguisher-template';
@@ -1234,64 +1251,66 @@ const InspectionReview: React.FC = () => {
     }
   };
 
-  const mapInspectionType = (
-    type: InspectionType,
-  ): 'fire_extinguisher' | 'first_aid' | 'hse_general' | 'hse_observation' | 'manhours' => {
-    switch (type) {
-      case 'fire_extinguisher':
-        return 'fire_extinguisher';
-      case 'first_aid':
-        return 'first_aid';
-      case 'hse_observation':
-        return 'hse_observation';
-      case 'manhours':
-        return 'manhours';
-      case 'hse':
-      default:
-        return 'hse_general';
-    }
-  };
+  // Unused function - kept for potential future use
+  // const mapInspectionType = (
+  //   type: InspectionType,
+  // ): 'fire_extinguisher' | 'first_aid' | 'hse_general' | 'hse_observation' | 'manhours' => {
+  //   switch (type) {
+  //     case 'fire_extinguisher':
+  //       return 'fire_extinguisher';
+  //     case 'first_aid':
+  //       return 'first_aid';
+  //     case 'hse_observation':
+  //       return 'hse_observation';
+  //     case 'manhours':
+  //       return 'manhours';
+  //     case 'hse':
+  //     default:
+  //       return 'hse_general';
+  //   }
+  // };
 
-  const mapFormData = (inspection: Inspection, type: InspectionType) => {
-    switch (type) {
-      case 'fire_extinguisher':
-        return {
-          extinguishers: inspection.extinguishers || [],
-        };
-      case 'first_aid':
-        return {
-          kits: inspection.kits || [],
-        };
-      case 'hse':
-        return {
-          contractorInfo: inspection.contractorInfo || {},
-          categories: inspection.categories || inspection.items || [],
-          observations: inspection.observations || [],
-        };
-      case 'hse_observation':
-        return {
-          observation: inspection.observation || '',
-          location: inspection.location || '',
-          actionNeeded: inspection.actionNeeded || '',
-          hazards: inspection.hazards || '',
-          remarks: inspection.remarks || '',
-          photos: inspection.photos || [],
-          status: inspection.status || '',
-        };
-      case 'manhours':
-        return {
-          reportMonth: inspection.reportMonth || '',
-          reportYear: inspection.reportYear || '',
-          numEmployees: inspection.numEmployees || '',
-          monthlyManHours: inspection.monthlyManHours || '',
-          ltiCases: inspection.ltiCases || '0',
-          nearMissAccidents: inspection.nearMissAccidents || '0',
-          monthlyData: inspection.monthlyData || [],
-        };
-      default:
-        return inspection;
-    }
-  };
+  // Unused function - kept for potential future use
+  // const mapFormData = (inspectionData: Inspection, type: InspectionType) => {
+  //   switch (type) {
+  //     case 'fire_extinguisher':
+  //       return {
+  //         extinguishers: inspectionData.extinguishers || [],
+  //       };
+  //     case 'first_aid':
+  //       return {
+  //         kits: inspectionData.kits || [],
+  //       };
+  //     case 'hse':
+  //       return {
+  //         contractorInfo: inspectionData.contractorInfo || {},
+  //         categories: inspectionData.categories || inspectionData.items || [],
+  //         observations: inspectionData.observations || [],
+  //       };
+  //     case 'hse_observation':
+  //       return {
+  //         observation: inspectionData.observation || '',
+  //         location: inspectionData.location || '',
+  //         actionNeeded: inspectionData.actionNeeded || '',
+  //         hazards: inspectionData.hazards || '',
+  //         remarks: inspectionData.remarks || '',
+  //         photos: inspectionData.photos || [],
+  //         status: inspectionData.status || '',
+  //       };
+  //     case 'manhours':
+  //       return {
+  //         reportMonth: inspectionData.reportMonth || '',
+  //         reportYear: inspectionData.reportYear || '',
+  //         numEmployees: inspectionData.numEmployees || '',
+  //         monthlyManHours: inspectionData.monthlyManHours || '',
+  //         ltiCases: inspectionData.ltiCases || '0',
+  //         nearMissAccidents: inspectionData.nearMissAccidents || '0',
+  //         monthlyData: inspectionData.monthlyData || [],
+  //       };
+  //     default:
+  //       return inspectionData;
+  //   }
+  // };
 
   const getInspectionTypeName = (type: InspectionType) => {
     switch (type) {
@@ -1327,28 +1346,29 @@ const InspectionReview: React.FC = () => {
     }
   };
 
-  const getRatingColor = (rating: string) => {
-    switch (rating) {
-      case 'G':
-      case 'GOOD':
-      case '✓':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'A':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'P':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'X':
-      case 'SIN':
-      case 'SPS':
-      case 'SWO':
-      case 'FAIL':
-        return 'bg-red-100 text-red-800 border-red-300';
-      case 'NA':
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-      default:
-        return 'bg-gray-100 text-gray-600 border-gray-300';
-    }
-  };
+  // Unused function - kept for potential future use
+  // const getRatingColor = (rating: string) => {
+  //   switch (rating) {
+  //     case 'G':
+  //     case 'GOOD':
+  //     case '✓':
+  //       return 'bg-green-100 text-green-800 border-green-300';
+  //     case 'A':
+  //       return 'bg-blue-100 text-blue-800 border-blue-300';
+  //     case 'P':
+  //       return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+  //     case 'X':
+  //     case 'SIN':
+  //     case 'SPS':
+  //     case 'SWO':
+  //     case 'FAIL':
+  //       return 'bg-red-100 text-red-800 border-red-300';
+  //     case 'NA':
+  //       return 'bg-gray-100 text-gray-800 border-gray-300';
+  //     default:
+  //       return 'bg-gray-100 text-gray-600 border-gray-300';
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -1382,6 +1402,7 @@ const InspectionReview: React.FC = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
+                type="button"
                 onClick={() => router.back()}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -1408,6 +1429,7 @@ const InspectionReview: React.FC = () => {
             <div className="flex gap-3">
               {/* Download Excel button for all inspection types */}
               <button
+                type="button"
                 onClick={handleDownloadExcel}
                 disabled={processing}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -1437,6 +1459,7 @@ const InspectionReview: React.FC = () => {
                   )}
               </button>
               <button
+                type="button"
                 onClick={handleDownloadPDF}
                 disabled={processing}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -1454,6 +1477,7 @@ const InspectionReview: React.FC = () => {
               </button>
               {/* SharePoint OAuth Export Button */}
               <button
+                type="button"
                 onClick={handleTestSharePointExport}
                 disabled={processing}
                 className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -1470,6 +1494,7 @@ const InspectionReview: React.FC = () => {
                 📁 Export to SharePoint
               </button>
               <button
+                type="button"
                 onClick={() => setShowRejectModal(true)}
                 disabled={processing}
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -1485,6 +1510,7 @@ const InspectionReview: React.FC = () => {
                 Reject
               </button>
               <button
+                type="button"
                 onClick={() => setShowApproveModal(true)}
                 disabled={processing}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -2298,6 +2324,22 @@ const InspectionReview: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Preview Excel */}
+          {excelData && (
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview Excel</h2>
+              <ExcelViewer
+                excelData={excelData}
+                title="Inspection Excel Preview"
+                showDownloadButton={false}
+                showZoomControls
+                height="500px"
+                filename={`${inspectionType}_inspection.xlsx`}
+                showHeader
+              />
+            </div>
+          )}
 
           {/* Reviewer Comments */}
           <div className="bg-white rounded-lg shadow-sm border p-6">

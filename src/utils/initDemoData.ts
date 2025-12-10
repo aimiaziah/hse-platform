@@ -42,11 +42,6 @@ export function initializeDemoData() {
           requiresAction: false,
         },
       ],
-      googleDriveExport: {
-        status: 'success' as const,
-        fileId: 'demo-file-123',
-        exportedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
     },
     {
       id: 'insp-002',

@@ -171,7 +171,7 @@ const SignatureCanvas: React.FC<SignatureCanvasProps> = ({
 
       <div className="text-xs text-gray-500">
         <p>• Draw your signature using mouse or touch</p>
-        <p>• Click "Save Signature" to confirm</p>
+        <p>• Click &quot;Save Signature&quot; to confirm</p>
         <p>• Your signature will be attached to the inspection form</p>
       </div>
     </div>

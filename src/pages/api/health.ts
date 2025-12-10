@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   try {
     // Check database connection by querying users table
     const supabase = getServiceSupabase();
-    const { data, error } = await supabase.from('users').select('count').limit(1).single();
+    const { error } = await supabase.from('users').select('id').limit(1);
 
     if (error) {
       throw new Error(`Database error: ${error.message}`);

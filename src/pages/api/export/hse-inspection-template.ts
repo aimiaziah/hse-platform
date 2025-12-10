@@ -204,6 +204,15 @@ const categories = [
   },
 ];
 
+// Increase body size limit to handle large image data
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb', // Increase from default 1mb to 10mb
+    },
+  },
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
   if (req.method !== 'POST') {

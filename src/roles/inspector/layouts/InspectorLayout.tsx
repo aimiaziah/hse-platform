@@ -67,7 +67,7 @@ const InspectorLayout: React.FC<InspectorLayoutProps> = ({
       logout();
       router.push('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      // Logout error
     }
   };
 
@@ -141,6 +141,7 @@ const InspectorLayout: React.FC<InspectorLayoutProps> = ({
                   {/* Inspection Forms Dropdown */}
                   <div className="relative">
                     <button
+                      type="button"
                       onClick={() => setShowInspectionsDropdown(!showInspectionsDropdown)}
                       onBlur={() => setTimeout(() => setShowInspectionsDropdown(false), 200)}
                       className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
@@ -203,6 +204,7 @@ const InspectorLayout: React.FC<InspectorLayoutProps> = ({
                   </div>
                 </Link>
                 <button
+                  type="button"
                   onClick={handleLogout}
                   className="px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors inline-flex items-center gap-2"
                 >

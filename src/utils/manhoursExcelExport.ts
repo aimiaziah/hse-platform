@@ -51,7 +51,54 @@ interface ManhoursReportData {
   remarks: string;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+// Unused constant - kept for potential future use
+// // Unused constant - kept for potential future use
+// const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Format date to DD/MM/YYYY
+ */
+function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return dateString;
+  }
+}
+
+/**
+ * Calculate LTI Incident Rate
+ */
+function calculateLTIIncidentRate(data: ManhoursReportData): number {
+  const accidents = Number(data.formulaLtiCases || 0);
+  const avgEmployees = Number(data.formulaAnnualAvgEmployees || 1);
+  if (avgEmployees === 0) return 0;
+  return (accidents / avgEmployees) * 100000;
+}
+
+/**
+ * Calculate Incident Frequency Rate
+ */
+function calculateIncidentFrequencyRate(data: ManhoursReportData): number {
+  const accidents = Number(data.formulaLtiCases || 0);
+  const totalManHours = Number(data.formulaAnnualTotalManHours || 1);
+  if (totalManHours === 0) return 0;
+  return (accidents / totalManHours) * 1000000;
+}
+
+/**
+ * Calculate Severity Rate
+ */
+function calculateSeverityRate(data: ManhoursReportData): number {
+  const workdaysLost = Number(data.formulaWorkdaysLost || 0);
+  const totalManHours = Number(data.formulaAnnualTotalManHours || 1);
+  if (totalManHours === 0) return 0;
+  return (workdaysLost / totalManHours) * 1000000;
+}
 
 /**
  * Fetch Excel template from local storage (with Supabase fallback and caching)
@@ -69,7 +116,6 @@ async function fetchTemplateFromStorage(
     // 4. Caches the result for future use
     return await loadTemplate(bucketName, filePath);
   } catch (error) {
-    console.error('Error fetching template:', error);
     throw error;
   }
 }
@@ -81,11 +127,9 @@ async function fetchTemplateFromStorage(
 export async function generateManhoursExcel(data: ManhoursReportData): Promise<ExcelJS.Workbook> {
   try {
     // Load the template file from Supabase Storage
-    console.log('Fetching template from Supabase Storage...');
     const templateBuffer = await fetchTemplateFromStorage('templates', 'monthly manhours.xlsx');
 
     // Load the template with ExcelJS
-    console.log('Loading template with ExcelJS...');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(templateBuffer);
 
@@ -146,7 +190,7 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     ws.getCell('E29').value = `Annual Average of No. of Employee [${
       data.formulaAnnualAvgEmployees || 0
     }]`;
-    ws.getCell('O28').value = ltiRate;
+    ws.getCell('O28').value = Number(ltiRate);
 
     // Incident Frequency Rate (Rows 31-32)
     const freqRate = calculateIncidentFrequencyRate(data);
@@ -154,7 +198,7 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     ws.getCell('E32').value = `Total Man-hours worked per year [${
       data.formulaAnnualTotalManHours || 0
     }]`;
-    ws.getCell('O31').value = freqRate;
+    ws.getCell('O31').value = Number(freqRate);
 
     // Severity Rate (Rows 34-35)
     const sevRate = calculateSeverityRate(data);
@@ -162,7 +206,7 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     ws.getCell('E35').value = `Total Man-hours worked per year [${
       data.formulaAnnualTotalManHours || 0
     }]`;
-    ws.getCell('O34').value = sevRate;
+    ws.getCell('O34').value = Number(sevRate);
 
     // ==========================================
     // MONTHLY DATA SECTION
@@ -198,10 +242,8 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     ws.getCell('C37').value = `Monthly Site Industrial Accidents ${currentYear}`;
     ws.getCell('C46').value = `HSE ACCIDENT STATISTIC ${currentYear}`;
 
-    console.log('Template filled successfully');
     return wb;
   } catch (error) {
-    console.error('Error loading template:', error);
     throw new Error(
       'Could not load template from Supabase. Please ensure "monthly manhours.xlsx" exists in the templates bucket.',
     );
@@ -234,54 +276,10 @@ export async function downloadManhoursExcel(data: ManhoursReportData, filename?:
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
 
-    console.log('File downloaded successfully');
+    // File downloaded successfully
   } catch (error) {
-    console.error('Error generating Excel:', error);
+    // Error generating Excel
     throw error;
   }
 }
 
-/**
- * Format date to DD/MM/YYYY
- */
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  } catch {
-    return dateString;
-  }
-}
-
-/**
- * Calculate LTI Incident Rate
- * Formula: (No of Accidents / Annual Average of No. of Employee) × 1000
- */
-function calculateLTIIncidentRate(data: ManhoursReportData): string {
-  const lti = parseFloat(data.formulaLtiCases) || 0;
-  const employees = parseFloat(data.formulaAnnualAvgEmployees) || 1;
-  return ((lti / employees) * 1000).toFixed(2);
-}
-
-/**
- * Calculate Incident Frequency Rate
- * Formula: (No of Accidents / Total Man-hours worked per year) × 1,000,000
- */
-function calculateIncidentFrequencyRate(data: ManhoursReportData): string {
-  const lti = parseFloat(data.formulaLtiCases) || 0;
-  const totalHours = parseFloat(data.formulaAnnualTotalManHours) || 1;
-  return ((lti / totalHours) * 1000000).toFixed(2);
-}
-
-/**
- * Calculate Severity Rate
- * Formula: (Loss of Working Days / Total Man-hours worked per year) × 1,000,000
- */
-function calculateSeverityRate(data: ManhoursReportData): string {
-  const workdaysLost = parseFloat(data.formulaWorkdaysLost) || 0;
-  const totalHours = parseFloat(data.formulaAnnualTotalManHours) || 1;
-  return ((workdaysLost / totalHours) * 1000000).toFixed(2);
-}
