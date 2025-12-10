@@ -1,132 +1,98 @@
-// Authentication Configuration
-// Centralized configuration for authentication methods, rate limiting, and role mapping
-
-/**
- * Rate limit configuration
- */
-export interface RateLimitConfig {
-  maxRequests: number;
-  windowMs: number;
-}
-
-/**
- * Get rate limit configuration from environment variables
- */
-export function getRateLimitConfig(): RateLimitConfig {
-  const maxRequests = parseInt(
-    process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '5',
-    10,
-  );
-  const windowMs = parseInt(
-    process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000', // 15 minutes default
-    10,
-  );
-
-  return {
-    maxRequests,
-    windowMs,
-  };
-}
+// Authentication Configuration and Helpers
+import { env } from './env';
+import { validateEmailDomain } from './validation';
 
 /**
  * Check if an authentication method is enabled
  */
 export function isAuthMethodEnabled(method: 'pin' | 'microsoft'): boolean {
   if (method === 'pin') {
-    return process.env.ENABLE_PIN_AUTH === 'true';
+    return env.ENABLE_PIN_AUTH;
   }
   if (method === 'microsoft') {
-    return process.env.ENABLE_MICROSOFT_AUTH === 'true';
+    return env.ENABLE_MICROSOFT_AUTH;
   }
   return false;
 }
 
 /**
- * Get allowed email domains from environment
+ * Get rate limit configuration
  */
-function getAllowedEmailDomains(): string[] {
-  const domains = process.env.ALLOWED_EMAIL_DOMAINS || '';
-  return domains
-    .split(',')
-    .map((d) => d.trim().toLowerCase())
-    .filter((d) => d.length > 0);
+export function getRateLimitConfig() {
+  return {
+    maxRequests: env.AUTH_RATE_LIMIT_MAX_REQUESTS,
+    windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+  };
 }
 
 /**
- * Check if email is in admin whitelist
- * You can customize this by setting ADMIN_EMAILS environment variable
- * Format: comma-separated list of emails or email patterns
+ * Get allowed email domains as an array
+ */
+function getAllowedEmailDomains(): string[] {
+  if (!env.ALLOWED_EMAIL_DOMAINS) {
+    return [];
+  }
+  return env.ALLOWED_EMAIL_DOMAINS.split(',').map((domain) => domain.trim()).filter(Boolean);
+}
+
+/**
+ * Check if email domain is allowed
+ */
+export function isEmailDomainAllowed(email: string): boolean {
+  const allowedDomains = getAllowedEmailDomains();
+  return validateEmailDomain(email, allowedDomains);
+}
+
+/**
+ * Check if email belongs to admin (based on domain or specific email)
+ * You can customize this logic based on your requirements
  */
 export function isAdminEmail(email: string): boolean {
   if (!email) return false;
-
-  const emailLower = email.toLowerCase();
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',').map((e) => e.trim().toLowerCase()) || [];
-
-  // Check exact email match
-  if (adminEmails.includes(emailLower)) {
-    return true;
+  
+  // Check if email domain is allowed (if domain whitelist is configured)
+  const allowedDomains = getAllowedEmailDomains();
+  if (allowedDomains.length > 0 && !isEmailDomainAllowed(email)) {
+    return false;
   }
 
-  // Check email pattern (e.g., *@admin.theta-edge.com)
-  return adminEmails.some((pattern) => {
-    if (pattern.includes('*')) {
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-      return regex.test(emailLower);
-    }
-    return false;
-  });
+  // Add specific admin email checks here if needed
+  // Example: return email.toLowerCase().includes('admin@') || email.toLowerCase().includes('manager@');
+  
+  return false; // Default: no specific admin emails
 }
 
 /**
- * Check if email is in supervisor whitelist
- * You can customize this by setting SUPERVISOR_EMAILS environment variable
+ * Check if email belongs to supervisor
  */
 export function isSupervisorEmail(email: string): boolean {
   if (!email) return false;
-
-  const emailLower = email.toLowerCase();
-  const supervisorEmails =
-    process.env.SUPERVISOR_EMAILS?.split(',').map((e) => e.trim().toLowerCase()) || [];
-
-  // Check exact email match
-  if (supervisorEmails.includes(emailLower)) {
-    return true;
+  
+  const allowedDomains = getAllowedEmailDomains();
+  if (allowedDomains.length > 0 && !isEmailDomainAllowed(email)) {
+    return false;
   }
 
-  // Check email pattern
-  return supervisorEmails.some((pattern) => {
-    if (pattern.includes('*')) {
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-      return regex.test(emailLower);
-    }
-    return false;
-  });
+  // Add specific supervisor email checks here if needed
+  // Example: return email.toLowerCase().includes('supervisor@');
+  
+  return false; // Default: no specific supervisor emails
 }
 
 /**
- * Check if email is in inspector whitelist
- * You can customize this by setting INSPECTOR_EMAILS environment variable
+ * Check if email belongs to inspector
  */
 export function isInspectorEmail(email: string): boolean {
   if (!email) return false;
-
-  const emailLower = email.toLowerCase();
-  const inspectorEmails =
-    process.env.INSPECTOR_EMAILS?.split(',').map((e) => e.trim().toLowerCase()) || [];
-
-  // Check exact email match
-  if (inspectorEmails.includes(emailLower)) {
-    return true;
+  
+  const allowedDomains = getAllowedEmailDomains();
+  if (allowedDomains.length > 0 && !isEmailDomainAllowed(email)) {
+    return false;
   }
 
-  // Check email pattern
-  return inspectorEmails.some((pattern) => {
-    if (pattern.includes('*')) {
-      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-      return regex.test(emailLower);
-    }
-    return false;
-  });
+  // Add specific inspector email checks here if needed
+  // Example: return email.toLowerCase().includes('inspector@');
+  
+  return false; // Default: no specific inspector emails
 }
 

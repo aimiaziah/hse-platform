@@ -1,4 +1,5 @@
 # DigitalOcean App Platform Specification
+# Production deployment configuration for PWA Inspection Platform
 # This file defines how your app should be built and deployed on DigitalOcean
 
 name: pwa-inspection-platform
@@ -7,27 +8,31 @@ region: sgp
 # Services - defines the components of your application
 services:
   - name: web
-    # Source code configuration
+    # Source code configuration - Production branch
     github:
       repo: aimiaziah/hse-platform
       branch: main
       deploy_on_push: true
 
-    # Build configuration
+    # Production build configuration
     build_command: npm ci && npm run build
 
-    # Run configuration
+    # Production run configuration
     run_command: npm start
 
     # Environment configuration
     environment_slug: node-js
     instance_count: 1
-    instance_size_slug: basic-xxs # $5/month - suitable for small apps
+    # Production instance sizing:
+    # basic-xxs: $5/month (512MB RAM, 1 vCPU) - suitable for small production apps
+    # basic-xs: $12/month (1GB RAM, 1 vCPU) - recommended for production with moderate traffic
+    # basic-s: $24/month (2GB RAM, 1 vCPU) - recommended for production with higher traffic
+    instance_size_slug: basic-xxs
 
     # HTTP configuration
     http_port: 8080
 
-    # Health check configuration
+    # Production health check configuration
     health_check:
       http_path: /api/health
       initial_delay_seconds: 20
@@ -91,6 +96,15 @@ services:
         value: 'true'
         scope: RUN_TIME
 
+      # Rate limiting configuration
+      - key: AUTH_RATE_LIMIT_MAX_REQUESTS
+        value: '5'
+        scope: RUN_TIME
+
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: '900000'
+        scope: RUN_TIME
+
       # DigitalOcean Spaces configuration (optional - for image storage)
       - key: DO_SPACES_NAME
         value: 'inspection-images'
@@ -133,10 +147,15 @@ services:
         value: 'HSE'
         scope: RUN_TIME
 
-      # Logging
+      # Production logging configuration
       - key: LOG_LEVEL
         value: 'info'
         scope: RUN_TIME
+
+      # Production optimizations
+      - key: NEXT_PUBLIC_APP_ENV
+        value: 'production'
+        scope: RUN_AND_BUILD_TIME
 
       # Application settings
       - key: NEXT_PUBLIC_APP_NAME
@@ -147,7 +166,13 @@ services:
         value: '1.0.0'
         scope: RUN_AND_BUILD_TIME
 
-# Alerts configuration
+      # Optional: App URL (for OAuth redirects - set after deployment)
+      # - key: NEXT_PUBLIC_APP_URL
+      #   value: 'https://your-app-name.ondigitalocean.app'
+      #   scope: RUN_AND_BUILD_TIME
+
+# Production alerts configuration
+# These alerts will notify you of important deployment events
 alerts:
   - rule: DEPLOYMENT_FAILED
   - rule: DEPLOYMENT_LIVE
