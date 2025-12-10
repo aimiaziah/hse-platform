@@ -40,6 +40,7 @@ curl http://localhost:8080/api/health
 ```
 
 **Expected Response:**
+
 ```json
 {
   "status": "healthy",
@@ -77,16 +78,19 @@ git push origin main
 ### 2.1 Create App via App Spec (Recommended)
 
 1. **Go to DigitalOcean App Platform**
+
    - Visit: https://cloud.digitalocean.com/apps
    - Click **"Create App"**
 
 2. **Select "Use App Spec"**
+
    - Choose **"Use App Spec"** option
    - You can either:
      - **Option A:** Upload `.do/app.yaml` file
      - **Option B:** Copy-paste contents of `.do/app.yaml`
 
 3. **Connect GitHub Repository**
+
    - DigitalOcean will ask to connect GitHub
    - Authorize DigitalOcean to access your repositories
    - Select repository: `aimiaziah/hse-platform`
@@ -106,49 +110,55 @@ git push origin main
 Add these **REQUIRED** variables (mark secrets as encrypted):
 
 #### Core Configuration
-| Variable | Value | Encrypted? | Notes |
-|----------|-------|------------|-------|
-| `NODE_ENV` | `production` | No | |
-| `NODE_VERSION` | `18` | No | |
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase URL | **Yes** | From Supabase dashboard |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your anon key | **Yes** | From Supabase dashboard |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your service key | **Yes** | From Supabase dashboard |
-| `JWT_SECRET` | Random 64-char string | **Yes** | Generate with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` |
+
+| Variable                        | Value                 | Encrypted? | Notes                                                                                     |
+| ------------------------------- | --------------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| `NODE_ENV`                      | `production`          | No         |                                                                                           |
+| `NODE_VERSION`                  | `18`                  | No         |                                                                                           |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Your Supabase URL     | **Yes**    | From Supabase dashboard                                                                   |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your anon key         | **Yes**    | From Supabase dashboard                                                                   |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Your service key      | **Yes**    | From Supabase dashboard                                                                   |
+| `JWT_SECRET`                    | Random 64-char string | **Yes**    | Generate with: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"` |
 
 #### Authentication
-| Variable | Value | Encrypted? |
-|----------|-------|------------|
-| `JWT_EXPIRES_IN` | `7d` | No |
-| `ALLOWED_EMAIL_DOMAINS` | `theta-edge.com` | No |
-| `ENABLE_PIN_AUTH` | `true` | No |
-| `ENABLE_MICROSOFT_AUTH` | `true` | No |
-| `PREFER_MICROSOFT_AUTH` | `true` | No |
+
+| Variable                | Value            | Encrypted? |
+| ----------------------- | ---------------- | ---------- |
+| `JWT_EXPIRES_IN`        | `7d`             | No         |
+| `ALLOWED_EMAIL_DOMAINS` | `theta-edge.com` | No         |
+| `ENABLE_PIN_AUTH`       | `true`           | No         |
+| `ENABLE_MICROSOFT_AUTH` | `true`           | No         |
+| `PREFER_MICROSOFT_AUTH` | `true`           | No         |
 
 #### Optional: DigitalOcean Spaces (for image storage)
-| Variable | Value | Encrypted? |
-|----------|-------|------------|
-| `DO_SPACES_NAME` | `inspection-images` | No |
-| `DO_SPACES_REGION` | `sgp1` | No |
-| `DO_SPACES_ENDPOINT` | `https://sgp1.digitaloceanspaces.com` | No |
-| `DO_SPACES_KEY` | Your Spaces key | **Yes** |
-| `DO_SPACES_SECRET` | Your Spaces secret | **Yes** |
+
+| Variable             | Value                                 | Encrypted? |
+| -------------------- | ------------------------------------- | ---------- |
+| `DO_SPACES_NAME`     | `inspection-images`                   | No         |
+| `DO_SPACES_REGION`   | `sgp1`                                | No         |
+| `DO_SPACES_ENDPOINT` | `https://sgp1.digitaloceanspaces.com` | No         |
+| `DO_SPACES_KEY`      | Your Spaces key                       | **Yes**    |
+| `DO_SPACES_SECRET`   | Your Spaces secret                    | **Yes**    |
 
 #### Application Info
-| Variable | Value | Encrypted? |
-|----------|-------|------------|
-| `NEXT_PUBLIC_APP_NAME` | `PWA Inspection Platform` | No |
-| `NEXT_PUBLIC_APP_VERSION` | `1.0.0` | No |
-| `NEXT_TELEMETRY_DISABLED` | `1` | No |
-| `LOG_LEVEL` | `info` | No |
+
+| Variable                  | Value                     | Encrypted? |
+| ------------------------- | ------------------------- | ---------- |
+| `NEXT_PUBLIC_APP_NAME`    | `PWA Inspection Platform` | No         |
+| `NEXT_PUBLIC_APP_VERSION` | `1.0.0`                   | No         |
+| `NEXT_TELEMETRY_DISABLED` | `1`                       | No         |
+| `LOG_LEVEL`               | `info`                    | No         |
 
 ### 2.3 Deploy
 
 1. **Review Settings**
+
    - Double-check all environment variables
    - Verify instance size: `basic-xxs` ($5/month)
    - Verify region: `sgp` (Singapore)
 
 2. **Click "Create Resources"**
+
    - First deployment takes **8-12 minutes**
    - You'll see build logs in real-time
 
@@ -164,6 +174,7 @@ Add these **REQUIRED** variables (mark secrets as encrypted):
 ### 3.1 Check Deployment Status
 
 1. **In DigitalOcean Dashboard:**
+
    - Go to your app
    - Check **"Deployments"** tab
    - Status should be **"Live"** ✅
@@ -179,6 +190,7 @@ curl https://your-app-name.ondigitalocean.app/api/health
 ```
 
 **Expected:**
+
 ```json
 {
   "status": "healthy",
@@ -194,11 +206,13 @@ curl https://your-app-name.ondigitalocean.app/api/health
 Test these features in your deployed app:
 
 #### Authentication
+
 - [ ] **PIN Login:** Visit app → Enter PIN `0000` (admin) or `1234` (inspector)
 - [ ] **Microsoft SSO:** Click Microsoft login (if configured)
 - [ ] **Session Persistence:** Refresh page, should stay logged in
 
 #### Core Features
+
 - [ ] **Create Inspection:** Inspector role → Create fire extinguisher inspection
 - [ ] **View Inspections:** See list of inspections
 - [ ] **Image Upload:** Upload image during inspection
@@ -206,11 +220,13 @@ Test these features in your deployed app:
 - [ ] **Export PDF:** Export inspection to PDF
 
 #### Role-Based Access
+
 - [ ] **Inspector:** Can create/view own inspections
 - [ ] **Supervisor:** Can review inspections
 - [ ] **Admin:** Can manage users
 
 #### PWA Features
+
 - [ ] **Install PWA:** Browser should show "Install" prompt
 - [ ] **Offline Mode:** Disable network → App should work offline
 - [ ] **Service Worker:** Check browser DevTools → Application → Service Workers
@@ -245,11 +261,13 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 ### Mobile Testing Tips
 
 1. **Access on Mobile:**
+
    - Open `https://your-app-name.ondigitalocean.app` on your phone
    - Add to home screen (PWA install)
    - Test all features on mobile
 
 2. **Compare with Piggy:**
+
    - Test same features on both Piggy (local) and production
    - Note any differences
    - Fix production issues
@@ -269,6 +287,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 **Symptoms:** Build logs show errors
 
 **Solutions:**
+
 1. Check build logs for specific error
 2. Common issues:
    - **TypeScript errors:** Fix in code, commit, push
@@ -282,6 +301,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 **Symptoms:** Deployment shows "Unhealthy"
 
 **Solutions:**
+
 1. Check health endpoint manually: `curl https://your-app/api/health`
 2. Check Supabase connection:
    - Verify `NEXT_PUBLIC_SUPABASE_URL` is correct
@@ -294,6 +314,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 **Symptoms:** App deploys but crashes immediately
 
 **Solutions:**
+
 1. Check runtime logs in DigitalOcean
 2. Common causes:
    - Missing environment variables
@@ -306,6 +327,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 **Symptoms:** Health check shows `"database": "disconnected"`
 
 **Solutions:**
+
 1. Verify Supabase credentials in environment variables
 2. Check Supabase project status: https://status.supabase.com
 3. Verify IP allowlist in Supabase (if configured)
@@ -316,6 +338,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 **Symptoms:** Images show broken/placeholder
 
 **Solutions:**
+
 1. If using DigitalOcean Spaces:
    - Verify `DO_SPACES_*` environment variables
    - Check CORS configuration on Spaces
@@ -331,6 +354,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 ### Workflow for Updates
 
 1. **Make Changes Locally**
+
    ```bash
    # Make your changes
    # Test locally
@@ -338,11 +362,13 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
    ```
 
 2. **Test Build**
+
    ```bash
    npm run build
    ```
 
 3. **Commit and Push**
+
    ```bash
    git add .
    git commit -m "fix: Description of fix"
@@ -350,6 +376,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
    ```
 
 4. **Auto-Deploy**
+
    - DigitalOcean automatically detects push
    - Starts new deployment
    - Takes 3-5 minutes
@@ -365,6 +392,7 @@ Deploy → Test → Identify Issues → Fix Locally → Push → Auto-Deploy →
 If new deployment has issues:
 
 1. **Quick Rollback:**
+
    - Go to Deployments tab
    - Find last working deployment
    - Click **"Rollback"**
@@ -382,6 +410,7 @@ If new deployment has issues:
 ### Set Up Monitoring
 
 1. **DigitalOcean Alerts:**
+
    - Go to Settings → Alerts
    - Enable:
      - Deployment failed
@@ -397,11 +426,13 @@ If new deployment has issues:
 ### Regular Maintenance
 
 **Weekly (5 minutes):**
+
 - Check deployment status
 - Review error logs
 - Check Supabase health
 
 **Monthly (30 minutes):**
+
 - Run `npm audit` locally
 - Update dependencies if needed
 - Review user feedback
@@ -413,14 +444,14 @@ If new deployment has issues:
 
 ### Current Setup
 
-| Service | Plan | Monthly Cost |
-|---------|------|--------------|
-| DigitalOcean App Platform | Basic (512MB) | $5 |
-| DigitalOcean Spaces | 250GB + 1TB transfer | $0* |
-| Supabase | Free tier | $0 |
-| **Total** | | **$5/month** |
+| Service                   | Plan                 | Monthly Cost |
+| ------------------------- | -------------------- | ------------ |
+| DigitalOcean App Platform | Basic (512MB)        | $5           |
+| DigitalOcean Spaces       | 250GB + 1TB transfer | $0\*         |
+| Supabase                  | Free tier            | $0           |
+| **Total**                 |                      | **$5/month** |
 
-*Included in GitHub Student Pack $200 credit
+\*Included in GitHub Student Pack $200 credit
 
 ### With GitHub Student Pack
 
@@ -458,12 +489,14 @@ curl https://your-app/api/health
 ### Environment Variables Quick Reference
 
 **Required:**
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `JWT_SECRET`
 
 **Optional but Recommended:**
+
 - `DO_SPACES_*` (for image storage)
 - `NEXT_PUBLIC_SHAREPOINT_*` (for SharePoint integration)
 
@@ -491,4 +524,3 @@ curl https://your-app/api/health
 **Last Updated:** 2024-12-09  
 **Status:** ✅ Ready for Deployment  
 **Estimated Deployment Time:** 10-15 minutes (first time)
-

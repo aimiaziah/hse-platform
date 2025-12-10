@@ -22,7 +22,7 @@ services:
     # Environment configuration
     environment_slug: node-js
     instance_count: 1
-    instance_size_slug: basic-xxs  # $5/month - suitable for small apps
+    instance_size_slug: basic-xxs # $5/month - suitable for small apps
 
     # HTTP configuration
     http_port: 8080
@@ -44,12 +44,12 @@ services:
         scope: RUN_AND_BUILD_TIME
 
       - key: NODE_VERSION
-        value: "18"
+        value: '18'
         scope: BUILD_TIME
 
       # Next.js configuration
       - key: NEXT_TELEMETRY_DISABLED
-        value: "1"
+        value: '1'
         scope: RUN_AND_BUILD_TIME
 
       # Supabase configuration (set these in App Platform UI)
@@ -71,37 +71,37 @@ services:
         type: SECRET
 
       - key: JWT_EXPIRES_IN
-        value: "7d"
+        value: '7d'
         scope: RUN_TIME
 
       - key: ALLOWED_EMAIL_DOMAINS
-        value: "theta-edge.com"
+        value: 'theta-edge.com'
         scope: RUN_TIME
 
       # Feature flags
       - key: ENABLE_PIN_AUTH
-        value: "true"
+        value: 'true'
         scope: RUN_TIME
 
       - key: ENABLE_MICROSOFT_AUTH
-        value: "true"
+        value: 'true'
         scope: RUN_TIME
 
       - key: PREFER_MICROSOFT_AUTH
-        value: "true"
+        value: 'true'
         scope: RUN_TIME
 
       # DigitalOcean Spaces configuration (optional - for image storage)
       - key: DO_SPACES_NAME
-        value: "inspection-images"
+        value: 'inspection-images'
         scope: RUN_TIME
 
       - key: DO_SPACES_REGION
-        value: "sgp1"
+        value: 'sgp1'
         scope: RUN_TIME
 
       - key: DO_SPACES_ENDPOINT
-        value: "https://sgp1.digitaloceanspaces.com"
+        value: 'https://sgp1.digitaloceanspaces.com'
         scope: RUN_TIME
 
       - key: DO_SPACES_KEY
@@ -118,33 +118,33 @@ services:
         type: SECRET
 
       - key: NEXT_PUBLIC_SHAREPOINT_TENANT_ID
-        value: "common"
+        value: 'common'
         scope: RUN_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_SITE_URL
-        value: "https://thetaedgebhd.sharepoint.com/sites/ThetaEdge"
+        value: 'https://thetaedgebhd.sharepoint.com/sites/ThetaEdge'
         scope: RUN_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME
-        value: "Shared Documents"
+        value: 'Shared Documents'
         scope: RUN_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER
-        value: "HSE"
+        value: 'HSE'
         scope: RUN_TIME
 
       # Logging
       - key: LOG_LEVEL
-        value: "info"
+        value: 'info'
         scope: RUN_TIME
 
       # Application settings
       - key: NEXT_PUBLIC_APP_NAME
-        value: "PWA Inspection Platform"
+        value: 'PWA Inspection Platform'
         scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_APP_VERSION
-        value: "1.0.0"
+        value: '1.0.0'
         scope: RUN_AND_BUILD_TIME
 
 # Alerts configuration
