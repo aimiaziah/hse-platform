@@ -34,7 +34,7 @@ git push origin main
 **Option B: Via UI**
 1. Go to https://cloud.digitalocean.com/apps
 2. Click "Create App"
-3. Connect GitHub repo: `aimiaziah/pwa-inspection`
+3. Connect GitHub repo: `aimiaziah/hse-platform`
 4. Select branch: `main`
 5. Configure build settings (see DIGITALOCEAN_DEPLOYMENT.md)
 
@@ -153,7 +153,7 @@ With GitHub Student Pack: **40 months free** ($200 credit ÷ $5/month)
 
 - Full guide: `DIGITALOCEAN_DEPLOYMENT.md`
 - DigitalOcean docs: https://docs.digitalocean.com/products/app-platform/
-- GitHub issues: https://github.com/aimiaziah/pwa-inspection/issues
+- GitHub issues: https://github.com/aimiaziah/hse-platform/issues
 - Supabase docs: https://supabase.com/docs
 
 ## Notes

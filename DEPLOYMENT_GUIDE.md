@@ -1,7 +1,7 @@
 # 🚀 DigitalOcean Deployment Guide - Step by Step
 
 **For:** Pre-staging deployment on DigitalOcean App Platform  
-**Repository:** https://github.com/aimiaziah/pwa-inspection  
+**Repository:** https://github.com/aimiaziah/hse-platform  
 **Status:** Ready for deployment
 
 ---
@@ -89,7 +89,7 @@ git push origin main
 3. **Connect GitHub Repository**
    - DigitalOcean will ask to connect GitHub
    - Authorize DigitalOcean to access your repositories
-   - Select repository: `aimiaziah/pwa-inspection`
+   - Select repository: `aimiaziah/hse-platform`
    - Select branch: `main`
    - Enable **"Autodeploy on push"** ✅
 
@@ -434,7 +434,7 @@ If new deployment has issues:
 ### Important URLs
 
 - **DigitalOcean Dashboard:** https://cloud.digitalocean.com/apps
-- **GitHub Repository:** https://github.com/aimiaziah/pwa-inspection
+- **GitHub Repository:** https://github.com/aimiaziah/hse-platform
 - **Supabase Dashboard:** https://app.supabase.com
 - **App URL:** `https://your-app-name.ondigitalocean.app`
 
@@ -484,7 +484,7 @@ curl https://your-app/api/health
 - **Deployment Issues:** Check `DIGITALOCEAN_DEPLOYMENT.md` for detailed troubleshooting
 - **Build Issues:** Check build logs in DigitalOcean dashboard
 - **Runtime Issues:** Check runtime logs in DigitalOcean dashboard
-- **GitHub Issues:** https://github.com/aimiaziah/pwa-inspection/issues
+- **GitHub Issues:** https://github.com/aimiaziah/hse-platform/issues
 
 ---
 

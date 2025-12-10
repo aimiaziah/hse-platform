@@ -9,7 +9,7 @@ services:
   - name: web
     # Source code configuration
     github:
-      repo: aimiaziah/pwa-inspection
+      repo: aimiaziah/hse-platform
       branch: main
       deploy_on_push: true
 

@@ -41,7 +41,7 @@ Complete guide for deploying the PWA Inspection Platform to DigitalOcean App Pla
 1. **Create a new App**
    - Go to [DigitalOcean App Platform](https://cloud.digitalocean.com/apps)
    - Click "Create App"
-   - Connect your GitHub repository: `aimiaziah/pwa-inspection`
+   - Connect your GitHub repository: `aimiaziah/hse-platform`
    - Select branch: `main`
    - Enable "Autodeploy" for automatic deployments on push
 
@@ -405,7 +405,7 @@ After successful deployment:
 ## Support
 
 - **DigitalOcean Docs**: https://docs.digitalocean.com/products/app-platform/
-- **GitHub Issues**: https://github.com/aimiaziah/pwa-inspection/issues
+- **GitHub Issues**: https://github.com/aimiaziah/hse-platform/issues
 - **Supabase Docs**: https://supabase.com/docs
 
 ---

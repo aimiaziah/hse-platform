@@ -5,12 +5,12 @@
   "author": "Aimi Aziah <your.email@example.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aimiaziah/pwa-inspection.git"
+    "url": "https://github.com/aimiaziah/hse-platform.git"
   },
   "bugs": {
-    "url": "https://github.com/aimiaziah/pwa-inspection/issues"
+    "url": "https://github.com/aimiaziah/hse-platform/issues"
   },
-  "homepage": "https://github.com/aimiaziah/pwa-inspection#readme",
+  "homepage": "https://github.com/aimiaziah/hse-platform#readme",
   "keywords": [
     "Next.js",
     "React",
