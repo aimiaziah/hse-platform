@@ -94,8 +94,8 @@ const UsersManagement: React.FC = () => {
     }
   };
 
-  const isMicrosoftUser = (user: User) => {
-    return !user.pin && user.email;
+  const isMicrosoftUser = (user: User): boolean => {
+    return !user.pin && !!user.email;
   };
 
   if (loading) {
