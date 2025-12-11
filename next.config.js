@@ -83,7 +83,7 @@ module.exports = withPWA({
       },
     ];
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Exclude Node.js built-in modules from client-side bundle
     if (!isServer) {
       config.resolve.fallback = {
@@ -97,11 +97,20 @@ module.exports = withPWA({
       };
     }
 
-    // Ensure CSS is handled properly in production builds
+    // Optimize CSS and module handling for production builds
     config.optimization = {
       ...config.optimization,
       moduleIds: 'deterministic',
+      // Reduce memory usage during build
+      minimize: !dev,
     };
+
+    // Improve CSS module handling to prevent loader errors
+    if (!dev) {
+      config.infrastructureLogging = {
+        level: 'error',
+      };
+    }
 
     return config;
   },

@@ -9,7 +9,9 @@ services:
       deploy_on_push: true
     http_port: 8080
     instance_count: 1
-    instance_size_slug: basic-xxs
+    # Using basic-s (2GB RAM) for reliable Next.js builds
+    # After successful build, you can scale down to basic-xxs if needed
+    instance_size_slug: basic-s
     routes:
       - path: /
     envs:
