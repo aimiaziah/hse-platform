@@ -2705,10 +2705,10 @@ const InspectionReview: React.FC = () => {
                   excelData={excelData}
                   title={`${getInspectionTypeName(inspectionType)} Report`}
                   filename={`${inspectionType}-inspection-${inspection?.id || 'report'}.xlsx`}
-                  showDownloadButton={true}
-                  showZoomControls={true}
+                  showDownloadButton
+                  showZoomControls
                   height="calc(100vh - 180px)"
-                  showHeader={true}
+                  showHeader
                 />
               </div>
             </div>

@@ -264,7 +264,8 @@ const InspectorProfile: React.FC = () => {
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800 font-medium">✓ Signature Configured</p>
                 <p className="text-xs text-blue-600 mt-1">
-                  For security reasons, signature PIN can only be set once. Contact an administrator to reset.
+                  For security reasons, signature PIN can only be set once. Contact an administrator
+                  to reset.
                 </p>
               </div>
             )}
@@ -293,38 +294,38 @@ const InspectorProfile: React.FC = () => {
                   </div>
                 </div>
 
-              {/* Step 2: PIN Fields (shown after drawing) */}
-              {showPinFields && (
-                <div className="space-y-4 border-t pt-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Signature PIN (4+ characters)
-                    </label>
-                    <input
-                      type="password"
-                      value={signaturePin}
-                      onChange={(e) => setSignaturePin(e.target.value)}
-                      placeholder="Enter PIN"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      autoComplete="new-password"
-                    />
-                  </div>
+                {/* Step 2: PIN Fields (shown after drawing) */}
+                {showPinFields && (
+                  <div className="space-y-4 border-t pt-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Signature PIN (4+ characters)
+                      </label>
+                      <input
+                        type="password"
+                        value={signaturePin}
+                        onChange={(e) => setSignaturePin(e.target.value)}
+                        placeholder="Enter PIN"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autoComplete="new-password"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm PIN
-                    </label>
-                    <input
-                      type="password"
-                      value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value)}
-                      placeholder="Re-enter PIN"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      autoComplete="new-password"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Confirm PIN
+                      </label>
+                      <input
+                        type="password"
+                        value={confirmPin}
+                        onChange={(e) => setConfirmPin(e.target.value)}
+                        placeholder="Re-enter PIN"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autoComplete="new-password"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex gap-3">

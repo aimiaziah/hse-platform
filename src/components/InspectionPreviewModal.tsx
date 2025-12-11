@@ -275,7 +275,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
             // Response is not JSON, use default message
           }
           console.error('Excel preview generation failed:', errorMessage);
-          alert(errorMessage + ' Please try again.');
+          alert(`${errorMessage} Please try again.`);
         }
       } else {
         console.error('No API endpoint configured for inspection type:', inspection.type);
@@ -1773,14 +1773,30 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                   {loadingExcel ? (
                     <>
                       <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
                       </svg>
                       <span>Loading Preview...</span>
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -2023,10 +2039,10 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                 excelData={excelPreviewData}
                 title={`${getInspectionTypeName(inspection.type)} Report`}
                 filename={`${inspection.type}-inspection-${inspection.id}.xlsx`}
-                showDownloadButton={true}
-                showZoomControls={true}
+                showDownloadButton
+                showZoomControls
                 height="calc(100vh - 180px)"
-                showHeader={true}
+                showHeader
               />
             </div>
           </div>

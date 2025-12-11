@@ -561,7 +561,8 @@ const FirstAidInspection: React.FC = () => {
                               )}
                               {kit.capturedImages && kit.capturedImages.length > 0 && (
                                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-md font-medium">
-                                  {kit.capturedImages.length} photo{kit.capturedImages.length !== 1 ? 's' : ''}
+                                  {kit.capturedImages.length} photo
+                                  {kit.capturedImages.length !== 1 ? 's' : ''}
                                 </span>
                               )}
                               {expiryStatus.expired > 0 && (

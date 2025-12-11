@@ -58,7 +58,8 @@ async function updateSignature(req: NextApiRequest, res: NextApiResponse, userId
     if (user.signature_pin && user.signature_created_at) {
       return res.status(403).json({
         error: 'Signature PIN is already set and cannot be changed',
-        message: 'For security reasons, signature PIN can only be set once. Please contact an administrator to reset your signature PIN.',
+        message:
+          'For security reasons, signature PIN can only be set once. Please contact an administrator to reset your signature PIN.',
         isLocked: true,
       });
     }
