@@ -59,6 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       preparedDate: observedDate || '',
       reviewedBy: reviewedBy || '',
       reviewedDate: reviewedAt || '',
+      reviewerSignature: reviewerSignature || '',
     };
 
     // Generate Excel using template

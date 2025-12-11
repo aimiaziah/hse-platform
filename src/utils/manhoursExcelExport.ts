@@ -19,6 +19,7 @@ interface ManhoursReportData {
   preparedDate: string;
   reviewedBy: string;
   reviewedDate: string;
+  reviewerSignature?: string;
   reportMonth: string;
   reportYear: string;
 
@@ -114,6 +115,28 @@ export async function generateManhoursExcel(data: ManhoursReportData): Promise<E
     }
     if (data.reviewedDate) {
       ws.getCell('N7').value = formatDate(data.reviewedDate);
+    }
+
+    // Add reviewer signature if available
+    if (data.reviewerSignature) {
+      try {
+        // Convert base64 signature to image
+        const base64Data = data.reviewerSignature.replace(/^data:image\/\w+;base64,/, '');
+        const imageId = wb.addImage({
+          base64: base64Data,
+          extension: 'png',
+        });
+
+        ws.addImage(imageId, {
+          tl: { col: 14, row: 5 }, // Column O, Row 6 (0-indexed)
+          ext: { width: 150, height: 50 },
+        });
+
+        ws.getCell('O7').value = 'Supervisor Signature';
+        ws.getCell('O7').font = { size: 9, italic: true };
+      } catch (error) {
+        console.error('Error adding signature to Excel:', error);
+      }
     }
 
     // Row 10: Month (Column K)

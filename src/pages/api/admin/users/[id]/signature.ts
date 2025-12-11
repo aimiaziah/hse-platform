@@ -46,7 +46,7 @@ async function updateSignature(req: NextApiRequest, res: NextApiResponse, userId
     // Check if user exists
     const { data: user, error: userError } = (await supabase
       .from('users')
-      .select('id, role, signature_pin')
+      .select('id, role, signature_pin, signature_created_at')
       .eq('id', userId)
       .single()) as { data: UserRow | null; error: any };
 
@@ -54,17 +54,22 @@ async function updateSignature(req: NextApiRequest, res: NextApiResponse, userId
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Prepare update data
+    // Check if signature PIN is already set (one-time setup only)
+    if (user.signature_pin && user.signature_created_at) {
+      return res.status(403).json({
+        error: 'Signature PIN is already set and cannot be changed',
+        message: 'For security reasons, signature PIN can only be set once. Please contact an administrator to reset your signature PIN.',
+        isLocked: true,
+      });
+    }
+
+    // Prepare update data for first-time setup
     const updateData: any = {
       signature,
       signature_pin: signaturePin,
+      signature_created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-
-    // Only set signature_created_at on first creation
-    if (!user.signature_pin) {
-      updateData.signature_created_at = new Date().toISOString();
-    }
 
     // Update signature and PIN
     const { error: updateError } = await (supabase.from('users') as any)

@@ -1,0 +1,20 @@
+name: Deploy to Pre-Staging (DigitalOcean)
+
+on:
+  push:
+    branches:
+      - main  # or create a pre-staging branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to DigitalOcean App Platform
+        uses: digitalocean/app_action@v1.1.5
+        with:
+          app_name: inspection-app-pre-staging
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}

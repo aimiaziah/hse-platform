@@ -45,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       preparedDate: preparedDate || new Date().toISOString(),
       reviewedBy: reviewedBy || '',
       reviewedDate: reviewedAt || '',
+      reviewerSignature: reviewerSignature || '',
       reportMonth: reportMonth || '',
       reportYear: reportYear || new Date().getFullYear().toString(),
       numEmployees: numEmployees || '0',

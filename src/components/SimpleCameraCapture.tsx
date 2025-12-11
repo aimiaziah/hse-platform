@@ -262,16 +262,16 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
   return (
     <div className="fixed inset-0 bg-black z-[9999] flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white p-4 flex items-center justify-between">
+      <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold">Take Photos</h3>
+          <h3 className="text-lg font-bold">Capture Photos</h3>
           <p className="text-sm opacity-90">
-            {capturedImages.length} / {maxPhotos} photos
+            {capturedImages.length} / {maxPhotos} photos taken
           </p>
         </div>
         <button
           onClick={handleCancel}
-          className="p-2 hover:bg-white/20 rounded-full transition-colors"
+          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
         >
           <X className="w-6 h-6" />
         </button>
@@ -311,21 +311,21 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
 
         {showPreview && currentPreview && (
           <div className="absolute inset-0 flex flex-col bg-black">
-            <div className="flex-1 overflow-hidden flex items-center justify-center">
-              <img src={currentPreview} alt="Preview" className="max-w-full max-h-full object-contain" />
+            <div className="flex-1 overflow-hidden flex items-center justify-center p-4">
+              <img src={currentPreview} alt="Preview" className="max-w-full max-h-full object-contain rounded-lg" />
             </div>
-            <div className="p-6 bg-gradient-to-t from-black via-black to-transparent flex gap-4">
+            <div className="p-6 bg-gradient-to-t from-black via-black/90 to-transparent flex gap-4">
               <button
                 onClick={retakePhoto}
-                className="flex-1 bg-gray-600 text-white py-4 px-4 rounded-xl font-bold active:bg-gray-700"
+                className="flex-1 bg-gray-700 text-white py-3 px-4 rounded-lg font-bold active:bg-gray-800"
               >
                 Retake
               </button>
               <button
                 onClick={confirmCapture}
-                className="flex-1 bg-green-600 text-white py-4 px-4 rounded-xl font-bold active:bg-green-700"
+                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-bold active:bg-green-700"
               >
-                Keep Photo
+                Use This Photo
               </button>
             </div>
           </div>
@@ -333,68 +333,68 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
 
         {isCameraActive && !showPreview && (
           <>
-            {/* Crosshair */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-white/60"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-white/60"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white/40 rounded-full animate-pulse"></div>
-              </div>
-            </div>
-
-            {/* Flash toggle */}
+            {/* Flash toggle - simplified */}
             <div className="absolute top-4 right-4">
               <button
                 onClick={toggleTorch}
-                className={`p-4 rounded-full transition-all ${
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   torchEnabled ? 'bg-yellow-500 text-white' : 'bg-black/60 text-white'
                 }`}
               >
-                {torchEnabled ? <Zap className="w-6 h-6" /> : <ZapOff className="w-6 h-6" />}
+                {torchEnabled ? 'Flash ON' : 'Flash OFF'}
               </button>
             </div>
 
-            {/* Captured images thumbnail strip */}
+            {/* Captured images preview */}
             {capturedImages.length > 0 && (
-              <div className="absolute top-4 left-4 flex gap-2 max-w-[calc(100%-8rem)]">
-                {capturedImages.map((img, idx) => (
-                  <div key={idx} className="relative group">
-                    <img
-                      src={img.dataUrl}
-                      alt={`Captured ${idx + 1}`}
-                      className="w-16 h-16 object-cover rounded-lg border-2 border-white"
-                    />
-                    <button
-                      onClick={() => deleteImage(idx)}
-                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+              <div className="absolute top-4 left-4 bg-black/60 rounded-lg p-3">
+                <p className="text-white text-sm font-medium mb-2">Captured:</p>
+                <div className="flex gap-2">
+                  {capturedImages.map((img, idx) => (
+                    <div key={idx} className="relative">
+                      <img
+                        src={img.dataUrl}
+                        alt={`Photo ${idx + 1}`}
+                        className="w-16 h-16 object-cover rounded-md border-2 border-white"
+                      />
+                      <button
+                        onClick={() => deleteImage(idx)}
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Capture button */}
-            <div className="absolute bottom-0 left-0 right-0 pb-8 pt-6 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-center gap-4 px-4">
-              {canTakeMore && (
-                <button
-                  onClick={capturePhoto}
-                  className="bg-white text-green-600 rounded-full active:scale-95 shadow-2xl flex items-center justify-center border-8 border-green-600 transition-transform"
-                  style={{ width: '90px', height: '90px' }}
-                >
-                  <Camera className="w-10 h-10" />
-                </button>
-              )}
-              {capturedImages.length > 0 && (
-                <button
-                  onClick={handleComplete}
-                  className="bg-green-600 text-white px-8 py-4 rounded-full font-bold shadow-lg flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  Done ({capturedImages.length})
-                </button>
-              )}
+            {/* Bottom Controls */}
+            <div className="absolute bottom-0 left-0 right-0 pb-8 pt-6 bg-gradient-to-t from-black via-black/90 to-transparent">
+              <div className="flex flex-col items-center gap-4 px-4">
+                {/* Capture Button */}
+                {canTakeMore && (
+                  <button
+                    onClick={capturePhoto}
+                    className="bg-white rounded-full active:scale-95 shadow-2xl flex items-center justify-center transition-transform"
+                    style={{ width: '80px', height: '80px' }}
+                  >
+                    <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-white" />
+                    </div>
+                  </button>
+                )}
+
+                {/* Submit Button */}
+                {capturedImages.length > 0 && (
+                  <button
+                    onClick={handleComplete}
+                    className="bg-green-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg w-full max-w-xs"
+                  >
+                    Submit {capturedImages.length} Photo{capturedImages.length !== 1 ? 's' : ''}
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}

@@ -126,6 +126,15 @@ const InspectorProfile: React.FC = () => {
   };
 
   const handleSave = async () => {
+    // Check if signature is already locked
+    if (user?.signatureCreatedAt) {
+      setMessage({
+        type: 'error',
+        text: 'Your signature PIN is already set and locked. Contact an administrator to reset it.',
+      });
+      return;
+    }
+
     if (!signaturePin) {
       setMessage({ type: 'error', text: 'Please enter a PIN' });
       return;
@@ -177,7 +186,10 @@ const InspectorProfile: React.FC = () => {
         setShowPinFields(false);
         setTimeout(() => setMessage(null), 3000);
       } else {
-        setMessage({ type: 'error', text: 'Failed to save signature. Please try again.' });
+        setMessage({
+          type: 'error',
+          text: 'Failed to save signature. Your PIN may already be set. Contact administrator.',
+        });
       }
     } catch (error) {
       console.error('Error saving signature:', error);
@@ -216,12 +228,6 @@ const InspectorProfile: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
-                <div className="px-4 py-2 bg-gray-50 rounded-lg border text-gray-600 text-sm font-mono">
-                  {user?.id?.slice(0, 8) || 'N/A'}...
-                </div>
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <div className="px-4 py-2 bg-gray-50 rounded-lg border">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -249,39 +255,43 @@ const InspectorProfile: React.FC = () => {
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Signature Setup</h2>
             <p className="text-sm text-gray-600 mb-4">
-              {user?.signature
-                ? 'Your signature is set up. You can update it below.'
+              {user?.signatureCreatedAt
+                ? 'Your signature is already set up and locked for security.'
                 : 'Draw your signature and set a PIN for signing inspection forms.'}
             </p>
 
-            {user?.signature && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800 font-medium">✓ Signature Configured</p>
+            {user?.signatureCreatedAt && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium">✓ Signature Configured</p>
+                <p className="text-xs text-blue-600 mt-1">
+                  For security reasons, signature PIN can only be set once. Contact an administrator to reset.
+                </p>
               </div>
             )}
 
             {/* Step 1: Draw Signature */}
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Draw Your Signature
-                </label>
-                <div className="relative border-2 border-gray-300 rounded-lg bg-white">
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full h-48 touch-none cursor-crosshair"
-                    style={{ touchAction: 'none' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={clearCanvas}
-                    disabled={!hasSignature}
-                    className="absolute top-2 right-2 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Clear
-                  </button>
+            {!user?.signatureCreatedAt && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Draw Your Signature
+                  </label>
+                  <div className="relative border-2 border-gray-300 rounded-lg bg-white">
+                    <canvas
+                      ref={canvasRef}
+                      className="w-full h-48 touch-none cursor-crosshair"
+                      style={{ touchAction: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={clearCanvas}
+                      disabled={!hasSignature}
+                      className="absolute top-2 right-2 px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
-              </div>
 
               {/* Step 2: PIN Fields (shown after drawing) */}
               {showPinFields && (
@@ -316,36 +326,37 @@ const InspectorProfile: React.FC = () => {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                {!showPinFields ? (
-                  <button
-                    onClick={handleNext}
-                    disabled={!hasSignature}
-                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <>
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  {!showPinFields ? (
                     <button
-                      onClick={() => setShowPinFields(false)}
-                      disabled={saving}
-                      className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                      onClick={handleNext}
+                      disabled={!hasSignature}
+                      className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Back
+                      Next
                     </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={saving || !signaturePin || !confirmPin}
-                      className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? 'Saving...' : 'Save'}
-                    </button>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setShowPinFields(false)}
+                        disabled={saving}
+                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={saving || !signaturePin || !confirmPin}
+                        className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {saving ? 'Saving...' : 'Save'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </InspectorLayout>

@@ -13,6 +13,7 @@ export interface User {
   createdAt: string;
   lastLogin?: string;
   signature?: string | null;
+  signatureCreatedAt?: string | null;
   permissions: {
     // Admin permissions
     canManageUsers: boolean;
@@ -206,6 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
           signature: data.user.signature || null,
+          signatureCreatedAt: data.user.signature_created_at || null,
           permissions: data.user.permissions,
         };
 

@@ -37,6 +37,7 @@ export interface HSEObservationFormData {
   preparedDate?: string;
   reviewedBy?: string;
   reviewedDate?: string;
+  reviewerSignature?: string;
 }
 
 /**
@@ -174,8 +175,31 @@ export async function generateHSEObservationExcel(
 
     if (data.reviewedBy) {
       ws.getCell(`B${currentRow}`).value = 'Reviewed By:';
+      ws.getCell(`B${currentRow}`).font = { bold: true, size: 11 };
       ws.getCell(`C${currentRow}`).value = data.reviewedBy;
       ws.getCell(`D${currentRow}`).value = data.reviewedDate ? formatDate(data.reviewedDate) : '';
+
+      // Add signature if available
+      if (data.reviewerSignature) {
+        try {
+          // Convert base64 signature to image
+          const base64Data = data.reviewerSignature.replace(/^data:image\/\w+;base64,/, '');
+          const imageId = wb.addImage({
+            base64: base64Data,
+            extension: 'png',
+          });
+
+          wb.worksheets[0].addImage(imageId, {
+            tl: { col: 6, row: currentRow - 1 }, // Column G
+            ext: { width: 150, height: 50 },
+          });
+
+          ws.getCell(`G${currentRow}`).value = 'Supervisor Signature';
+          ws.getCell(`G${currentRow}`).font = { size: 9, italic: true };
+        } catch (error) {
+          console.error('Error adding signature to Excel:', error);
+        }
+      }
     }
 
     // ==========================================

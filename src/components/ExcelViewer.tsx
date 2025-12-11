@@ -63,6 +63,12 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
     try {
       setLoading(true);
       setError('');
+
+      // Validate input data
+      if (!excelData) {
+        throw new Error('No Excel data provided');
+      }
+
       const workbook = new ExcelJS.Workbook();
       // Convert Blob to ArrayBuffer if needed
       let buffer: ArrayBuffer;
@@ -71,6 +77,13 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
       } else {
         buffer = excelData;
       }
+
+      // Validate buffer
+      if (!buffer || buffer.byteLength === 0) {
+        throw new Error('Excel data is empty or invalid');
+      }
+
+      console.log(`[ExcelViewer] Loading Excel file (${buffer.byteLength} bytes)...`);
       await workbook.xlsx.load(buffer);
       const parsedSheets: SheetData[] = [];
       workbook.eachSheet((worksheet) => {
@@ -127,12 +140,18 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
           mergedCells,
         });
       });
+      if (parsedSheets.length === 0) {
+        throw new Error('No worksheets found in Excel file');
+      }
+
+      console.log(`[ExcelViewer] Successfully parsed ${parsedSheets.length} sheet(s)`);
       setSheets(parsedSheets);
       setLoading(false);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Error parsing Excel:', err);
-      setError('Failed to parse Excel file');
+      console.error('[ExcelViewer] Error parsing Excel:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to parse Excel file';
+      setError(`Failed to load Excel: ${errorMsg}`);
       setLoading(false);
     }
   }, [excelData]);
@@ -312,9 +331,14 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
           )}
           {!loading && error && (
             <div className="flex items-center justify-center h-full">
-              <div className="text-center">
+              <div className="text-center max-w-md p-6">
                 <FileSpreadsheet className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                <p className="text-red-500 font-medium">{error}</p>
+                <p className="text-red-600 font-semibold mb-2">Excel Preview Error</p>
+                <p className="text-red-500 text-sm mb-4">{error}</p>
+                <p className="text-gray-600 text-xs">
+                  Please check the browser console for more details or try generating the file
+                  again.
+                </p>
               </div>
             </div>
           )}

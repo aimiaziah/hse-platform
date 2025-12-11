@@ -250,6 +250,37 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const handleResetSignaturePin = async (userId: string, userName: string) => {
+    if (
+      !confirm(
+        `Are you sure you want to reset the signature PIN for ${userName}?\n\nThis will:\n- Clear their signature PIN\n- Clear their saved signature\n- Require them to set up a new signature and PIN`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/reset-signature-pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(data.message);
+        loadUsers(); // Reload to get updated user data
+      } else {
+        alert(data.error || 'Failed to reset signature PIN');
+      }
+    } catch (error) {
+      console.error('Error resetting signature PIN:', error);
+      alert('An error occurred while resetting the signature PIN. Please try again.');
+    }
+  };
+
   const getRoleColor = (role: UserRole) => {
     switch (role) {
       case 'admin':
@@ -579,31 +610,42 @@ const UserManagement: React.FC = () => {
                           {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleEditUser(user)}
-                              className="text-indigo-600 hover:text-indigo-900"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => toggleUserStatus(user.id)}
-                              className={
-                                user.isActive
-                                  ? 'text-red-600 hover:text-red-900'
-                                  : 'text-green-600 hover:text-green-900'
-                              }
-                              disabled={user.id === currentUser?.id}
-                            >
-                              {user.isActive ? 'Deactivate' : 'Activate'}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-600 hover:text-red-900"
-                              disabled={user.id === currentUser?.id}
-                            >
-                              Delete
-                            </button>
+                          <div className="flex flex-col space-y-1">
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="text-indigo-600 hover:text-indigo-900"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => toggleUserStatus(user.id)}
+                                className={
+                                  user.isActive
+                                    ? 'text-red-600 hover:text-red-900'
+                                    : 'text-green-600 hover:text-green-900'
+                                }
+                                disabled={user.id === currentUser?.id}
+                              >
+                                {user.isActive ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="text-red-600 hover:text-red-900"
+                                disabled={user.id === currentUser?.id}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                            {user.signature && (
+                              <button
+                                onClick={() => handleResetSignaturePin(user.id, user.name)}
+                                className="text-orange-600 hover:text-orange-900 text-xs"
+                                title="Reset signature PIN"
+                              >
+                                Reset Signature PIN
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

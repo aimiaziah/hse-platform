@@ -15,12 +15,13 @@
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { exportToGoogleDrive, isGoogleDriveConfigured } from '@/utils/googleDrive';
 import { storage } from '@/utils/storage';
 import { compressSignature, compressObservationPhotos } from '@/utils/imageCompression';
 import SignaturePinVerificationModal from '@/components/SignaturePinVerificationModal';
+import ExcelViewer from '@/components/ExcelViewer';
 import { prepareExcelPreviewData } from '@/utils/excelPreviewHelper';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -87,6 +88,9 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
   const [processing, setProcessing] = useState(false);
   const [supervisorSignature, setSupervisorSignature] = useState('');
   const [fullImageUrl, setFullImageUrl] = useState<string | null>(null);
+  const [excelPreviewData, setExcelPreviewData] = useState<ArrayBuffer | null>(null);
+  const [showExcelPreviewModal, setShowExcelPreviewModal] = useState(false);
+  const [loadingExcel, setLoadingExcel] = useState(false);
 
   const getGroupedInspectionData = () => {
     const grouped: { [location: string]: any[] } = {};
@@ -150,6 +154,140 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
     };
     notifications.push(notification);
     storage.save('notifications', notifications);
+  };
+
+  // Load Excel preview data only when requested
+  const loadExcelPreview = async () => {
+    if (!inspection || inspection.status !== 'pending_review') return;
+
+    // If preview data already exists, just show the modal
+    if (excelPreviewData) {
+      setShowExcelPreviewModal(true);
+      return;
+    }
+
+    setLoadingExcel(true);
+    try {
+      let apiEndpoint = '';
+      let requestBody: any = {};
+
+      if (inspection.type === 'hse') {
+        apiEndpoint = '/api/export/hse-inspection-template';
+        requestBody = {
+          contractor: inspection.company || inspection.formData?.contractor || '',
+          location: inspection.location || inspection.formData?.location || '',
+          date: inspection.inspectionDate || inspection.date,
+          workActivity: inspection.formData?.workActivity || '',
+          tablePersons: inspection.formData?.tablePersons || [],
+          inspectionItems: inspection.items || inspection.formData?.inspectionItems || [],
+          commentsRemarks: inspection.formData?.commentsRemarks || '',
+          observations: inspection.observations || inspection.formData?.observations || [],
+          reviewedBy: inspection.reviewedBy || user?.name,
+          reviewedAt: inspection.reviewedAt,
+          reviewerSignature: inspection.reviewerSignature,
+          format: 'excel',
+        };
+      } else if (inspection.type === 'fire_extinguisher') {
+        apiEndpoint = '/api/export/fire-extinguisher-template';
+        requestBody = {
+          company: inspection.company,
+          location: inspection.location,
+          inspectedBy: inspection.inspectedBy || inspection.inspector,
+          designation: inspection.designation,
+          inspectionDate: inspection.inspectionDate || inspection.date,
+          signature: inspection.signature,
+          extinguishers: inspection.extinguishers || [],
+          reviewedBy: inspection.reviewedBy || user?.name,
+          reviewedAt: inspection.reviewedAt,
+          reviewerSignature: inspection.reviewerSignature,
+          format: 'excel',
+        };
+      } else if (inspection.type === 'first_aid') {
+        apiEndpoint = '/api/export/first-aid-template';
+        requestBody = {
+          company: inspection.company,
+          location: inspection.location,
+          inspectedBy: inspection.inspectedBy || inspection.inspector,
+          designation: inspection.designation,
+          inspectionDate: inspection.inspectionDate || inspection.date,
+          signature: inspection.signature,
+          kits: inspection.kitInspections || inspection.kits || [],
+          reviewedBy: inspection.reviewedBy || user?.name,
+          reviewedAt: inspection.reviewedAt,
+          reviewerSignature: inspection.reviewerSignature,
+          format: 'excel',
+        };
+      } else if (inspection.type === 'hse_observation') {
+        apiEndpoint = '/api/export/hse-observation-template';
+        const obs = inspection.formData || inspection;
+        requestBody = {
+          observation: obs.observation || '',
+          location: obs.location || inspection.location || '',
+          observedBy: inspection.inspectedBy || inspection.inspector || '',
+          observedDate: inspection.inspectionDate || inspection.date || '',
+          actionNeeded: obs.actionNeeded || '',
+          hazards: obs.hazards || '',
+          remarks: obs.remarks || '',
+          status: obs.status || 'Open',
+          photos: obs.photos || [],
+          itemNo: obs.itemNo || '1',
+          categoryName: obs.categoryName || 'General',
+          itemName: obs.itemName || 'Observation',
+          reviewedBy: inspection.reviewedBy || user?.name,
+          reviewedAt: inspection.reviewedAt,
+          reviewerSignature: inspection.reviewerSignature,
+          format: 'excel',
+        };
+      } else if (inspection.type === 'manhours') {
+        apiEndpoint = '/api/export/manhours-template';
+        requestBody = {
+          ...inspection,
+          format: 'excel',
+        };
+      }
+
+      if (apiEndpoint) {
+        const excelResponse = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (excelResponse.ok) {
+          const arrayBuffer = await excelResponse.arrayBuffer();
+
+          // Validate that we actually received data
+          if (arrayBuffer.byteLength === 0) {
+            throw new Error('Received empty Excel file from server');
+          }
+
+          setExcelPreviewData(arrayBuffer);
+          setShowExcelPreviewModal(true);
+        } else {
+          // Try to get error message from response
+          let errorMessage = 'Failed to generate Excel preview.';
+          try {
+            const errorData = await excelResponse.json();
+            if (errorData.error) {
+              errorMessage += ` ${errorData.error}`;
+            }
+          } catch (e) {
+            // Response is not JSON, use default message
+          }
+          console.error('Excel preview generation failed:', errorMessage);
+          alert(errorMessage + ' Please try again.');
+        }
+      } else {
+        console.error('No API endpoint configured for inspection type:', inspection.type);
+        alert(`Excel preview is not supported for ${inspection.type} inspections yet.`);
+      }
+    } catch (error) {
+      console.error('Error loading Excel preview:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Error loading Excel preview: ${errorMessage}. Please try again.`);
+    } finally {
+      setLoadingExcel(false);
+    }
   };
 
   const ensureInspectionInDatabase = async (): Promise<string | null> => {
@@ -948,15 +1086,8 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                               {/* AI Captured Images Section */}
                               {item.aiCapturedImages && item.aiCapturedImages.length > 0 && (
                                 <div className="mt-4">
-                                  <p className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                    <svg
-                                      className="w-4 h-4 text-purple-600"
-                                      viewBox="0 0 24 24"
-                                      fill="currentColor"
-                                    >
-                                      <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 22.5l-.394-1.933a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                                    </svg>
-                                    AI Scan Images ({item.aiCapturedImages.length})
+                                  <p className="text-xs font-bold text-gray-700 mb-2">
+                                    Images ({item.aiCapturedImages.length})
                                   </p>
                                   <div className="grid grid-cols-2 gap-2">
                                     {item.aiCapturedImages.map((image: any, imgIdx: number) => (
@@ -970,18 +1101,6 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                                         <div className="absolute bottom-2 left-2 right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded">
                                           {image.stepId.replace(/_/g, ' ')}
                                         </div>
-                                        {image.timestamp && (
-                                          <div className="absolute top-2 right-2 bg-purple-600/90 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1">
-                                            <svg
-                                              className="w-3 h-3"
-                                              fill="currentColor"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                                            </svg>
-                                            AI
-                                          </div>
-                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -1638,6 +1757,43 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
           {/* Supervisor Action Section */}
           {user && inspection.status === 'pending_review' && (
             <div className="bg-white border-t-2 border-gray-200 rounded-xl shadow-sm p-5 space-y-5">
+              {/* Preview Excel */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Preview Report
+                </label>
+                <p className="text-xs text-gray-600 mb-3">
+                  Preview the Excel report before approving the inspection.
+                </p>
+                <button
+                  onClick={loadExcelPreview}
+                  disabled={loadingExcel || processing}
+                  className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium text-sm"
+                >
+                  {loadingExcel ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Loading Preview...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      <span>Preview Excel Report</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Review Comments */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1809,6 +1965,70 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
               className="max-w-full max-h-[90vh] w-auto h-auto object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Excel Preview Modal */}
+      {showExcelPreviewModal && excelPreviewData && (
+        <div className="fixed inset-0 z-[60] overflow-hidden bg-gray-900 bg-opacity-75">
+          <div className="flex flex-col h-full">
+            {/* Modal Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Excel Preview</h2>
+                  <p className="text-sm text-gray-500">
+                    {getInspectionTypeName(inspection.type)} Report
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowExcelPreviewModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Close preview"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-hidden p-6">
+              <ExcelViewer
+                excelData={excelPreviewData}
+                title={`${getInspectionTypeName(inspection.type)} Report`}
+                filename={`${inspection.type}-inspection-${inspection.id}.xlsx`}
+                showDownloadButton={true}
+                showZoomControls={true}
+                height="calc(100vh - 180px)"
+                showHeader={true}
+              />
+            </div>
           </div>
         </div>
       )}

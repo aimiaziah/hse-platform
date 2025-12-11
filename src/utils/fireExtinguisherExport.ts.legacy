@@ -622,7 +622,7 @@ export const generateChecklistFormDocument = (checklistData: ChecklistData): voi
         'Serial No',
         'Location',
         'Capture Time',
-        'AI Scan Images',
+        'Images',
       ]);
 
       // Add image data for each extinguisher
