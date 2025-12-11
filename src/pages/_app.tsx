@@ -1,14 +1,6 @@
 // src/pages/_app.tsx
 import '@/styles/globals.css';
 
-// IBM Plex Sans font imports - optimized for inspection platform
-// Import only the weights we need for better performance
-import '@fontsource/ibm-plex-sans/400'; // Regular - body text
-import '@fontsource/ibm-plex-sans/400-italic'; // Regular Italic
-import '@fontsource/ibm-plex-sans/500'; // Medium - emphasis
-import '@fontsource/ibm-plex-sans/600'; // SemiBold - headings
-import '@fontsource/ibm-plex-sans/700'; // Bold - strong emphasis
-
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import { useEffect } from 'react';
