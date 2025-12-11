@@ -96,6 +96,13 @@ module.exports = withPWA({
         util: false,
       };
     }
+
+    // Ensure CSS is handled properly in production builds
+    config.optimization = {
+      ...config.optimization,
+      moduleIds: 'deterministic',
+    };
+
     return config;
   },
 });
