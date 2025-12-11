@@ -347,8 +347,8 @@ const uploadToSharePoint = async (
         id: result.id,
         webUrl: result.webUrl,
       };
-      } catch (error) {
-        // SharePoint site upload failed, falling back to OneDrive
+    } catch (error) {
+      // SharePoint site upload failed, falling back to OneDrive
       // Fall back to OneDrive if SharePoint upload fails
     }
   }
@@ -608,11 +608,6 @@ export const exportToSharePoint = async (
       uploadToSharePoint(excelBlob, excelFilename, folderPath),
       uploadToSharePoint(pdfBlob, pdfFilename, folderPath),
     ]);
-
-    // Files uploaded to SharePoint
-      excel: excelResult.webUrl,
-      pdf: pdfResult.webUrl,
-    });
 
     // Store export record
     const exportRecords: any[] = storage.load('sharepoint_exports', []);

@@ -181,7 +181,7 @@ export async function uploadToSharePointWithDuplicateCheck(
   } catch (error) {
     console.error('SharePoint upload error:', error);
     // Fallback to Supabase storage
-    return await uploadToSupabaseStorage(fileName, fileBuffer, folderPath);
+    return uploadToSupabaseStorage(fileName, fileBuffer, folderPath);
   }
 }
 

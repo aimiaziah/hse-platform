@@ -179,8 +179,9 @@ function addFireExtinguisherDetails(
     },
     didDrawPage: () => {
       // Add page numbers on new pages
-      const pageInfo = (doc as { internal?: { getCurrentPageInfo?: () => { pageNumber: number } } })
-        .internal?.getCurrentPageInfo?.();
+      const pageInfo = (
+        doc as { internal?: { getCurrentPageInfo?: () => { pageNumber: number } } }
+      ).internal?.getCurrentPageInfo?.();
       if (pageInfo && pageInfo().pageNumber > 1) {
         const pageWidth = doc.internal.pageSize.getWidth();
         const currentPage = pageInfo().pageNumber;
@@ -233,7 +234,11 @@ function addFirstAidDetails(
 
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Kit Location: ${(kit.location as string) || `Kit ${kitIndex + 1}`}`, 14, currentYPosition);
+    doc.text(
+      `Kit Location: ${(kit.location as string) || `Kit ${kitIndex + 1}`}`,
+      14,
+      currentYPosition,
+    );
     currentYPosition += 6;
 
     const items = (kit.items as Array<Record<string, unknown>>) || [];
@@ -354,7 +359,11 @@ function addHSEInspectionDetails(
   }
 
   // Add observations if available
-  if (formData.observations && Array.isArray(formData.observations) && formData.observations.length > 0) {
+  if (
+    formData.observations &&
+    Array.isArray(formData.observations) &&
+    formData.observations.length > 0
+  ) {
     if (currentYPosition > 250) {
       doc.addPage();
       currentYPosition = 20;
@@ -529,7 +538,9 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
   currentYPosition += 10;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generated for: ${data.supervisorName}`, pageWidth / 2, currentYPosition, { align: 'center' });
+  doc.text(`Generated for: ${data.supervisorName}`, pageWidth / 2, currentYPosition, {
+    align: 'center',
+  });
 
   currentYPosition += 5;
   doc.text(`Generated on: ${formatDate(data.generatedDate)}`, pageWidth / 2, currentYPosition, {
@@ -641,8 +652,9 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
     didDrawPage: () => {
       // Add page numbers
       const pageCount = doc.getNumberOfPages();
-      const pageInfo = (doc as { internal?: { getCurrentPageInfo?: () => { pageNumber: number } } })
-        .internal?.getCurrentPageInfo?.();
+      const pageInfo = (
+        doc as { internal?: { getCurrentPageInfo?: () => { pageNumber: number } } }
+      ).internal?.getCurrentPageInfo?.();
       const currentPage = pageInfo ? pageInfo().pageNumber : 1;
       doc.setFontSize(8);
       doc.text(
@@ -659,43 +671,6 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
 
   return doc;
 }
-
-    const issues = [];
-    if (ext.shellRusted) issues.push('Shell Rusted');
-    if (ext.hosePerished) issues.push('Hose Perished');
-    if (ext.nozzleBlocked) issues.push('Nozzle Blocked');
-    if (ext.pressureGaugeFaulty) issues.push('Pressure Faulty');
-    if (ext.safetyPinMissing) issues.push('Pin Missing');
-    if (ext.pinSealBroken) issues.push('Seal Broken');
-    if (!ext.accessible) issues.push('Not Accessible');
-    if (ext.missingOrNotInPlace) issues.push('Missing/Not in Place');
-    if (ext.emptyOrPressureLow) issues.push('Empty/Low Pressure');
-
-    return [
-      ext.serialNumber || ext.assetNumber || 'N/A',
-      ext.location || 'N/A',
-      ext.typeSize || 'N/A',
-      ext.expiryDate || 'N/A',
-      issues.length > 0 ? issues.join(', ') : 'OK',
-      ext.remarks || '-',
-    ];
-  });
-
-  autoTable(doc, {
-    startY: yPosition,
-    head: [['Serial #', 'Location', 'Type/Size', 'Expiry', 'Issues', 'Remarks']],
-    body: tableData,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [231, 76, 60], textColor: 255, fontStyle: 'bold' },
-    columnStyles: {
-      0: { cellWidth: 25 },
-      1: { cellWidth: 30 },
-      2: { cellWidth: 25 },
-      3: { cellWidth: 25 },
-      4: { cellWidth: 45 },
-      5: { cellWidth: 30 },
-    },
 
 /**
  * Download PDF

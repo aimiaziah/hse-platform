@@ -87,7 +87,20 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
                       className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                       title="Go to Profile"
                     >
-                      <span className="material-icons text-xl">person</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
                     </Link>
                     <div className="text-left flex flex-col justify-center">
                       <p className="text-sm font-medium text-gray-900 leading-none mb-0">
