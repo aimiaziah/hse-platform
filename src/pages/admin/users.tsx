@@ -27,7 +27,6 @@ interface UserFormData {
     canEditInspections: boolean;
     canViewInspections: boolean;
     canViewAnalytics: boolean;
-    canViewGoogleDriveStatus: boolean;
     canAddDigitalSignature: boolean;
     canExportReports: boolean;
   };
@@ -66,7 +65,6 @@ const UserManagement: React.FC = () => {
       canEditInspections: true,
       canViewInspections: true,
       canViewAnalytics: true,
-      canViewGoogleDriveStatus: true,
       canAddDigitalSignature: true,
       canExportReports: true,
     },
@@ -159,7 +157,6 @@ const UserManagement: React.FC = () => {
         canManageSystem: (user.permissions as any).canManageSystem ?? false,
         canBackupRestore: (user.permissions as any).canBackupRestore ?? false,
         canEditInspections: (user.permissions as any).canEditInspections ?? false,
-        canViewGoogleDriveStatus: (user.permissions as any).canViewGoogleDriveStatus ?? false,
         canAddDigitalSignature: (user.permissions as any).canAddDigitalSignature ?? false,
         canExportReports: (user.permissions as any).canExportReports ?? false,
       },
@@ -317,7 +314,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
-          canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
         };
@@ -336,7 +332,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
-          canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
         };
@@ -355,7 +350,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: true,
           canViewInspections: true,
           canViewAnalytics: true,
-          canViewGoogleDriveStatus: true,
           canAddDigitalSignature: true,
           canExportReports: true,
         };
@@ -374,7 +368,6 @@ const UserManagement: React.FC = () => {
           canEditInspections: false,
           canViewInspections: true,
           canViewAnalytics: false,
-          canViewGoogleDriveStatus: false,
           canAddDigitalSignature: false,
           canExportReports: false,
         };

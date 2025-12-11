@@ -17,7 +17,6 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { exportToGoogleDrive, isGoogleDriveConfigured } from '@/utils/googleDrive';
 import { storage } from '@/utils/storage';
 import { compressSignature, compressObservationPhotos } from '@/utils/imageCompression';
 import SignaturePinVerificationModal from '@/components/SignaturePinVerificationModal';
@@ -485,50 +484,6 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
         alert('Warning: Failed to download Excel file, but inspection was still approved.');
       }
 
-      // Export to Google Drive if configured
-      try {
-        if (!isGoogleDriveConfigured()) {
-          console.warn('Google Drive not configured. Skipping document upload.');
-        } else {
-          // Prepare inspection data with review information (using compressed images)
-          const inspectionWithReview = {
-            ...inspection,
-            formData: compressedFormData,
-            signature: compressedFormData.inspectorSignature || inspection.signature,
-            reviewedBy: user.name,
-            reviewedAt: reviewDate,
-            reviewerSignature: compressedSignature,
-          };
-
-          // Export to Google Drive (generates Excel internally with compressed images)
-          console.log('Step 1/2: Generating Excel with compressed images...');
-          console.log('Inspection type:', inspection.type);
-          const fileId = await exportToGoogleDrive(inspectionWithReview);
-          console.log('Step 2/2: Upload complete!');
-
-          console.log('Document uploaded successfully to Google Drive:', {
-            fileId,
-            fileUrl: `https://drive.google.com/file/d/${fileId}/view`,
-          });
-        }
-      } catch (exportError) {
-        console.error('Document export error:', exportError);
-        // Only show alert if it's not a configuration issue
-        const errorMsg = exportError instanceof Error ? exportError.message : 'Unknown error';
-        if (
-          !errorMsg.includes('not enabled') &&
-          !errorMsg.includes('not configured') &&
-          !errorMsg.includes('Invalid') &&
-          !errorMsg.includes('credentials')
-        ) {
-          alert(
-            `Warning: Document upload to Google Drive failed: ${errorMsg}. The inspection was still approved.`,
-          );
-        } else {
-          // Just log configuration errors, don't alert the user
-          console.warn('Google Drive upload skipped due to configuration issue:', errorMsg);
-        }
-      }
       createNotification(
         inspection.inspectorId || inspection.inspectedBy || '',
         'approval',
@@ -536,13 +491,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
           user.name
         }${reviewComments ? `: ${reviewComments}` : ''}`,
       );
-      if (isGoogleDriveConfigured()) {
-        alert(
-          'Inspection approved successfully! Excel file downloaded and exported to Google Drive.',
-        );
-      } else {
-        alert('Inspection approved successfully! Excel file has been downloaded.');
-      }
+      alert('Inspection approved successfully! Excel file has been downloaded.');
       setShowApproveModal(false);
       if (onApprove) onApprove();
       onClose();
@@ -655,21 +604,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
       URL.revokeObjectURL(url);
 
       console.log('Excel file re-exported successfully!');
-
-      // Optionally export to Google Drive
-      try {
-        if (isGoogleDriveConfigured()) {
-          console.log('Uploading to Google Drive...');
-          const fileId = await exportToGoogleDrive(inspection);
-          console.log('Upload complete! File ID:', fileId);
-          alert('Excel file downloaded and uploaded to Google Drive successfully!');
-        } else {
-          alert('Excel file downloaded successfully!');
-        }
-      } catch (driveError) {
-        console.error('Google Drive upload failed:', driveError);
-        alert('Excel file downloaded successfully! (Google Drive upload failed)');
-      }
+      alert('Excel file downloaded successfully!');
     } catch (error) {
       console.error('Error re-exporting inspection:', error);
       alert('Error exporting file. Please try again.');

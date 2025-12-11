@@ -5,7 +5,6 @@ import SupervisorLayout from '@/roles/supervisor/layouts/SupervisorLayout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
 import { useAuth } from '@/hooks/useAuth';
-import { exportToGoogleDrive } from '@/utils/googleDrive';
 import {
   exportToSharePoint as exportToSharePointOAuth,
   isSharePointAuthenticated,
