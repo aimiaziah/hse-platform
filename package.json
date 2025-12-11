@@ -42,7 +42,7 @@
     "test:templates": "node test-template-caching.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.940.0",
+    "@aws-sdk/client-s3": "^3.948.0",
     "@aws-sdk/s3-request-presigner": "^3.940.0",
     "@supabase/supabase-js": "^2.78.0",
     "@types/bcrypt": "^6.0.0",
