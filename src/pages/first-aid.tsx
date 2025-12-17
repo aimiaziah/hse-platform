@@ -114,7 +114,7 @@ const FirstAidInspection: React.FC = () => {
   };
 
   const [inspectionData, setInspectionData] = useState<InspectionData>(() => {
-    const previousInspection = loadPreviousInspectionData();
+    const previousInspection = typeof window !== 'undefined' ? loadPreviousInspectionData() : null;
     return {
       id: Date.now().toString(),
       inspectedBy: user?.name || '',
@@ -153,7 +153,7 @@ const FirstAidInspection: React.FC = () => {
   // Load existing draft if available
   useEffect(() => {
     try {
-      const drafts = JSON.parse(localStorage.getItem('first-aid-drafts') || '[]');
+      const drafts = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('first-aid-drafts') || '[]') : [];
       if (drafts.length > 0) {
         // Load the most recent draft
         const latestDraft = drafts[drafts.length - 1];
@@ -235,14 +235,14 @@ const FirstAidInspection: React.FC = () => {
 
   const handleSaveDraft = () => {
     try {
-      const drafts = JSON.parse(localStorage.getItem('first-aid-drafts') || '[]');
+      const drafts = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('first-aid-drafts') || '[]') : [];
       const existingIndex = drafts.findIndex((d: InspectionData) => d.id === inspectionData.id);
       if (existingIndex >= 0) {
         drafts[existingIndex] = inspectionData;
       } else {
         drafts.push(inspectionData);
       }
-      localStorage.setItem('first-aid-drafts', JSON.stringify(drafts));
+      if (typeof window !== 'undefined') localStorage.setItem('first-aid-drafts', JSON.stringify(drafts));
       alert('Draft saved successfully!');
     } catch (error) {
       alert('Failed to save draft');
@@ -283,9 +283,9 @@ const FirstAidInspection: React.FC = () => {
       }
 
       // Remove from drafts after successful submission
-      const drafts = JSON.parse(localStorage.getItem('first-aid-drafts') || '[]');
+      const drafts = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('first-aid-drafts') || '[]') : [];
       const updatedDrafts = drafts.filter((d: InspectionData) => d.id !== inspectionData.id);
-      localStorage.setItem('first-aid-drafts', JSON.stringify(updatedDrafts));
+      if (typeof window !== 'undefined') localStorage.setItem('first-aid-drafts', JSON.stringify(updatedDrafts));
 
       setShowSubmitDialog(false);
       alert('First Aid Inspection submitted successfully!');
