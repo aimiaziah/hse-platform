@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import SupervisorLayout from '@/roles/supervisor/layouts/SupervisorLayout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
+import { safeFetch } from '@/utils/url-validator';
 import { useAuth } from '@/hooks/useAuth';
 import {
   exportToSharePoint as exportToSharePointOAuth,
@@ -150,7 +151,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       };
 
       // Generate Excel data for download
-      const excelResponse = await fetch('/api/export/hse-inspection-template', {
+      const excelResponse = await safeFetch('/api/export/hse-inspection-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,7 +166,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       }
 
       // Generate PDF for Excel tab preview
-      const pdfResponse = await fetch('/api/export/hse-inspection-template', {
+      const pdfResponse = await safeFetch('/api/export/hse-inspection-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -205,7 +206,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       };
 
       // Generate Excel data for download
-      const excelResponse = await fetch(apiEndpoint, {
+      const excelResponse = await safeFetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -220,7 +221,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       }
 
       // Generate PDF for Excel tab preview
-      const pdfResponse = await fetch(apiEndpoint, {
+      const pdfResponse = await safeFetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -365,7 +366,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
         throw new Error(`Unsupported inspection type: ${inspectionType}`);
     }
 
-    const response = await fetch(apiEndpoint, {
+    const response = await safeFetch(apiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
@@ -383,7 +384,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
     setLoading(true);
     try {
       // First, try to fetch from database
-      const response = await fetch(`/api/inspections/${id}`);
+      const response = await safeFetch(`/api/inspections/${id}`);
       let found: Inspection | null = null;
 
       if (response.ok) {
@@ -554,7 +555,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
         };
       }
 
-      const response = await fetch(apiEndpoint, {
+      const response = await safeFetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -638,7 +639,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       const reviewDate = new Date().toISOString();
 
       // Update inspection in database via API
-      const apiResponse = await fetch(`/api/inspections/${id}`, {
+      const apiResponse = await safeFetch(`/api/inspections/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -845,7 +846,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
     setProcessing(true);
     try {
       // Update inspection in database via API
-      const apiResponse = await fetch(`/api/inspections/${id}`, {
+      const apiResponse = await safeFetch(`/api/inspections/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1008,7 +1009,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
         };
       }
 
-      const response = await fetch(apiEndpoint, {
+      const response = await safeFetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -1081,7 +1082,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
         };
       }
 
-      const response = await fetch(apiEndpoint, {
+      const response = await safeFetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -1140,7 +1141,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       setProcessing(true);
 
       // Generate Excel blob
-      const excelResponse = await fetch(getApiEndpointForType(), {
+      const excelResponse = await safeFetch(getApiEndpointForType(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(getRequestBodyForType('excel')),
@@ -1150,7 +1151,7 @@ const InspectionReview: React.FC = (): JSX.Element => {
       const excelBlob = await excelResponse.blob();
 
       // Generate PDF blob
-      const pdfResponse = await fetch(getApiEndpointForType(), {
+      const pdfResponse = await safeFetch(getApiEndpointForType(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(getRequestBodyForType('pdf')),

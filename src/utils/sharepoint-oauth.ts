@@ -1,6 +1,7 @@
 // SharePoint/OneDrive OAuth Integration (User-delegated permissions)
 // Similar to Google Drive OAuth - no admin consent needed!
 import { storage } from './storage';
+import { buildGraphApiUrl, validateSharePointSiteUrl, safeFetch } from './url-validator';
 
 interface SharePointOAuthConfig {
   clientId: string;
@@ -198,7 +199,7 @@ const exchangeCodeForToken = async (code: string): Promise<string> => {
     scope: SCOPES,
   });
 
-  const response = await fetch(TOKEN_ENDPOINT, {
+  const response = await safeFetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -235,7 +236,7 @@ const refreshAccessToken = async (refreshToken: string): Promise<string> => {
     scope: SCOPES,
   });
 
-  const response = await fetch(TOKEN_ENDPOINT, {
+  const response = await safeFetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -275,16 +276,21 @@ const uploadToSharePoint = async (
   const libraryName = process.env.NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME || 'Shared Documents';
 
   if (siteUrl) {
-    // Upload to SharePoint team site
-    try {
-      // Extract hostname and site path from URL
-      const url = new URL(siteUrl);
-      const { hostname } = url;
-      const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/'); // e.g., "sites/ThetaEdge"
+    // Validate SharePoint site URL
+    if (!validateSharePointSiteUrl(siteUrl)) {
+      console.warn('[SSRF Prevention] Invalid SharePoint site URL configuration');
+      // Fall through to OneDrive upload
+    } else {
+      // Upload to SharePoint team site
+      try {
+        // Extract hostname and site path from URL
+        const url = new URL(siteUrl);
+        const { hostname } = url;
+        const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/'); // e.g., "sites/ThetaEdge"
 
       // Get site ID
-      const siteResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${hostname}:/${sitePath}`,
+      const siteResponse = await safeFetch(
+        buildGraphApiUrl(`sites/${hostname}:/${sitePath}`),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -298,8 +304,8 @@ const uploadToSharePoint = async (
       const siteId = siteData.id;
 
       // Get drive (document library) ID
-      const drivesResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`,
+      const drivesResponse = await safeFetch(
+        buildGraphApiUrl(`sites/${siteId}/drives`),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -325,10 +331,10 @@ const uploadToSharePoint = async (
 
       // Upload file to SharePoint
       const uploadPath = folderPath
-        ? `/sites/${siteId}/drives/${driveId}/root:/${folderPath}/${filename}:/content`
-        : `/sites/${siteId}/drives/${driveId}/root:/${filename}:/content`;
+        ? `sites/${siteId}/drives/${driveId}/root:/${folderPath}/${filename}:/content`
+        : `sites/${siteId}/drives/${driveId}/root:/${filename}:/content`;
 
-      const response = await fetch(`https://graph.microsoft.com/v1.0${uploadPath}`, {
+      const response = await safeFetch(buildGraphApiUrl(uploadPath), {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -347,18 +353,19 @@ const uploadToSharePoint = async (
         id: result.id,
         webUrl: result.webUrl,
       };
-    } catch (error) {
-      // SharePoint site upload failed, falling back to OneDrive
-      // Fall back to OneDrive if SharePoint upload fails
+      } catch (error) {
+        // SharePoint site upload failed, falling back to OneDrive
+        // Fall back to OneDrive if SharePoint upload fails
+      }
     }
   }
 
   // Fallback: Upload to OneDrive
   const uploadPath = folderPath
-    ? `/me/drive/root:/${folderPath}/${filename}:/content`
-    : `/me/drive/root:/${filename}:/content`;
+    ? `me/drive/root:/${folderPath}/${filename}:/content`
+    : `me/drive/root:/${filename}:/content`;
 
-  const response = await fetch(`https://graph.microsoft.com/v1.0${uploadPath}`, {
+  const response = await safeFetch(buildGraphApiUrl(uploadPath), {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -396,8 +403,8 @@ const createSharePointFolder = async (
       const parentPath = currentPath ? `/${currentPath}` : '';
 
       // Check if folder exists
-      const checkResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
+      const checkResponse = await safeFetch(
+        buildGraphApiUrl(`sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${folderName}' and folder ne null`),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -414,10 +421,10 @@ const createSharePointFolder = async (
 
       // Create folder
       const createPath = currentPath
-        ? `/sites/${siteId}/drives/${driveId}/root:/${currentPath}:/children`
-        : `/sites/${siteId}/drives/${driveId}/root/children`;
+        ? `sites/${siteId}/drives/${driveId}/root:/${currentPath}:/children`
+        : `sites/${siteId}/drives/${driveId}/root/children`;
 
-      const createResponse = await fetch(`https://graph.microsoft.com/v1.0${createPath}`, {
+      const createResponse = await safeFetch(buildGraphApiUrl(createPath), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -452,13 +459,15 @@ const createFolder = async (folderPath: string): Promise<void> => {
 
   // If SharePoint site is configured, use SharePoint folder creation
   if (siteUrl) {
-    try {
-      const url = new URL(siteUrl);
-      const { hostname } = url;
-      const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/');
+    // Validate SharePoint site URL
+    if (validateSharePointSiteUrl(siteUrl)) {
+      try {
+        const url = new URL(siteUrl);
+        const { hostname } = url;
+        const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/');
 
-      const siteResponse = await fetch(
-        `https://graph.microsoft.com/v1.0/sites/${hostname}:/${sitePath}`,
+        const siteResponse = await safeFetch(
+        buildGraphApiUrl(`sites/${hostname}:/${sitePath}`),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -468,8 +477,8 @@ const createFolder = async (folderPath: string): Promise<void> => {
         const siteData = await siteResponse.json();
         const siteId = siteData.id;
 
-        const drivesResponse = await fetch(
-          `https://graph.microsoft.com/v1.0/sites/${siteId}/drives`,
+        const drivesResponse = await safeFetch(
+          buildGraphApiUrl(`sites/${siteId}/drives`),
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           },
@@ -485,8 +494,9 @@ const createFolder = async (folderPath: string): Promise<void> => {
           }
         }
       }
-    } catch (error) {
-      // SharePoint folder creation failed, falling back to OneDrive
+      } catch (error) {
+        // SharePoint folder creation failed, falling back to OneDrive
+      }
     }
   }
 
@@ -496,8 +506,8 @@ const createFolder = async (folderPath: string): Promise<void> => {
 
   for (const folderName of pathParts) {
     try {
-      const checkResponse = await fetch(
-        `https://graph.microsoft.com/v1.0${currentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
+      const checkResponse = await safeFetch(
+        buildGraphApiUrl(`${currentPath}:/children?$filter=name eq '${folderName}' and folder ne null`),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -511,8 +521,8 @@ const createFolder = async (folderPath: string): Promise<void> => {
         }
       }
 
-      const createResponse = await fetch(
-        `https://graph.microsoft.com/v1.0${currentPath}/children`,
+      const createResponse = await safeFetch(
+        buildGraphApiUrl(`${currentPath}/children`),
         {
           method: 'POST',
           headers: {

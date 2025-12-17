@@ -1,6 +1,7 @@
 // Microsoft OAuth Authentication Utility
 import { UserRole } from '@/hooks/useAuth';
 import { isInspectorEmail, isAdminEmail, isSupervisorEmail } from '@/lib/auth-config';
+import { buildGraphApiUrl, validateSharePointSiteUrl, safeFetch } from './url-validator';
 
 export interface MicrosoftAuthConfig {
   clientId: string;
@@ -70,7 +71,7 @@ export async function exchangeCodeForToken(code: string): Promise<{
 }> {
   const config = getMicrosoftAuthConfig();
 
-  const tokenResponse = await fetch(
+  const tokenResponse = await safeFetch(
     `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`,
     {
       method: 'POST',
@@ -105,7 +106,7 @@ export async function exchangeCodeForToken(code: string): Promise<{
  * Get user information from Microsoft Graph API
  */
 export async function getMicrosoftUserInfo(accessToken: string): Promise<MicrosoftUserInfo> {
-  const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+  const response = await safeFetch(buildGraphApiUrl('me'), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -189,12 +190,10 @@ export async function uploadToOneDrive(
   try {
     // Construct the upload path
     const uploadPath = folderPath
-      ? `/me/drive/root:/${folderPath}/${fileName}:/content`
-      : `/me/drive/root:/${fileName}:/content`;
+      ? `me/drive/root:/${folderPath}/${fileName}:/content`
+      : `me/drive/root:/${fileName}:/content`;
 
-    const uploadUrl = `https://graph.microsoft.com/v1.0${uploadPath}`;
-
-    const response = await fetch(uploadUrl, {
+    const response = await safeFetch(buildGraphApiUrl(uploadPath), {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -235,13 +234,18 @@ export async function uploadToSharePointSite(
   folderPath?: string,
 ): Promise<{ success: boolean; fileUrl?: string; error?: string }> {
   try {
+    // Validate SharePoint site URL
+    if (!validateSharePointSiteUrl(siteUrl)) {
+      throw new Error('Invalid SharePoint site URL');
+    }
+
     // Extract site path from URL
     const url = new URL(siteUrl);
     const sitePath = url.pathname;
 
     // Get site ID
-    const siteResponse = await fetch(
-      `https://graph.microsoft.com/v1.0/sites/${url.hostname}:${sitePath}`,
+    const siteResponse = await safeFetch(
+      buildGraphApiUrl(`sites/${url.hostname}:${sitePath}`),
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -261,16 +265,17 @@ export async function uploadToSharePointSite(
       ? `/${libraryName}/${folderPath}/${fileName}`
       : `/${libraryName}/${fileName}`;
 
-    const uploadUrl = `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:${uploadPath}:/content`;
-
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/octet-stream',
+    const uploadResponse = await safeFetch(
+      buildGraphApiUrl(`sites/${siteId}/drive/root:${uploadPath}:/content`),
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: fileBuffer,
       },
-      body: fileBuffer,
-    });
+    );
 
     if (!uploadResponse.ok) {
       const error = await uploadResponse.json();
