@@ -29,6 +29,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
       icon: 'manage_accounts',
     },
     {
+      name: 'Security Dashboard',
+      href: '/admin/security-dashboard',
+      icon: 'security',
+    },
+    {
       name: 'Form Management',
       href: '/admin/checklist-items',
       icon: 'description',

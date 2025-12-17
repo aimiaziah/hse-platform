@@ -1,5 +1,7 @@
 // src/lib/supabase-middleware.ts - RBAC Middleware for Supabase
 import { NextApiRequest, NextApiResponse } from 'next';
+import { parse } from 'cookie';
+import { verifyToken } from '@/lib/jwt';
 import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
 
 export interface AuthenticatedRequest extends NextApiRequest {
@@ -31,19 +33,31 @@ export function withRBAC(
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
       // 1. Extract auth token from cookies or headers
+      // Parse cookies manually since Next.js doesn't auto-parse them
+      const cookies = parse(req.headers.cookie || '');
       const authToken =
-        req.cookies['auth-token'] || req.headers.authorization?.replace('Bearer ', '');
+        cookies['auth-token'] ||
+        req.cookies?.['auth-token'] ||
+        req.headers.authorization?.replace('Bearer ', '');
 
       if (!authToken) {
         return res.status(401).json({ error: 'Unauthorized - No auth token provided' });
       }
 
-      // 2. Validate token and get user from Supabase
+      // 2. Verify JWT token and extract user ID
+      const tokenPayload = verifyToken(authToken);
+      if (!tokenPayload) {
+        return res.status(401).json({ error: 'Unauthorized - Invalid or expired token' });
+      }
+
+      const { userId } = tokenPayload;
+
+      // 3. Get user from Supabase
       const supabase = getServiceSupabase();
       const { data: user, error } = await supabase
         .from('v_users_with_permissions')
         .select('*')
-        .eq('id', authToken)
+        .eq('id', userId)
         .eq('is_active', true)
         .single();
 
