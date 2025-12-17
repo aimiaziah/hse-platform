@@ -1,12 +1,12 @@
 // src/components/ProtectedRoute.tsx
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth, UserRole } from '@/hooks/useAuth';
+import { useAuth, UserRole, User } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: UserRole;
-  requiredPermission?: string;
+  requiredPermission?: keyof User['permissions'];
   fallbackUrl?: string;
 }
 
@@ -69,7 +69,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return null;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

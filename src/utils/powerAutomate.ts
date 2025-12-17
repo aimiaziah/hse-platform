@@ -78,7 +78,7 @@ export const uploadToSharePointViaPowerAutomate = async (
       inspectionId: inspection.id,
       inspectionType: inspection.type,
       inspectionDate: inspection.inspectionDate || new Date().toISOString(),
-      inspectedBy: inspection.inspectedBy,
+      inspectedBy: inspection.inspectedBy || '',
       reviewedBy: inspection.reviewedBy || '',
       excelFileBase64: excelBase64.split(',')[1], // Remove data:application/...;base64, prefix
       pdfFileBase64: pdfBase64.split(',')[1], // Remove data:application/...;base64, prefix

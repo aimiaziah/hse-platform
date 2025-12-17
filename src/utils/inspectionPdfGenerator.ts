@@ -3,7 +3,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { generateFirstAidPDF } from './firstAidExport';
+import { generateFirstAidPDF } from './templatePdfGenerator';
 
 interface InspectionData {
   id: string;
@@ -182,9 +182,9 @@ function addFireExtinguisherDetails(
       const pageInfo = (
         doc as { internal?: { getCurrentPageInfo?: () => { pageNumber: number } } }
       ).internal?.getCurrentPageInfo?.();
-      if (pageInfo && pageInfo().pageNumber > 1) {
+      if (pageInfo && pageInfo.pageNumber > 1) {
         const pageWidth = doc.internal.pageSize.getWidth();
-        const currentPage = pageInfo().pageNumber;
+        const currentPage = pageInfo.pageNumber;
         doc.setFontSize(8);
         doc.text(`Page ${currentPage}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, {
           align: 'center',
@@ -412,7 +412,7 @@ export function generateInspectionPDF(inspection: InspectionData): jsPDF {
       designation: inspection.designation || 'HSE',
       inspectionDate: inspection.inspection_date,
       signature: inspection.signature || undefined,
-      kits: inspection.form_data.kits || [],
+      kits: Array.isArray(inspection.form_data.kits) ? inspection.form_data.kits : [],
     });
   }
 
@@ -655,7 +655,7 @@ export function generateSupervisorOverviewPDF(data: SupervisorOverviewData): jsP
       const pageInfo = (
         doc as { internal?: { getCurrentPageInfo?: () => { pageNumber: number } } }
       ).internal?.getCurrentPageInfo?.();
-      const currentPage = pageInfo ? pageInfo().pageNumber : 1;
+      const currentPage = pageInfo ? pageInfo.pageNumber : 1;
       doc.setFontSize(8);
       doc.text(
         `Page ${currentPage} of ${pageCount}`,
