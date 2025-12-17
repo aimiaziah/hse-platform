@@ -15,6 +15,10 @@
 .env.local
 .env*.local
 
+# TEST FILES (with sensitive data)
+test-*.js
+test-*.ts
+
 # MISC
 .DS_Store
 *.pem
