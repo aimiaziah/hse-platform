@@ -5,7 +5,7 @@ ultralytics==8.3.0
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 pillow==11.0.0
-python-multipart==0.0.17
+python-multipart==0.0.18
 pydantic==2.10.0
 
 # For ONNX runtime (faster inference, smaller size)
