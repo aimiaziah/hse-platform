@@ -5,16 +5,15 @@
  * Choose your deployment option by setting environment variables.
  *
  * Supported Options:
- * 1. Roboflow Hosted API (easiest, recommended for start)
- * 2. AWS Lambda (custom deployment)
+ * 1. DigitalOcean App Platform (recommended for production - integrated with main app)
+ * 2. Roboflow Hosted API (easiest for testing)
  * 3. Google Cloud Run (custom deployment)
  * 4. Azure Functions (custom deployment)
  *
  * Setup:
  * 1. Train your YOLO model (see yolo-training-colab.py)
  * 2. Deploy using one of the options above
- * 3. Set environment variables in .env.local
- * 4. Rename this file to: analyze-extinguisher.ts
+ * 3. Set environment variables in .env.local or DigitalOcean dashboard
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
@@ -30,12 +29,12 @@ import {
 // ============================================================================
 
 // Choose your deployment option via environment variable
-const DEPLOYMENT_TYPE = process.env.AI_DEPLOYMENT_TYPE || 'roboflow'; // 'roboflow' | 'aws' | 'gcp' | 'azure'
+const DEPLOYMENT_TYPE = process.env.AI_DEPLOYMENT_TYPE || 'roboflow'; // 'roboflow' | 'digitalocean' | 'gcp' | 'azure'
 
 // API endpoints and keys
 const { ROBOFLOW_API_KEY } = process.env;
 const { ROBOFLOW_MODEL_ENDPOINT } = process.env;
-const { AWS_LAMBDA_ENDPOINT } = process.env;
+const AI_MODEL_ENDPOINT = process.env.AI_MODEL_ENDPOINT; // DigitalOcean internal endpoint
 const { GCP_CLOUD_RUN_ENDPOINT } = process.env;
 const { AZURE_FUNCTION_ENDPOINT } = process.env;
 
@@ -96,8 +95,8 @@ export default async function handler(
       case 'roboflow':
         yoloResults = await detectWithRoboflow(images);
         break;
-      case 'aws':
-        yoloResults = await detectWithAWS(images, extinguisherInfo);
+      case 'digitalocean':
+        yoloResults = await detectWithDigitalOcean(images, extinguisherInfo);
         break;
       case 'gcp':
         yoloResults = await detectWithGCP(images, extinguisherInfo);
@@ -201,20 +200,20 @@ async function detectWithRoboflow(images: CapturedImage[]): Promise<YOLOImageRes
 }
 
 // ============================================================================
-// DEPLOYMENT OPTION 2: AWS LAMBDA
+// DEPLOYMENT OPTION 2: DIGITALOCEAN APP PLATFORM
 // ============================================================================
 
-async function detectWithAWS(
+async function detectWithDigitalOcean(
   images: CapturedImage[],
   extinguisherInfo: any,
 ): Promise<YOLOImageResult[]> {
-  if (!AWS_LAMBDA_ENDPOINT) {
-    console.warn('[AI Analysis] AWS Lambda not configured, using mock data');
+  if (!AI_MODEL_ENDPOINT) {
+    console.warn('[AI Analysis] DigitalOcean AI endpoint not configured, using mock data');
     return generateMockDetections(images);
   }
 
   try {
-    const response = await fetch(AWS_LAMBDA_ENDPOINT, {
+    const response = await fetch(`${AI_MODEL_ENDPOINT}/detect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -228,13 +227,28 @@ async function detectWithAWS(
     });
 
     if (!response.ok) {
-      throw new Error(`AWS Lambda error: ${response.status} ${response.statusText}`);
+      throw new Error(`DigitalOcean AI Server error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data.results || [];
+    console.log('[DigitalOcean AI] Raw response:', data);
+
+    // Map Python server response format to our format
+    // Python server returns: { results: [{ stepId, detections: [{ class_name, confidence, bbox }] }] }
+    // We need: { results: [{ stepId, detections: [{ class, confidence, bbox }] }] }
+    const mappedResults = (data.results || []).map((result: any) => ({
+      stepId: result.stepId,
+      detections: (result.detections || []).map((det: any) => ({
+        class: det.class_name || det.class, // Map class_name to class
+        confidence: det.confidence,
+        bbox: det.bbox,
+      })),
+    }));
+
+    console.log('[DigitalOcean AI] Mapped results:', mappedResults);
+    return mappedResults;
   } catch (error: any) {
-    console.error('[AWS Lambda] Error:', error);
+    console.error('[DigitalOcean AI] Error:', error);
     throw error;
   }
 }

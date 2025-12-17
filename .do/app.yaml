@@ -7,6 +7,7 @@ region: sgp
 
 # Services - defines the components of your application
 services:
+  # Main Next.js web application
   - name: web
     # Source code configuration - Production branch
     github:
@@ -36,6 +37,44 @@ services:
     health_check:
       http_path: /api/health
       initial_delay_seconds: 20
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+  # YOLO AI Model Server (Python FastAPI)
+  - name: ai-model-server
+    # Source code configuration - same repo
+    github:
+      repo: aimiaziah/hse-platform
+      branch: main
+      deploy_on_push: true
+
+    # Python build configuration
+    build_command: pip install -r requirements.txt
+
+    # Run FastAPI server
+    run_command: python model_server.py --host 0.0.0.0 --port 8080
+
+    # Environment configuration
+    environment_slug: python
+    instance_count: 1
+    # AI model server needs more resources for ML inference
+    # basic-xs: $12/month (1GB RAM) - minimum for YOLO with ONNX
+    # basic-s: $24/month (2GB RAM) - recommended for PyTorch model
+    instance_size_slug: basic-xs
+
+    # HTTP configuration
+    http_port: 8080
+    # Make this service internal only (not publicly accessible)
+    # The Next.js app will communicate with it internally
+    internal_ports:
+      - 8080
+
+    # Health check for model server
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 30
       period_seconds: 10
       timeout_seconds: 5
       success_threshold: 1
@@ -170,6 +209,23 @@ services:
       # - key: NEXT_PUBLIC_APP_URL
       #   value: 'https://your-app-name.ondigitalocean.app'
       #   scope: RUN_AND_BUILD_TIME
+
+      # AI Model Server Configuration
+      - key: AI_DEPLOYMENT_TYPE
+        value: 'digitalocean'
+        scope: RUN_TIME
+
+      - key: AI_MODEL_ENDPOINT
+        value: 'http://ai-model-server:8080'
+        scope: RUN_TIME
+
+      - key: AI_MIN_CONFIDENCE
+        value: '0.5'
+        scope: RUN_TIME
+
+      - key: AI_TIMEOUT_MS
+        value: '30000'
+        scope: RUN_TIME
 
 # Production alerts configuration
 # These alerts will notify you of important deployment events

@@ -222,20 +222,21 @@ NEXT STEPS:
 3. DEPLOY MODEL:
    Choose one option:
 
-   A) Roboflow Hosted (Easiest):
+   A) DigitalOcean App Platform (Recommended for Production):
+      - Deploy model_server.py alongside your Next.js app
+      - Upload best.onnx to your repository
+      - Configure in .do/app.yaml (already set up)
+      - Model runs as internal service (not publicly accessible)
+
+   B) Roboflow Hosted (Easiest for Testing):
       - Upload best.pt to Roboflow
       - Use Roboflow API endpoint
       - Update .env: ROBOFLOW_API_KEY=your_key
 
-   B) AWS Lambda:
-      - Follow deployment guide in AI_YOLO_IMPLEMENTATION_GUIDE.md
-      - Deploy lambda_function.py with best.pt
-      - Update .env: AI_API_ENDPOINT=your_lambda_url
-
-   C) Client-Side (Offline):
-      - Use the exported TensorFlow.js model
-      - Copy to public/models/ in your Next.js app
-      - Implement browser-based inference
+   C) Google Cloud Run or Azure Functions:
+      - Deploy model_server.py as a containerized service
+      - Update .env with appropriate endpoint
+      - Good for multi-cloud or custom scaling needs
 
 4. UPDATE YOUR APP:
    - Update src/pages/api/ai/analyze-extinguisher.ts
