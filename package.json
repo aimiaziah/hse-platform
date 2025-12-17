@@ -30,16 +30,13 @@
     "clean": "git clean -dfX",
     "dev": "next dev -p 8080",
     "lint": "next lint --fix .",
-    "prepare": "husky install",
+    "prepare": "node -e \"try { require('husky').install() } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e }\" || true",
     "start": "next start -p 8080",
     "import-data": "ts-node --project tsconfig.json scripts/import-historical-data.ts",
     "create-sample-data": "ts-node --project tsconfig.json scripts/create-sample-data.ts",
-    "test:r2": "node test-r2-setup.js",
     "migrate:r2": "node migrate-images-to-r2.js",
-    "test:digitalocean": "node test-digitalocean.js",
     "migrate:digitalocean": "node migrate-to-digitalocean.js",
-    "download:templates": "node download-templates-from-supabase.js",
-    "test:templates": "node test-template-caching.js"
+    "download:templates": "node download-templates-from-supabase.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",
@@ -96,7 +93,7 @@
     "typescript-eslint": "^7.18.0"
   },
   "engines": {
-    "node": ">=14.6.0",
-    "npm": ">=6.x"
+    "node": ">=18.17.0 <22.0.0",
+    "npm": ">=9.0.0"
   }
 }
