@@ -23,6 +23,9 @@ test-*.ts
 .DS_Store
 *.pem
 
+# CLAUDE CODE
+.claude/
+
 # DATA STORAGE
 .data/
 

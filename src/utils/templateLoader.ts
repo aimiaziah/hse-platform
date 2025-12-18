@@ -4,14 +4,19 @@ import { getTemplateWithCache } from './templateCache';
 
 /**
  * Template name mappings
- * Maps original Supabase names to local file names
+ * Maps both original Supabase names and modern template names to local file names
  */
 const TEMPLATE_MAPPINGS: Record<string, string[]> = {
   'fire extinguisher form.xlsx': ['fire-extinguisher-template.xlsx', 'fire extinguisher form.xlsx'],
+  'fire-extinguisher-template.xlsx': ['fire-extinguisher-template.xlsx', 'fire extinguisher form.xlsx'],
   'first aid form.xlsx': ['first-aid-template.xlsx', 'first aid form.xlsx'],
+  'first-aid-template.xlsx': ['first-aid-template.xlsx', 'first aid form.xlsx'],
   'hse inspection form.xlsx': ['hse-inspection-template.xlsx', 'hse inspection form.xlsx'],
+  'hse-inspection-template.xlsx': ['hse-inspection-template.xlsx', 'hse inspection form.xlsx'],
   'monthly manhours.xlsx': ['manhours-template.xlsx', 'monthly manhours.xlsx'],
+  'manhours-template.xlsx': ['manhours-template.xlsx', 'monthly manhours.xlsx'],
   'observation form.xlsx': ['observation-template.xlsx', 'observation form.xlsx'],
+  'observation-template.xlsx': ['observation-template.xlsx', 'observation form.xlsx'],
 };
 
 /**

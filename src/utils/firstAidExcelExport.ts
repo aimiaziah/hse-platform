@@ -282,8 +282,10 @@ export async function generateFirstAidExcel(
 
     return wb;
   } catch (error) {
+    console.error('[FirstAidExport] Error generating Excel:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     throw new Error(
-      'Could not load First Aid template. Please ensure "first-aid-template.xlsx" exists in the templates storage.',
+      `Could not load First Aid template: ${errorMessage}. Please ensure "first-aid-template.xlsx" exists in the templates storage.`,
     );
   }
 }
