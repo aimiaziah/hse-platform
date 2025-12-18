@@ -8,7 +8,10 @@ import { getTemplateWithCache } from './templateCache';
  */
 const TEMPLATE_MAPPINGS: Record<string, string[]> = {
   'fire extinguisher form.xlsx': ['fire-extinguisher-template.xlsx', 'fire extinguisher form.xlsx'],
-  'fire-extinguisher-template.xlsx': ['fire-extinguisher-template.xlsx', 'fire extinguisher form.xlsx'],
+  'fire-extinguisher-template.xlsx': [
+    'fire-extinguisher-template.xlsx',
+    'fire extinguisher form.xlsx',
+  ],
   'first aid form.xlsx': ['first-aid-template.xlsx', 'first aid form.xlsx'],
   'first-aid-template.xlsx': ['first-aid-template.xlsx', 'first aid form.xlsx'],
   'hse inspection form.xlsx': ['hse-inspection-template.xlsx', 'hse inspection form.xlsx'],
