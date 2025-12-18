@@ -8,10 +8,7 @@
  */
 
 // Allowlist of trusted domains for external API calls
-const ALLOWED_DOMAINS = [
-  'graph.microsoft.com',
-  'login.microsoftonline.com',
-];
+const ALLOWED_DOMAINS = ['graph.microsoft.com', 'login.microsoftonline.com'];
 
 // Allowlist of trusted API path prefixes for internal API calls
 const ALLOWED_API_PATHS = [
@@ -38,7 +35,7 @@ export const isValidUrl = (url: string, allowInternal: boolean = true): boolean 
       }
 
       // Check if the path starts with any allowed API path
-      return ALLOWED_API_PATHS.some(allowedPath => url.startsWith(allowedPath));
+      return ALLOWED_API_PATHS.some((allowedPath) => url.startsWith(allowedPath));
     }
 
     // Parse absolute URLs
@@ -46,8 +43,10 @@ export const isValidUrl = (url: string, allowInternal: boolean = true): boolean 
 
     // Only allow HTTPS protocol (or HTTP for localhost in development)
     if (parsedUrl.protocol !== 'https:') {
-      if (parsedUrl.protocol === 'http:' &&
-          (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1')) {
+      if (
+        parsedUrl.protocol === 'http:' &&
+        (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1')
+      ) {
         // Allow HTTP for localhost in development
         return true;
       }
@@ -56,8 +55,8 @@ export const isValidUrl = (url: string, allowInternal: boolean = true): boolean 
 
     // Check if domain is in allowlist
     const hostname = parsedUrl.hostname.toLowerCase();
-    const isAllowedDomain = ALLOWED_DOMAINS.some(domain =>
-      hostname === domain || hostname.endsWith(`.${domain}`)
+    const isAllowedDomain = ALLOWED_DOMAINS.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
     );
 
     if (!isAllowedDomain) {
@@ -89,7 +88,7 @@ export const validateUrlForFetch = (url: string, allowInternal: boolean = true):
   if (!isValidUrl(url, allowInternal)) {
     throw new Error(
       `[SSRF Prevention] Attempted to fetch from untrusted URL. ` +
-      `Only requests to trusted domains are allowed.`
+        `Only requests to trusted domains are allowed.`,
     );
   }
 };
@@ -133,7 +132,9 @@ export const validateSharePointSiteUrl = (siteUrl: string): boolean => {
     // Must be a sharepoint.com domain
     const hostname = parsedUrl.hostname.toLowerCase();
     if (!hostname.endsWith('.sharepoint.com')) {
-      console.warn(`[SSRF Prevention] SharePoint site URL must be from sharepoint.com domain: ${hostname}`);
+      console.warn(
+        `[SSRF Prevention] SharePoint site URL must be from sharepoint.com domain: ${hostname}`,
+      );
       return false;
     }
 
@@ -149,10 +150,7 @@ export const validateSharePointSiteUrl = (siteUrl: string): boolean => {
  * @param options - Fetch options
  * @returns Promise with fetch response
  */
-export const safeFetch = async (
-  url: string,
-  options?: RequestInit
-): Promise<Response> => {
+export const safeFetch = async (url: string, options?: RequestInit): Promise<Response> => {
   // Validate URL before fetching
   validateUrlForFetch(url);
 

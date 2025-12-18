@@ -244,14 +244,11 @@ export async function uploadToSharePointSite(
     const sitePath = url.pathname;
 
     // Get site ID
-    const siteResponse = await safeFetch(
-      buildGraphApiUrl(`sites/${url.hostname}:${sitePath}`),
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
+    const siteResponse = await safeFetch(buildGraphApiUrl(`sites/${url.hostname}:${sitePath}`), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
       },
-    );
+    });
 
     if (!siteResponse.ok) {
       throw new Error('Failed to get SharePoint site information');

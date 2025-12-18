@@ -288,71 +288,65 @@ const uploadToSharePoint = async (
         const { hostname } = url;
         const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/'); // e.g., "sites/ThetaEdge"
 
-      // Get site ID
-      const siteResponse = await safeFetch(
-        buildGraphApiUrl(`sites/${hostname}:/${sitePath}`),
-        {
+        // Get site ID
+        const siteResponse = await safeFetch(buildGraphApiUrl(`sites/${hostname}:/${sitePath}`), {
           headers: { Authorization: `Bearer ${accessToken}` },
-        },
-      );
+        });
 
-      if (!siteResponse.ok) {
-        throw new Error('Failed to get SharePoint site information');
-      }
+        if (!siteResponse.ok) {
+          throw new Error('Failed to get SharePoint site information');
+        }
 
-      const siteData = await siteResponse.json();
-      const siteId = siteData.id;
+        const siteData = await siteResponse.json();
+        const siteId = siteData.id;
 
-      // Get drive (document library) ID
-      const drivesResponse = await safeFetch(
-        buildGraphApiUrl(`sites/${siteId}/drives`),
-        {
+        // Get drive (document library) ID
+        const drivesResponse = await safeFetch(buildGraphApiUrl(`sites/${siteId}/drives`), {
           headers: { Authorization: `Bearer ${accessToken}` },
-        },
-      );
+        });
 
-      if (!drivesResponse.ok) {
-        throw new Error('Failed to get document library');
-      }
+        if (!drivesResponse.ok) {
+          throw new Error('Failed to get document library');
+        }
 
-      const drivesData = await drivesResponse.json();
-      const drive = drivesData.value.find((d: any) => d.name === libraryName);
+        const drivesData = await drivesResponse.json();
+        const drive = drivesData.value.find((d: any) => d.name === libraryName);
 
-      if (!drive) {
-        throw new Error(`Document library "${libraryName}" not found`);
-      }
+        if (!drive) {
+          throw new Error(`Document library "${libraryName}" not found`);
+        }
 
-      const driveId = drive.id;
+        const driveId = drive.id;
 
-      // Create folder structure if needed
-      if (folderPath) {
-        await createSharePointFolder(accessToken, siteId, driveId, folderPath);
-      }
+        // Create folder structure if needed
+        if (folderPath) {
+          await createSharePointFolder(accessToken, siteId, driveId, folderPath);
+        }
 
-      // Upload file to SharePoint
-      const uploadPath = folderPath
-        ? `sites/${siteId}/drives/${driveId}/root:/${folderPath}/${filename}:/content`
-        : `sites/${siteId}/drives/${driveId}/root:/${filename}:/content`;
+        // Upload file to SharePoint
+        const uploadPath = folderPath
+          ? `sites/${siteId}/drives/${driveId}/root:/${folderPath}/${filename}:/content`
+          : `sites/${siteId}/drives/${driveId}/root:/${filename}:/content`;
 
-      const response = await safeFetch(buildGraphApiUrl(uploadPath), {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/octet-stream',
-        },
-        body: file,
-      });
+        const response = await safeFetch(buildGraphApiUrl(uploadPath), {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/octet-stream',
+          },
+          body: file,
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`SharePoint upload failed: ${error.error?.message || 'Unknown error'}`);
-      }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`SharePoint upload failed: ${error.error?.message || 'Unknown error'}`);
+        }
 
-      const result = await response.json();
-      return {
-        id: result.id,
-        webUrl: result.webUrl,
-      };
+        const result = await response.json();
+        return {
+          id: result.id,
+          webUrl: result.webUrl,
+        };
       } catch (error) {
         // SharePoint site upload failed, falling back to OneDrive
         // Fall back to OneDrive if SharePoint upload fails
@@ -404,7 +398,9 @@ const createSharePointFolder = async (
 
       // Check if folder exists
       const checkResponse = await safeFetch(
-        buildGraphApiUrl(`sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${folderName}' and folder ne null`),
+        buildGraphApiUrl(
+          `sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
+        ),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -466,34 +462,28 @@ const createFolder = async (folderPath: string): Promise<void> => {
         const { hostname } = url;
         const sitePath = url.pathname.split('/').filter(Boolean).slice(0, 2).join('/');
 
-        const siteResponse = await safeFetch(
-        buildGraphApiUrl(`sites/${hostname}:/${sitePath}`),
-        {
+        const siteResponse = await safeFetch(buildGraphApiUrl(`sites/${hostname}:/${sitePath}`), {
           headers: { Authorization: `Bearer ${accessToken}` },
-        },
-      );
+        });
 
-      if (siteResponse.ok) {
-        const siteData = await siteResponse.json();
-        const siteId = siteData.id;
+        if (siteResponse.ok) {
+          const siteData = await siteResponse.json();
+          const siteId = siteData.id;
 
-        const drivesResponse = await safeFetch(
-          buildGraphApiUrl(`sites/${siteId}/drives`),
-          {
+          const drivesResponse = await safeFetch(buildGraphApiUrl(`sites/${siteId}/drives`), {
             headers: { Authorization: `Bearer ${accessToken}` },
-          },
-        );
+          });
 
-        if (drivesResponse.ok) {
-          const drivesData = await drivesResponse.json();
-          const drive = drivesData.value.find((d: any) => d.name === libraryName);
+          if (drivesResponse.ok) {
+            const drivesData = await drivesResponse.json();
+            const drive = drivesData.value.find((d: any) => d.name === libraryName);
 
-          if (drive) {
-            await createSharePointFolder(accessToken, siteId, drive.id, folderPath);
-            return;
+            if (drive) {
+              await createSharePointFolder(accessToken, siteId, drive.id, folderPath);
+              return;
+            }
           }
         }
-      }
       } catch (error) {
         // SharePoint folder creation failed, falling back to OneDrive
       }
@@ -507,7 +497,9 @@ const createFolder = async (folderPath: string): Promise<void> => {
   for (const folderName of pathParts) {
     try {
       const checkResponse = await safeFetch(
-        buildGraphApiUrl(`${currentPath}:/children?$filter=name eq '${folderName}' and folder ne null`),
+        buildGraphApiUrl(
+          `${currentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
+        ),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         },
@@ -521,21 +513,18 @@ const createFolder = async (folderPath: string): Promise<void> => {
         }
       }
 
-      const createResponse = await safeFetch(
-        buildGraphApiUrl(`${currentPath}/children`),
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: folderName,
-            folder: {},
-            '@microsoft.graph.conflictBehavior': 'rename',
-          }),
+      const createResponse = await safeFetch(buildGraphApiUrl(`${currentPath}/children`), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({
+          name: folderName,
+          folder: {},
+          '@microsoft.graph.conflictBehavior': 'rename',
+        }),
+      });
 
       if (!createResponse.ok) {
         throw new Error(`Failed to create folder: ${folderName}`);
