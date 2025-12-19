@@ -1,6 +1,7 @@
-// src/pages/api/upload/image.ts - API endpoint for image uploads to R2
+// src/pages/api/upload/image.ts - API endpoint for image uploads to DigitalOcean Spaces
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { uploadImageToR2 } from '../../../utils/cloudflareR2';
+import { uploadImageToSpaces, isSpacesConfigured } from '../../../utils/digitalOceanSpaces';
+import { uploadImageToR2, isR2Configured } from '../../../utils/cloudflareR2';
 
 type UploadResponse = {
   success: boolean;
@@ -27,8 +28,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       });
     }
 
-    // Upload to R2
-    const result = await uploadImageToR2(image, folder || 'inspections');
+    // Prefer DigitalOcean Spaces, fallback to R2
+    let result;
+    if (isSpacesConfigured()) {
+      console.log('[API] Uploading to DigitalOcean Spaces...');
+      result = await uploadImageToSpaces(image, folder || 'inspections');
+    } else if (isR2Configured()) {
+      console.log('[API] Uploading to Cloudflare R2...');
+      result = await uploadImageToR2(image, folder || 'inspections');
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: 'No storage provider configured. Please set up DO Spaces or R2.',
+      });
+    }
 
     if (result.success) {
       return res.status(200).json({

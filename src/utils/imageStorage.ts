@@ -12,7 +12,20 @@ export interface ImageStorageResult {
 }
 
 /**
- * Check if R2 is configured
+ * Check if DigitalOcean Spaces is configured
+ * This is a client-side check using public env vars
+ */
+function isSpacesConfigured(): boolean {
+  // DO Spaces only needs these to be set (keys are server-side only)
+  return !!(
+    typeof window !== 'undefined' &&
+    process.env.NEXT_PUBLIC_DO_SPACES_ENDPOINT &&
+    process.env.NEXT_PUBLIC_DO_SPACES_BUCKET
+  );
+}
+
+/**
+ * Check if R2 is configured (fallback)
  * This is a client-side check using public env vars
  */
 function isR2Configured(): boolean {
@@ -33,10 +46,10 @@ export async function uploadImage(
   base64Data: string,
   folder = 'inspections',
 ): Promise<ImageStorageResult> {
-  // If R2 is configured, upload to R2
-  if (isR2Configured()) {
+  // If DO Spaces or R2 is configured, upload to cloud storage
+  if (isSpacesConfigured() || isR2Configured()) {
     try {
-      // Call API endpoint to upload to R2 (server-side only has credentials)
+      // Call API endpoint to upload (server-side handles credentials)
       const response = await fetch('/api/upload/image', {
         method: 'POST',
         headers: {
@@ -63,8 +76,8 @@ export async function uploadImage(
       }
       throw new Error(result.error || 'Upload failed');
     } catch (error) {
-      console.error('[ImageStorage] R2 upload failed, falling back to base64:', error);
-      // Fallback to base64 if R2 upload fails
+      console.error('[ImageStorage] Cloud upload failed, falling back to base64:', error);
+      // Fallback to base64 if upload fails
       return {
         success: true,
         data: base64Data,
@@ -179,11 +192,22 @@ export function isImageUrl(data: string): boolean {
  * Get storage info
  */
 export function getStorageInfo() {
+  const spacesConfigured = isSpacesConfigured();
   const r2Configured = isR2Configured();
 
+  let storageType = 'LocalStorage (Base64)';
+  if (spacesConfigured) {
+    storageType = 'DigitalOcean Spaces';
+  } else if (r2Configured) {
+    storageType = 'Cloudflare R2';
+  }
+
   return {
-    storageType: r2Configured ? 'R2' : 'LocalStorage (Base64)',
+    storageType,
+    spacesConfigured,
     r2Configured,
+    spacesEndpoint: process.env.NEXT_PUBLIC_DO_SPACES_ENDPOINT || 'Not configured',
+    spacesBucket: process.env.NEXT_PUBLIC_DO_SPACES_BUCKET || 'Not configured',
     r2AccountId: process.env.NEXT_PUBLIC_R2_ACCOUNT_ID || 'Not configured',
     r2BucketName: process.env.NEXT_PUBLIC_R2_BUCKET_NAME || 'Not configured',
   };

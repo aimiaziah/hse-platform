@@ -1,0 +1,219 @@
+{
+  "requestExample": {
+    "method": "POST",
+    "endpoint": "/api/ai/analyze-extinguisher",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "images": [
+        {
+          "stepId": "overall",
+          "dataUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...[BASE64_ENCODED_IMAGE]...",
+          "timestamp": 1703001234567
+        },
+        {
+          "stepId": "closeup",
+          "dataUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD...[BASE64_ENCODED_IMAGE]...",
+          "timestamp": 1703001245678
+        }
+      ],
+      "extinguisherInfo": {
+        "serialNo": "FE-001",
+        "location": "Building A - Floor 2 - Near Stairwell",
+        "typeSize": "9kg CO2"
+      }
+    }
+  },
+  "responseExample": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "success": true,
+      "detections": [
+        {
+          "field": "shell",
+          "value": "√",
+          "confidence": 0.92,
+          "reasoning": "Shell detected with 92% confidence - appears intact"
+        },
+        {
+          "field": "hose",
+          "value": "√",
+          "confidence": 0.88,
+          "reasoning": "Hose detected at 88% confidence - clearly visible and attached"
+        },
+        {
+          "field": "nozzle",
+          "value": "√",
+          "confidence": 0.85,
+          "reasoning": "Nozzle detected at 85% confidence - clearly visible and attached"
+        },
+        {
+          "field": "pressureGauge",
+          "value": "√",
+          "confidence": 0.95,
+          "reasoning": "Pressure gauge detected at 95% confidence - clearly readable"
+        },
+        {
+          "field": "emptyPressureLow",
+          "value": "√",
+          "confidence": 0.855,
+          "reasoning": "Pressure gauge visible at 95% confidence - appears in operational range"
+        },
+        {
+          "field": "safetyPin",
+          "value": "√",
+          "confidence": 0.9,
+          "reasoning": "Safety pin detected at 90% confidence - clearly in place"
+        },
+        {
+          "field": "pinSeal",
+          "value": "√",
+          "confidence": 0.87,
+          "reasoning": "Pin seal detected at 87% confidence - clearly intact"
+        },
+        {
+          "field": "servicingTags",
+          "value": "√",
+          "confidence": 0.91,
+          "reasoning": "Service tag detected at 91% confidence - clearly readable"
+        },
+        {
+          "field": "accessible",
+          "value": "√",
+          "confidence": 0.896666,
+          "reasoning": "All components clearly visible at 90% confidence - appears accessible with no obstructions"
+        },
+        {
+          "field": "missingNotInPlace",
+          "value": "X",
+          "confidence": 0.8,
+          "reasoning": "Mounting bracket not visible, may not be in designated location"
+        }
+      ],
+      "extractedData": {},
+      "processingTime": 1847
+    }
+  },
+  "errorResponseExamples": {
+    "noImagesProvided": {
+      "status": 400,
+      "body": {
+        "success": false,
+        "detections": [],
+        "extractedData": {},
+        "error": "No images provided"
+      }
+    },
+    "methodNotAllowed": {
+      "status": 405,
+      "body": {
+        "success": false,
+        "detections": [],
+        "extractedData": {},
+        "error": "Method not allowed"
+      }
+    },
+    "serverError": {
+      "status": 500,
+      "body": {
+        "success": false,
+        "detections": [],
+        "extractedData": {},
+        "error": "Failed to analyze images",
+        "processingTime": 1234
+      }
+    },
+    "timeoutError": {
+      "status": 500,
+      "body": {
+        "success": false,
+        "detections": [],
+        "extractedData": {},
+        "error": "Request timeout - AI service took too long to respond",
+        "processingTime": 30000
+      }
+    }
+  },
+  "yoloRawDetectionExample": {
+    "results": [
+      {
+        "stepId": "overall",
+        "detections": [
+          {
+            "class": "shell",
+            "confidence": 0.92,
+            "bbox": [100, 50, 300, 500]
+          },
+          {
+            "class": "hose",
+            "confidence": 0.88,
+            "bbox": [250, 100, 350, 400]
+          },
+          {
+            "class": "nozzle",
+            "confidence": 0.85,
+            "bbox": [250, 80, 350, 150]
+          },
+          {
+            "class": "pressure_gauge",
+            "confidence": 0.95,
+            "bbox": [150, 150, 250, 250]
+          },
+          {
+            "class": "safety_pin",
+            "confidence": 0.9,
+            "bbox": [180, 100, 220, 140]
+          },
+          {
+            "class": "pin_seal",
+            "confidence": 0.87,
+            "bbox": [180, 110, 220, 130]
+          },
+          {
+            "class": "service_tag",
+            "confidence": 0.91,
+            "bbox": [120, 300, 220, 400]
+          }
+        ]
+      },
+      {
+        "stepId": "closeup",
+        "detections": [
+          {
+            "class": "pressure_gauge",
+            "confidence": 0.96,
+            "bbox": [50, 50, 250, 250]
+          },
+          {
+            "class": "service_tag",
+            "confidence": 0.93,
+            "bbox": [100, 300, 300, 450]
+          }
+        ]
+      }
+    ]
+  },
+  "performanceMetrics": {
+    "typical": {
+      "averageResponseTime": "1.5 - 3.0 seconds",
+      "imageProcessingTime": "800ms - 1.5s per image",
+      "networkLatency": "200ms - 500ms",
+      "totalAPITime": "1.8 - 3.5 seconds"
+    },
+    "requestSize": {
+      "singleImageCompressed": "200KB - 800KB",
+      "twoImages": "400KB - 1.6MB",
+      "jsonOverhead": "~500 bytes",
+      "totalRequest": "400KB - 2MB"
+    },
+    "responseSize": {
+      "detectionResults": "1KB - 3KB",
+      "metadata": "~200 bytes",
+      "totalResponse": "1.2KB - 3.5KB"
+    }
+  }
+}
