@@ -78,9 +78,17 @@ function base64ToBuffer(base64Data: string): Buffer {
 
 /**
  * Get MIME type from base64 data URL
+ * Uses a safer regex pattern to prevent ReDoS attacks
  */
 function getMimeType(base64Data: string): string {
-  const match = base64Data.match(/data:([^;]+);/);
+  // Limit input length to prevent ReDoS
+  if (base64Data.length > 1000) {
+    return 'image/jpeg';
+  }
+
+  // Use a more specific, bounded regex pattern
+  // Match "data:" followed by MIME type (alphanumeric, slash, hyphen, plus) followed by semicolon
+  const match = base64Data.match(/^data:([a-zA-Z0-9][a-zA-Z0-9\/\-\+]*);/);
   return match ? match[1] : 'image/jpeg';
 }
 

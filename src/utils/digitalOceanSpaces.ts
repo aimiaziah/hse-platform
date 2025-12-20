@@ -219,10 +219,7 @@ export async function deleteImageFromSpaces(key: string): Promise<boolean> {
  * @param expiresIn - URL expiration time in seconds (default: 1 hour)
  * @returns Signed URL
  */
-export async function getSignedUrlForSpaces(
-  key: string,
-  expiresIn = 3600,
-): Promise<string | null> {
+export async function getSignedUrlForSpaces(key: string, expiresIn = 3600): Promise<string | null> {
   try {
     const client = createSpacesClient();
     const config = getSpacesConfig();

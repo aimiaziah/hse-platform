@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import SupervisorLayout from '@/roles/supervisor/layouts/SupervisorLayout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
-import { safeFetch } from '@/utils/url-validator';
+import { safeFetch, sanitizeId } from '@/utils/url-validator';
 import { useAuth } from '@/hooks/useAuth';
 import {
   exportToSharePoint as exportToSharePointOAuth,
@@ -383,8 +383,10 @@ const InspectionReview: React.FC = (): JSX.Element => {
   const loadInspection = async () => {
     setLoading(true);
     try {
+      // Sanitize ID to prevent SSRF
+      const sanitizedId = sanitizeId(id);
       // First, try to fetch from database
-      const response = await safeFetch(`/api/inspections/${id}`);
+      const response = await safeFetch(`/api/inspections/${sanitizedId}`);
       let found: Inspection | null = null;
 
       if (response.ok) {
@@ -444,8 +446,10 @@ const InspectionReview: React.FC = (): JSX.Element => {
         }
 
         const inspections = storage.load(storageKey, []);
+        const sanitizedId = sanitizeId(id);
         found =
-          (inspections.find((i: Inspection) => i.id === id) as Inspection | undefined) || null;
+          (inspections.find((i: Inspection) => i.id === sanitizedId) as Inspection | undefined) ||
+          null;
       }
 
       if (found) {
@@ -611,11 +615,13 @@ const InspectionReview: React.FC = (): JSX.Element => {
     type: 'approval' | 'rejection',
     message: string,
   ) => {
+    // Sanitize ID to prevent injection
+    const sanitizedId = sanitizeId(id);
     const notifications: any[] = storage.load('notifications', []);
     const notification = {
       id: Date.now().toString(),
       userId: inspectorId,
-      inspectionId: id,
+      inspectionId: sanitizedId,
       type,
       message,
       read: false,
@@ -638,8 +644,10 @@ const InspectionReview: React.FC = (): JSX.Element => {
     try {
       const reviewDate = new Date().toISOString();
 
+      // Sanitize ID to prevent SSRF
+      const sanitizedId = sanitizeId(id);
       // Update inspection in database via API
-      const apiResponse = await safeFetch(`/api/inspections/${id}`, {
+      const apiResponse = await safeFetch(`/api/inspections/${sanitizedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -737,8 +745,12 @@ const InspectionReview: React.FC = (): JSX.Element => {
             sharePointExported = true;
           } catch (powerAutomateError: any) {
             console.error('Power Automate upload error:', powerAutomateError);
+            // Sanitize error message to prevent format string injection
+            const errorMessage = powerAutomateError?.message
+              ? String(powerAutomateError.message).substring(0, 200)
+              : 'Unknown error';
             alert(
-              `Inspection approved! Power Automate upload encountered an issue: ${powerAutomateError.message}. Documents can be downloaded manually.`,
+              `Inspection approved! Power Automate upload encountered an issue: ${errorMessage}. Documents can be downloaded manually.`,
             );
           }
         }
@@ -845,8 +857,10 @@ const InspectionReview: React.FC = (): JSX.Element => {
 
     setProcessing(true);
     try {
+      // Sanitize ID to prevent SSRF
+      const sanitizedId = sanitizeId(id);
       // Update inspection in database via API
-      const apiResponse = await safeFetch(`/api/inspections/${id}`, {
+      const apiResponse = await safeFetch(`/api/inspections/${sanitizedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

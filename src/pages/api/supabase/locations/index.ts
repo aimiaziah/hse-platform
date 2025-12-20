@@ -2,6 +2,8 @@
 import { NextApiResponse } from 'next';
 import { withRBAC, AuthenticatedRequest } from '@/lib/supabase-middleware';
 import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
+import { getCachedLocations } from '@/lib/supabase-cached';
+import { invalidateLocationCache } from '@/lib/cache';
 
 /**
  * GET /api/supabase/locations - List all locations
@@ -15,6 +17,26 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (req.method === 'GET') {
       const { is_active, limit = '100', offset = '0' } = req.query;
 
+      // Use cached locations for simple queries (most common case)
+      if (is_active === 'true' && offset === '0' && parseInt(limit as string) >= 100) {
+        try {
+          const cachedData = await getCachedLocations();
+          return res.status(200).json({
+            success: true,
+            data: cachedData,
+            cached: true,
+            pagination: {
+              total: cachedData.length,
+              limit: cachedData.length,
+              offset: 0,
+            },
+          });
+        } catch (error) {
+          console.warn('Cache miss, falling back to database');
+        }
+      }
+
+      // Complex query or cache miss - query database directly
       let query = supabase.from('locations').select('*', { count: 'exact' });
 
       // Apply filters
@@ -82,6 +104,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         console.error('Error creating location:', createError);
         return res.status(500).json({ error: 'Failed to create location' });
       }
+
+      // Invalidate cache
+      await invalidateLocationCache();
 
       // Log audit trail
       await logAuditTrail({

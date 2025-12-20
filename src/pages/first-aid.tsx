@@ -83,8 +83,8 @@ const FIRST_AID_ITEMS = [
   'Roll Bandage',
 ];
 
-const createInitialItems = (): FirstAidItem[] => {
-  return FIRST_AID_ITEMS.map((name, idx) => ({
+const createInitialItems = (itemsList: string[] = FIRST_AID_ITEMS): FirstAidItem[] => {
+  return itemsList.map((name, idx) => ({
     id: `item${idx + 1}`,
     name,
     expiryDateOption: 'NA',
@@ -102,6 +102,9 @@ const FirstAidInspection: React.FC = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [photographingKitIndex, setPhotographingKitIndex] = useState<number | null>(null);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [firstAidItemsList, setFirstAidItemsList] = useState<string[]>(FIRST_AID_ITEMS);
+  const [firstAidKitsList, setFirstAidKitsList] = useState(INITIAL_KITS_DATA);
 
   const loadPreviousInspectionData = () => {
     try {
@@ -150,8 +153,82 @@ const FirstAidInspection: React.FC = () => {
     }
   }, [hasPermission, router]);
 
+  // Load templates from database
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+
+        // Load first aid items
+        const itemsResponse = await fetch(
+          '/api/admin/inspection-item-templates?template_type=first_aid&item_type=first_aid_item&is_active=true',
+        );
+        const itemsResult = await itemsResponse.json();
+        if (itemsResult.success && itemsResult.data && itemsResult.data.length > 0) {
+          const items = itemsResult.data.map((t: any) => t.item_name).filter(Boolean);
+          setFirstAidItemsList(items);
+        }
+
+        // Load first aid kits
+        const kitsResponse = await fetch(
+          '/api/admin/inspection-item-templates?template_type=first_aid&item_type=first_aid_kit&is_active=true',
+        );
+        const kitsResult = await kitsResponse.json();
+        if (kitsResult.success && kitsResult.data && kitsResult.data.length > 0) {
+          const kits = kitsResult.data.map((t: any) => ({
+            id: t.id,
+            no: t.kit_no || 0,
+            model: t.model || '',
+            location: t.kit_location || '',
+            modelNo: t.model_no || '',
+          }));
+          setFirstAidKitsList(kits);
+        }
+      } catch (error) {
+        console.error('[First Aid] Error loading templates:', error);
+        // Fallback to defaults on error
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    loadTemplates();
+  }, []);
+
+  // Update inspection data when templates are loaded
+  useEffect(() => {
+    if (loadingTemplates) return;
+
+    const previousInspection = typeof window !== 'undefined' ? loadPreviousInspectionData() : null;
+
+    setInspectionData((prev) => ({
+      ...prev,
+      kits: firstAidKitsList.map((kit) => {
+        const previousKit = previousInspection?.kitInspections?.find(
+          (pk: any) => pk.modelNo === kit.modelNo && pk.location === kit.location,
+        );
+        return {
+          ...kit,
+          items: firstAidItemsList.map((name, idx) => {
+            const previousItem = previousKit?.items?.[idx];
+            return {
+              id: `item${idx + 1}`,
+              name,
+              expiryDateOption: (previousItem?.expiryDateOption || 'NA') as 'NA' | 'date',
+              expiryDate: previousItem?.expiryDate || '',
+              quantity: '',
+              previousQuantity: previousItem?.quantity || '',
+              status: null,
+            };
+          }),
+          remarks: '',
+        };
+      }),
+    }));
+  }, [firstAidItemsList, firstAidKitsList, loadingTemplates]);
+
   // Load existing draft if available
   useEffect(() => {
+    if (loadingTemplates) return; // Wait for templates to load first
     try {
       const drafts =
         typeof window !== 'undefined'
@@ -166,10 +243,23 @@ const FirstAidInspection: React.FC = () => {
     } catch (error) {
       console.error('[First Aid] Error loading draft:', error);
     }
-  }, []);
+  }, [loadingTemplates]);
 
   if (!hasPermission('canCreateInspections')) {
     return null;
+  }
+
+  if (loadingTemplates) {
+    return (
+      <InspectorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Loading templates...</p>
+          </div>
+        </div>
+      </InspectorLayout>
+    );
   }
 
   const updateField = (field: keyof InspectionData, value: any) => {

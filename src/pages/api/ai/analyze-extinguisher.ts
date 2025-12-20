@@ -188,7 +188,9 @@ async function detectWithRoboflow(images: CapturedImage[]): Promise<YOLOImageRes
         detections,
       });
     } catch (error) {
-      console.error(`[Roboflow] Error processing image ${image.stepId}:`, error);
+      // Sanitize stepId to prevent format string injection
+      const safeStepId = String(image.stepId || 'unknown').substring(0, 50);
+      console.error(`[Roboflow] Error processing image ${safeStepId}:`, error);
       results.push({
         stepId: image.stepId,
         detections: [],

@@ -1,7 +1,13 @@
 // SharePoint/OneDrive OAuth Integration (User-delegated permissions)
 // Similar to Google Drive OAuth - no admin consent needed!
 import { storage } from './storage';
-import { buildGraphApiUrl, validateSharePointSiteUrl, safeFetch } from './url-validator';
+import {
+  buildGraphApiUrl,
+  validateSharePointSiteUrl,
+  safeFetch,
+  sanitizeFilename,
+  sanitizeFolderPath,
+} from './url-validator';
 
 interface SharePointOAuthConfig {
   clientId: string;
@@ -318,15 +324,19 @@ const uploadToSharePoint = async (
 
         const driveId = drive.id;
 
+        // Sanitize inputs to prevent SSRF
+        const sanitizedFilename = sanitizeFilename(filename);
+        const sanitizedFolderPath = folderPath ? sanitizeFolderPath(folderPath) : undefined;
+
         // Create folder structure if needed
-        if (folderPath) {
-          await createSharePointFolder(accessToken, siteId, driveId, folderPath);
+        if (sanitizedFolderPath) {
+          await createSharePointFolder(accessToken, siteId, driveId, sanitizedFolderPath);
         }
 
         // Upload file to SharePoint
-        const uploadPath = folderPath
-          ? `sites/${siteId}/drives/${driveId}/root:/${folderPath}/${filename}:/content`
-          : `sites/${siteId}/drives/${driveId}/root:/${filename}:/content`;
+        const uploadPath = sanitizedFolderPath
+          ? `sites/${siteId}/drives/${driveId}/root:/${sanitizedFolderPath}/${sanitizedFilename}:/content`
+          : `sites/${siteId}/drives/${driveId}/root:/${sanitizedFilename}:/content`;
 
         const response = await safeFetch(buildGraphApiUrl(uploadPath), {
           method: 'PUT',
@@ -355,9 +365,13 @@ const uploadToSharePoint = async (
   }
 
   // Fallback: Upload to OneDrive
-  const uploadPath = folderPath
-    ? `me/drive/root:/${folderPath}/${filename}:/content`
-    : `me/drive/root:/${filename}:/content`;
+  // Sanitize inputs to prevent SSRF
+  const sanitizedFilename = sanitizeFilename(filename);
+  const sanitizedFolderPath = folderPath ? sanitizeFolderPath(folderPath) : undefined;
+
+  const uploadPath = sanitizedFolderPath
+    ? `me/drive/root:/${sanitizedFolderPath}/${sanitizedFilename}:/content`
+    : `me/drive/root:/${sanitizedFilename}:/content`;
 
   const response = await safeFetch(buildGraphApiUrl(uploadPath), {
     method: 'PUT',
@@ -389,17 +403,23 @@ const createSharePointFolder = async (
   driveId: string,
   folderPath: string,
 ): Promise<void> => {
-  const pathParts = folderPath.split('/').filter(Boolean);
+  // Sanitize folder path to prevent SSRF
+  const sanitizedPath = sanitizeFolderPath(folderPath);
+  const pathParts = sanitizedPath.split('/').filter(Boolean);
   let currentPath = '';
 
   for (const folderName of pathParts) {
+    // Additional sanitization for each folder name
+    const sanitizedFolderName = sanitizeFilename(folderName);
     try {
       const parentPath = currentPath ? `/${currentPath}` : '';
 
-      // Check if folder exists
+      // Check if folder exists (use sanitized folder name)
       const checkResponse = await safeFetch(
         buildGraphApiUrl(
-          `sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
+          `sites/${siteId}/drives/${driveId}/root:${parentPath}:/children?$filter=name eq '${encodeURIComponent(
+            sanitizedFolderName,
+          )}' and folder ne null`,
         ),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -410,7 +430,7 @@ const createSharePointFolder = async (
         const data = await checkResponse.json();
         if (data.value && data.value.length > 0) {
           // Folder exists
-          currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+          currentPath = currentPath ? `${currentPath}/${sanitizedFolderName}` : sanitizedFolderName;
           continue;
         }
       }
@@ -427,7 +447,7 @@ const createSharePointFolder = async (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: folderName,
+          name: sanitizedFolderName,
           folder: {},
           '@microsoft.graph.conflictBehavior': 'rename',
         }),
@@ -438,7 +458,7 @@ const createSharePointFolder = async (
         // Failed to create folder - continue without folder
       }
 
-      currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+      currentPath = currentPath ? `${currentPath}/${sanitizedFolderName}` : sanitizedFolderName;
     } catch (error) {
       // Error with folder - continue without folder
     }
@@ -449,6 +469,8 @@ const createSharePointFolder = async (
  * Create folder in OneDrive/SharePoint if it doesn't exist
  */
 const createFolder = async (folderPath: string): Promise<void> => {
+  // Sanitize folder path to prevent SSRF
+  const sanitizedPath = sanitizeFolderPath(folderPath);
   const accessToken = await getAccessToken();
   const siteUrl = process.env.NEXT_PUBLIC_SHAREPOINT_SITE_URL;
   const libraryName = process.env.NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME || 'Shared Documents';
@@ -479,7 +501,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
             const drive = drivesData.value.find((d: any) => d.name === libraryName);
 
             if (drive) {
-              await createSharePointFolder(accessToken, siteId, drive.id, folderPath);
+              await createSharePointFolder(accessToken, siteId, drive.id, sanitizedPath);
               return;
             }
           }
@@ -491,14 +513,18 @@ const createFolder = async (folderPath: string): Promise<void> => {
   }
 
   // Fallback: OneDrive folder creation
-  const pathParts = folderPath.split('/').filter(Boolean);
+  const pathParts = sanitizedPath.split('/').filter(Boolean);
   let currentPath = '/me/drive/root';
 
   for (const folderName of pathParts) {
+    // Sanitize each folder name
+    const sanitizedFolderName = sanitizeFilename(folderName);
     try {
       const checkResponse = await safeFetch(
         buildGraphApiUrl(
-          `${currentPath}:/children?$filter=name eq '${folderName}' and folder ne null`,
+          `${currentPath}:/children?$filter=name eq '${encodeURIComponent(
+            sanitizedFolderName,
+          )}' and folder ne null`,
         ),
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -508,7 +534,7 @@ const createFolder = async (folderPath: string): Promise<void> => {
       if (checkResponse.ok) {
         const data = await checkResponse.json();
         if (data.value && data.value.length > 0) {
-          currentPath = `${currentPath}/${folderName}`;
+          currentPath = `${currentPath}/${sanitizedFolderName}`;
           continue;
         }
       }
@@ -520,17 +546,17 @@ const createFolder = async (folderPath: string): Promise<void> => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: folderName,
+          name: sanitizedFolderName,
           folder: {},
           '@microsoft.graph.conflictBehavior': 'rename',
         }),
       });
 
       if (!createResponse.ok) {
-        throw new Error(`Failed to create folder: ${folderName}`);
+        throw new Error(`Failed to create folder: ${sanitizedFolderName}`);
       }
 
-      currentPath = `${currentPath}/${folderName}`;
+      currentPath = `${currentPath}/${sanitizedFolderName}`;
     } catch (error) {
       // Error with folder - continue without folder
     }

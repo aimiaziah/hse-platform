@@ -68,6 +68,21 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             </Link>
+
+            <Link
+              href="/admin/announcements"
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <span className="material-icons text-purple-600 text-2xl">campaign</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Announcements</h3>
+                  <p className="text-sm text-gray-600">Manage employee announcements</p>
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
       </AdminLayout>

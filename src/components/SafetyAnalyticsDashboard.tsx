@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CircularProgress from '@/components/CircularProgress';
+import { useAuth } from '@/hooks/useAuth';
 import {
   ComposedChart,
   Line,
@@ -12,7 +13,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-type TabType = 'manhours' | 'inspections';
+type TabType = 'manhours' | 'inspections' | 'announcements';
 
 interface MonthlyManhoursData {
   month: string;
@@ -75,6 +76,13 @@ interface AnalyticsData {
   };
 }
 
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  published_at: string;
+}
+
 const MONTH_LABELS = [
   'Jan',
   'Feb',
@@ -102,17 +110,24 @@ const COLORS = [
 ];
 
 const SafetyAnalyticsDashboard: React.FC = () => {
+  const { isRole, user } = useAuth();
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
 
   const [activeTab, setActiveTab] = useState<TabType>('manhours');
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
 
   useEffect(() => {
     loadAnalyticsData();
-  }, [selectedYear]);
+    if (isRole('employee') || isRole('inspector') || isRole('supervisor')) {
+      loadAnnouncements();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, user?.role]);
 
   const loadAnalyticsData = async () => {
     setLoading(true);
@@ -138,6 +153,32 @@ const SafetyAnalyticsDashboard: React.FC = () => {
       // Optionally show error message to user
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAnnouncements = async () => {
+    setLoadingAnnouncements(true);
+
+    try {
+      const response = await fetch('/api/announcements?limit=3', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch announcements');
+      }
+
+      const data = await response.json();
+      setAnnouncements(data.announcements || []);
+    } catch (error) {
+      console.error('Error loading announcements:', error);
+      setAnnouncements([]);
+    } finally {
+      setLoadingAnnouncements(false);
     }
   };
 
@@ -234,17 +275,36 @@ const SafetyAnalyticsDashboard: React.FC = () => {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
               )}
             </button>
-            <button
-              onClick={() => setActiveTab('inspections')}
-              className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
-                activeTab === 'inspections' ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Inspections & Alerts
-              {activeTab === 'inspections' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
-              )}
-            </button>
+            {!isRole('employee') && (
+              <button
+                onClick={() => setActiveTab('inspections')}
+                className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
+                  activeTab === 'inspections'
+                    ? 'text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Inspections & Alerts
+                {activeTab === 'inspections' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                )}
+              </button>
+            )}
+            {(isRole('employee') || isRole('inspector') || isRole('supervisor')) && (
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
+                  activeTab === 'announcements'
+                    ? 'text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Announcements
+                {activeTab === 'announcements' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -472,8 +532,53 @@ const SafetyAnalyticsDashboard: React.FC = () => {
         </>
       )}
 
-      {/* Inspections Tab */}
-      {activeTab === 'inspections' && (
+      {/* Announcements Tab (Employee, Inspector, Supervisor) */}
+      {(isRole('employee') || isRole('inspector') || isRole('supervisor')) &&
+        activeTab === 'announcements' && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Announcements</h3>
+            {loadingAnnouncements ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
+                  <span className="text-gray-600 text-sm">Loading announcements...</span>
+                </div>
+              </div>
+            ) : announcements.length > 0 ? (
+              <div className="space-y-3">
+                {announcements.map((announcement) => (
+                  <div
+                    key={announcement.id}
+                    className="border border-gray-200 rounded-lg p-3 hover:border-gray-300 transition-colors"
+                  >
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                      {announcement.title}
+                    </h4>
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
+                      {announcement.body}
+                    </p>
+                    {announcement.published_at && (
+                      <p className="text-[10px] text-gray-400 mt-2">
+                        {new Date(announcement.published_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500">No announcements available.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+      {/* Inspections Tab (Non-employee only) */}
+      {!isRole('employee') && activeTab === 'inspections' && (
         <>
           {/* Monthly Progress Circle */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">

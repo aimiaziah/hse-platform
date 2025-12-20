@@ -35,7 +35,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
     },
     {
       name: 'Form Management',
-      href: '/admin/checklist-items',
+      href: '/admin/form-templates',
       icon: 'description',
     },
   ];

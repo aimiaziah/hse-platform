@@ -2,6 +2,8 @@
 import { NextApiResponse } from 'next';
 import { withRBAC, AuthenticatedRequest } from '@/lib/supabase-middleware';
 import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
+import { getCachedLocation } from '@/lib/supabase-cached';
+import { invalidateLocationCache } from '@/lib/cache';
 
 /**
  * GET /api/supabase/locations/[id] - Get single location
@@ -19,20 +21,21 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
   try {
     // GET - Fetch single location
     if (req.method === 'GET') {
-      const { data: location, error } = await supabase
-        .from('locations')
-        .select('*')
-        .eq('id', id)
-        .single();
+      try {
+        const location = await getCachedLocation(id);
 
-      if (error || !location) {
+        if (!location) {
+          return res.status(404).json({ error: 'Location not found' });
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: location,
+          cached: true,
+        });
+      } catch (error) {
         return res.status(404).json({ error: 'Location not found' });
       }
-
-      return res.status(200).json({
-        success: true,
-        data: location,
-      });
     }
 
     // PUT - Update location
@@ -74,6 +77,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         console.error('Error updating location:', updateError);
         return res.status(500).json({ error: 'Failed to update location' });
       }
+
+      // Invalidate cache
+      await invalidateLocationCache(id);
 
       // Log audit trail
       await logAuditTrail({
@@ -121,6 +127,9 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         console.error('Error deleting location:', deleteError);
         return res.status(500).json({ error: 'Failed to delete location' });
       }
+
+      // Invalidate cache
+      await invalidateLocationCache(id);
 
       // Log audit trail
       await logAuditTrail({

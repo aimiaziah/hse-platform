@@ -145,6 +145,101 @@ export const validateSharePointSiteUrl = (siteUrl: string): boolean => {
 };
 
 /**
+ * Sanitizes a filename to prevent path traversal and injection attacks
+ * @param filename - The filename to sanitize
+ * @returns Sanitized filename
+ */
+export const sanitizeFilename = (filename: string): string => {
+  // Remove path traversal sequences
+  let sanitized = filename.replace(/\.\./g, '').replace(/\/\/+/g, '/');
+
+  // Remove any path separators
+  sanitized = sanitized.replace(/[\/\\]/g, '_');
+
+  // Remove control characters and special characters that could be used for injection
+  sanitized = sanitized.replace(/[<>:"|?*\x00-\x1f]/g, '');
+
+  // Limit length to prevent DoS
+  if (sanitized.length > 255) {
+    sanitized = sanitized.substring(0, 255);
+  }
+
+  // Ensure filename is not empty
+  if (!sanitized || sanitized.trim().length === 0) {
+    sanitized = 'file';
+  }
+
+  return sanitized.trim();
+};
+
+/**
+ * Sanitizes an ID parameter to prevent injection attacks
+ * @param id - The ID to sanitize
+ * @returns Sanitized ID
+ */
+export const sanitizeId = (id: string | string[] | undefined): string => {
+  if (!id) {
+    throw new Error('[SSRF Prevention] ID parameter is required');
+  }
+
+  // Convert array to string (take first element)
+  const idString = Array.isArray(id) ? id[0] : id;
+
+  // Remove any characters that could be used for path traversal or injection
+  // Only allow alphanumeric, hyphens, and underscores
+  const sanitized = idString.replace(/[^a-zA-Z0-9\-_]/g, '');
+
+  // Ensure ID is not empty and has reasonable length
+  if (!sanitized || sanitized.length === 0) {
+    throw new Error('[SSRF Prevention] Invalid ID parameter');
+  }
+
+  if (sanitized.length > 100) {
+    throw new Error('[SSRF Prevention] ID parameter too long');
+  }
+
+  return sanitized;
+};
+
+/**
+ * Sanitizes a folder path to prevent path traversal and injection attacks
+ * @param folderPath - The folder path to sanitize
+ * @returns Sanitized folder path
+ */
+export const sanitizeFolderPath = (folderPath: string): string => {
+  // Split path into components
+  const parts = folderPath.split('/').filter(Boolean);
+
+  // Sanitize each component
+  const sanitizedParts = parts
+    .map((part) => {
+      // Remove path traversal sequences
+      let sanitized = part.replace(/\.\./g, '').replace(/\/\/+/g, '/');
+
+      // Remove control characters and special characters
+      sanitized = sanitized.replace(/[<>:"|?*\x00-\x1f]/g, '');
+
+      // Limit component length
+      if (sanitized.length > 100) {
+        sanitized = sanitized.substring(0, 100);
+      }
+
+      return sanitized.trim();
+    })
+    .filter((part) => part.length > 0); // Remove empty parts
+
+  // Rejoin and ensure no double slashes or path traversal
+  const sanitized = sanitizedParts.join('/');
+
+  // Final check for path traversal
+  if (sanitized.includes('..') || sanitized.includes('//')) {
+    throw new Error('[SSRF Prevention] Invalid folder path detected');
+  }
+
+  return sanitized;
+};
+
+/**
  * Wraps fetch with URL validation
  * @param url - The URL to fetch
  * @param options - Fetch options

@@ -502,6 +502,7 @@ const FireExtinguisherChecklist: React.FC = () => {
   const [showAIResults, setShowAIResults] = useState(false);
   const [currentAIResults, setCurrentAIResults] = useState<AIInspectionResult | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
 
   useEffect(() => {
     if (!hasPermission('canCreateInspections')) {
@@ -509,8 +510,56 @@ const FireExtinguisherChecklist: React.FC = () => {
     }
   }, [hasPermission, router]);
 
+  // Load templates from database
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+        const response = await fetch(
+          '/api/admin/inspection-item-templates?template_type=fire_extinguisher&item_type=extinguisher&is_active=true',
+        );
+        const result = await response.json();
+        if (result.success && result.data && result.data.length > 0) {
+          // Convert database templates to FireExtinguisherRow format
+          const templates = result.data.map((t: any) => ({
+            no: t.item_no || 0,
+            serialNo: t.serial_no || '',
+            location: t.location || '',
+            typeSize: t.type_size || '',
+            shell: null,
+            hose: null,
+            nozzle: null,
+            pressureGauge: null,
+            safetyPin: null,
+            pinSeal: null,
+            accessible: null,
+            missingNotInPlace: null,
+            emptyPressureLow: null,
+            servicingTags: null,
+            expiryDate: '',
+            remarks: '',
+          }));
+          setChecklistData((prev) => ({
+            ...prev,
+            extinguishers: templates,
+          }));
+        } else {
+          // Fallback to INITIAL_EXTINGUISHERS if no templates found
+          console.warn('[Fire Extinguisher] No templates found, using defaults');
+        }
+      } catch (error) {
+        console.error('[Fire Extinguisher] Error loading templates:', error);
+        // Fallback to INITIAL_EXTINGUISHERS on error
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    loadTemplates();
+  }, []);
+
   // Load existing draft if available
   useEffect(() => {
+    if (loadingTemplates) return; // Wait for templates to load first
     try {
       const drafts = JSON.parse(localStorage.getItem('fire-extinguisher-drafts') || '[]');
       if (drafts.length > 0) {
@@ -522,10 +571,23 @@ const FireExtinguisherChecklist: React.FC = () => {
     } catch (error) {
       console.error('[Fire Extinguisher] Error loading draft:', error);
     }
-  }, []);
+  }, [loadingTemplates]);
 
   if (!hasPermission('canCreateInspections')) {
     return null;
+  }
+
+  if (loadingTemplates) {
+    return (
+      <InspectorLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Loading templates...</p>
+          </div>
+        </div>
+      </InspectorLayout>
+    );
   }
 
   const updateField = (field: keyof ChecklistData, value: any) => {
