@@ -164,6 +164,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       name: user.name,
       role: user.role,
       signature: user.signature || null,
+      profilePicture: user.profile_picture || null,
       permissions: {
         canManageUsers: permissions.can_manage_users || false,
         canManageForms: permissions.can_manage_forms || false,

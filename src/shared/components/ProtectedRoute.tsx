@@ -16,10 +16,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   fallbackUrl = '/login',
 }) => {
-  const { isAuthenticated, user, hasPermission, isRole } = useAuth();
+  const { isAuthenticated, user, hasPermission, isRole, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Wait for auth check to complete
+    if (isLoading) {
+      return;
+    }
+
     // Not authenticated - redirect to login
     if (!isAuthenticated) {
       router.push(fallbackUrl);
@@ -45,10 +50,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     fallbackUrl,
     hasPermission,
     isRole,
+    isLoading,
   ]);
 
   // Show loading while checking auth
-  if (!isAuthenticated) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

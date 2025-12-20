@@ -39,7 +39,7 @@ export function isAuthMethodEnabled(method: 'pin' | 'microsoft'): boolean {
  */
 export function isAdminEmail(email: string): boolean {
   const adminEmails =
-    process.env.ADMIN_EMAIL_WHITELIST?.split(',').map((e) => e.trim().toLowerCase()) || [];
+    env.ADMIN_EMAIL_WHITELIST?.split(',').map((e) => e.trim().toLowerCase()) || [];
   return adminEmails.includes(email.toLowerCase());
 }
 
@@ -48,7 +48,7 @@ export function isAdminEmail(email: string): boolean {
  */
 export function isSupervisorEmail(email: string): boolean {
   const supervisorEmails =
-    process.env.SUPERVISOR_EMAIL_WHITELIST?.split(',').map((e) => e.trim().toLowerCase()) || [];
+    env.SUPERVISOR_EMAIL_WHITELIST?.split(',').map((e) => e.trim().toLowerCase()) || [];
   return supervisorEmails.includes(email.toLowerCase());
 }
 
@@ -57,6 +57,6 @@ export function isSupervisorEmail(email: string): boolean {
  */
 export function isInspectorEmail(email: string): boolean {
   const inspectorEmails =
-    process.env.INSPECTOR_EMAIL_WHITELIST?.split(',').map((e) => e.trim().toLowerCase()) || [];
+    env.INSPECTOR_EMAIL_WHITELIST?.split(',').map((e) => e.trim().toLowerCase()) || [];
   return inspectorEmails.includes(email.toLowerCase());
 }

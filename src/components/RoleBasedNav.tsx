@@ -20,7 +20,8 @@ const RoleBasedNav: React.FC = () => {
       logout();
       router.push('/login');
     } catch (error) {
-      // Logout error
+      console.error('Logout error:', error);
+      router.push('/login');
     }
   };
 
@@ -120,6 +121,17 @@ const RoleBasedNav: React.FC = () => {
           {user && (
             <div className="flex items-center space-x-4">
               <div className="hidden sm:flex items-center space-x-3">
+                {user.profilePicture ? (
+                  <img
+                    src={user.profilePicture}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm border-2 border-gray-200">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">{user.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{user.role}</p>

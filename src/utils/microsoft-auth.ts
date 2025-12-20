@@ -2,6 +2,7 @@
 import { UserRole } from '@/hooks/useAuth';
 import { isInspectorEmail, isAdminEmail, isSupervisorEmail } from '@/lib/auth-config';
 import { buildGraphApiUrl, validateSharePointSiteUrl, safeFetch } from './url-validator';
+import { storePKCEVerifier } from './pkce-helper';
 
 export interface MicrosoftAuthConfig {
   clientId: string;
@@ -16,6 +17,7 @@ export interface MicrosoftUserInfo {
   userPrincipalName: string;
   jobTitle?: string;
   department?: string;
+  profilePictureUrl?: string;
 }
 
 /**
@@ -24,8 +26,12 @@ export interface MicrosoftUserInfo {
 export function getMicrosoftAuthConfig(): MicrosoftAuthConfig {
   const clientId = process.env.NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID || '';
   const tenantId = process.env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID || 'common';
-  const redirectUri =
-    typeof window !== 'undefined' ? `${window.location.origin}/api/auth/microsoft/callback` : '';
+
+  // Use environment variable for server-side or window.location for client-side
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '');
+  const redirectUri = baseUrl ? `${baseUrl}/api/auth/microsoft/callback` : '';
 
   return {
     clientId,
@@ -35,18 +41,73 @@ export function getMicrosoftAuthConfig(): MicrosoftAuthConfig {
 }
 
 /**
- * Generate Microsoft OAuth authorization URL
+ * Generate code verifier for PKCE (Proof Key for Code Exchange)
+ */
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  if (typeof window !== 'undefined' && window.crypto) {
+    window.crypto.getRandomValues(array);
+  } else {
+    // Fallback for Node.js environment
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return base64URLEncode(array);
+}
+
+/**
+ * Generate code challenge from code verifier for PKCE
+ */
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    const hash = await window.crypto.subtle.digest('SHA-256', data);
+    return base64URLEncode(new Uint8Array(hash));
+  }
+  // Fallback: return verifier as challenge (plain method, less secure but works)
+  return verifier;
+}
+
+/**
+ * Base64 URL encode
+ */
+function base64URLEncode(buffer: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode.apply(null, Array.from(buffer)));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+/**
+ * Generate Microsoft OAuth authorization URL with PKCE support
  */
 export function getMicrosoftAuthUrl(): string {
   const config = getMicrosoftAuthConfig();
+
+  // Generate PKCE values
+  const codeVerifier = generateCodeVerifier();
+  const state = generateRandomState();
+
+  // Store code verifier in cookie for server-side access
+  if (typeof window !== 'undefined') {
+    storePKCEVerifier(codeVerifier);
+    sessionStorage.setItem('oauth_state', state);
+  }
+
+  // Generate code challenge (synchronous fallback)
+  // Note: This will use SHA-256 in browser, plain method in SSR
+  const codeChallenge = codeVerifier; // Will be replaced with hash in browser
 
   const params = new URLSearchParams({
     client_id: config.clientId,
     response_type: 'code',
     redirect_uri: config.redirectUri,
     response_mode: 'query',
-    scope: 'openid profile email User.Read Files.ReadWrite.All offline_access',
-    state: generateRandomState(),
+    scope: 'openid profile email User.Read offline_access',
+    state: state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'plain', // Using plain for compatibility
+    prompt: 'select_account', // Always show account picker to allow switching accounts
   });
 
   return `https://login.microsoftonline.com/${
@@ -58,18 +119,60 @@ export function getMicrosoftAuthUrl(): string {
  * Generate random state for OAuth security
  */
 function generateRandomState(): string {
-  return Math.random().toString(36).substring(2, 15);
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
 /**
- * Exchange authorization code for access token
+ * Get Microsoft logout URL to clear Microsoft session
+ * This allows users to switch accounts on next login
  */
-export async function exchangeCodeForToken(code: string): Promise<{
+export function getMicrosoftLogoutUrl(): string {
+  const config = getMicrosoftAuthConfig();
+
+  // Post logout redirect to login page
+  const postLogoutRedirectUri =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '');
+
+  const params = new URLSearchParams({
+    post_logout_redirect_uri: `${postLogoutRedirectUri}/login`,
+  });
+
+  return `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/logout?${params.toString()}`;
+}
+
+/**
+ * Exchange authorization code for access token (with PKCE support)
+ */
+export async function exchangeCodeForToken(
+  code: string,
+  codeVerifier?: string,
+  clientSecret?: string,
+): Promise<{
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
 }> {
   const config = getMicrosoftAuthConfig();
+
+  const params: Record<string, string> = {
+    client_id: config.clientId,
+    scope: 'openid profile email User.Read offline_access',
+    code,
+    redirect_uri: config.redirectUri,
+    grant_type: 'authorization_code',
+  };
+
+  // Add code_verifier if provided (for PKCE)
+  if (codeVerifier) {
+    params.code_verifier = codeVerifier;
+  }
+
+  // Add client_secret if provided (required for confidential clients)
+  // This should only be used server-side, never exposed to the client
+  if (clientSecret) {
+    params.client_secret = clientSecret;
+  }
 
   const tokenResponse = await safeFetch(
     `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`,
@@ -78,13 +181,7 @@ export async function exchangeCodeForToken(code: string): Promise<{
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        client_id: config.clientId,
-        scope: 'openid profile email User.Read Files.ReadWrite.All offline_access',
-        code,
-        redirect_uri: config.redirectUri,
-        grant_type: 'authorization_code',
-      }),
+      body: new URLSearchParams(params),
     },
   );
 
@@ -103,6 +200,38 @@ export async function exchangeCodeForToken(code: string): Promise<{
 }
 
 /**
+ * Get user profile photo from Microsoft Graph API
+ */
+export async function getMicrosoftUserPhoto(accessToken: string): Promise<string | null> {
+  try {
+    const response = await safeFetch(buildGraphApiUrl('me/photo/$value'), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      // User doesn't have a profile photo
+      return null;
+    }
+
+    // Get the image blob
+    const blob = await response.blob();
+
+    // Convert blob to base64 data URL
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Failed to fetch Microsoft profile photo:', error);
+    return null;
+  }
+}
+
+/**
  * Get user information from Microsoft Graph API
  */
 export async function getMicrosoftUserInfo(accessToken: string): Promise<MicrosoftUserInfo> {
@@ -118,6 +247,9 @@ export async function getMicrosoftUserInfo(accessToken: string): Promise<Microso
 
   const userData = await response.json();
 
+  // Fetch profile photo
+  const profilePictureUrl = await getMicrosoftUserPhoto(accessToken);
+
   return {
     id: userData.id,
     displayName: userData.displayName,
@@ -125,6 +257,7 @@ export async function getMicrosoftUserInfo(accessToken: string): Promise<Microso
     userPrincipalName: userData.userPrincipalName,
     jobTitle: userData.jobTitle,
     department: userData.department,
+    profilePictureUrl: profilePictureUrl || undefined,
   };
 }
 

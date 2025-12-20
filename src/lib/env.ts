@@ -48,6 +48,11 @@ export const env = {
   AUTH_RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS || '5', 10),
   AUTH_RATE_LIMIT_WINDOW_MS: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || '900000', 10),
 
+  // Email Whitelists for Role Assignment
+  ADMIN_EMAIL_WHITELIST: process.env.ADMIN_EMAIL_WHITELIST || '',
+  SUPERVISOR_EMAIL_WHITELIST: process.env.SUPERVISOR_EMAIL_WHITELIST || '',
+  INSPECTOR_EMAIL_WHITELIST: process.env.INSPECTOR_EMAIL_WHITELIST || '',
+
   // DigitalOcean Spaces
   DO_SPACES_NAME: process.env.DO_SPACES_NAME,
   DO_SPACES_REGION: process.env.DO_SPACES_REGION,

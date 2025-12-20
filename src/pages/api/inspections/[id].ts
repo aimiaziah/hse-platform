@@ -155,6 +155,61 @@ async function updateInspection(
       newValues: updateData,
     });
 
+    // Send push notification to inspector when status changes to approved/rejected
+    if (
+      updateData.status &&
+      (updateData.status === 'approved' || updateData.status === 'rejected') &&
+      (existingInspection as any).inspector_id
+    ) {
+      try {
+        const notificationType =
+          updateData.status === 'approved'
+            ? 'inspection_approved'
+            : 'inspection_rejected';
+        const title =
+          updateData.status === 'approved'
+            ? 'Inspection Approved ✅'
+            : 'Inspection Needs Revision ⚠️';
+        const body =
+          updateData.status === 'approved'
+            ? `Your ${formatInspectionType((existingInspection as any).inspection_type)} inspection has been approved by ${user.name}.`
+            : `Your ${formatInspectionType((existingInspection as any).inspection_type)} inspection needs revision. ${reviewComments ? 'Comments: ' + reviewComments : ''}`;
+
+        // Send notification (fire and forget)
+        fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/notifications/send`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Cookie: req.headers.cookie || '',
+            },
+            body: JSON.stringify({
+              userId: (existingInspection as any).inspector_id,
+              notificationType,
+              title,
+              body,
+              data: {
+                inspectionId: inspectionId,
+                inspectionType: (existingInspection as any).inspection_type,
+                reviewerName: user.name,
+                status: updateData.status,
+                reviewComments: reviewComments || null,
+                url: '/inspector/submissions',
+              },
+              inspectionId: inspectionId,
+            }),
+          },
+        ).catch((err) => {
+          console.error('Failed to send push notification:', err);
+        });
+
+        console.log(`📬 Notification queued for inspector: ${(existingInspection as any).inspector_id}`);
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+      }
+    }
+
     return res.status(200).json({
       inspection: updatedInspection,
       message: 'Inspection updated successfully',
@@ -163,6 +218,20 @@ async function updateInspection(
     console.error('Update inspection error:', error);
     return res.status(500).json({ error: 'Failed to update inspection' });
   }
+}
+
+/**
+ * Format inspection type for display
+ */
+function formatInspectionType(type: string): string {
+  const typeMap: Record<string, string> = {
+    fire_extinguisher: 'Fire Extinguisher',
+    first_aid: 'First Aid',
+    hse_general: 'HSE General',
+    manhours: 'Man-hours Report',
+  };
+  return typeMap[type] || type;
+}
 }
 
 // DELETE /api/inspections/[id]

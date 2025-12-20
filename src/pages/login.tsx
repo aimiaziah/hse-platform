@@ -21,9 +21,18 @@ const LoginPage: React.FC = () => {
     console.error('Auth context not available:', error);
     authHook = null;
   }
-  const { login, isAuthenticated } = authHook || { login: null, isAuthenticated: false };
+  const { login, isAuthenticated, isLoading: authLoading } = authHook || {
+    login: null,
+    isAuthenticated: false,
+    isLoading: false,
+  };
 
   useEffect(() => {
+    // Don't redirect while loading auth state
+    if (authLoading) {
+      return;
+    }
+
     if (isAuthenticated && router && router.isReady) {
       // Prevent redirect loops
       const currentPath = router.pathname;
@@ -41,7 +50,7 @@ const LoginPage: React.FC = () => {
     if (router.isReady && router.query.login === 'success') {
       router.replace('/analytics');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, authLoading]);
 
   const handlePinInput = (digit: string) => {
     if (pin.length < 4) {

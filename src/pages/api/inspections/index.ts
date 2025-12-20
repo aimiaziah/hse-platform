@@ -249,6 +249,51 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
       newValues: inspectionData,
     });
 
+    // Send push notification to assigned supervisor (if status is pending_review)
+    if (inspectionStatus === 'pending_review' && assignedSupervisorId) {
+      try {
+        // Get supervisor details
+        const { data: supervisor } = await supabase
+          .from('users')
+          .select('name')
+          .eq('id', assignedSupervisorId)
+          .single();
+
+        // Send notification (fire and forget - don't wait for it)
+        fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/notifications/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Forward auth token from original request
+            'Cookie': req.headers.cookie || '',
+          },
+          body: JSON.stringify({
+            userId: assignedSupervisorId,
+            notificationType: 'inspection_assigned',
+            title: 'New Inspection Assigned',
+            body: `${actualInspectorName} submitted a ${formatInspectionType(formType)} inspection for your review.`,
+            data: {
+              inspectionId: newInspection.id,
+              inspectionType: formType,
+              inspectorName: actualInspectorName,
+              url: `/supervisor/review/${newInspection.id}`,
+            },
+            inspectionId: newInspection.id,
+          }),
+        }).catch((err) => {
+          console.error('Failed to send push notification:', err);
+          // Don't fail the inspection creation if notification fails
+        });
+
+        console.log(
+          `📬 Notification queued for supervisor: ${supervisor?.name || assignedSupervisorId}`,
+        );
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+        // Don't fail the inspection creation if notification fails
+      }
+    }
+
     return res.status(201).json({
       inspection: newInspection,
       message: 'Inspection created successfully',
@@ -257,6 +302,20 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
     console.error('Create inspection error:', error);
     return res.status(500).json({ error: 'Failed to create inspection' });
   }
+}
+
+/**
+ * Format inspection type for display
+ */
+function formatInspectionType(type: string): string {
+  const typeMap: Record<string, string> = {
+    fire_extinguisher: 'Fire Extinguisher',
+    first_aid: 'First Aid',
+    hse_general: 'HSE General',
+    manhours: 'Man-hours Report',
+  };
+  return typeMap[type] || type;
+}
 }
 
 export default withRBAC(handler, {

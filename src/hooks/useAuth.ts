@@ -13,6 +13,7 @@ export interface User {
   createdAt: string;
   lastLogin?: string;
   signature?: string | null;
+  profilePicture?: string | null;
   permissions: {
     // Admin permissions
     canManageUsers: boolean;
@@ -36,6 +37,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (pin: string) => Promise<boolean>;
   logout: () => void;
   hasPermission: (permission: keyof User['permissions']) => boolean;
@@ -158,6 +160,7 @@ const defaultUsers: User[] = [
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Initialize default users if not exists
@@ -171,8 +174,52 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     if (sessionUser) {
       setUser(sessionUser);
       setIsAuthenticated(true);
+      setIsLoading(false);
+    } else {
+      // No session in localStorage, try to restore from auth cookie
+      restoreSessionFromCookie();
     }
   }, []);
+
+  const restoreSessionFromCookie = async () => {
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include', // Include cookies
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          console.log('[useAuth] Session restored from cookie:', data.user.name);
+
+          // Map the API response to our User type
+          const restoredUser: User = {
+            id: data.user.id,
+            name: data.user.name,
+            pin: '', // No PIN for Microsoft users
+            role: data.user.role as UserRole,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            signature: data.user.signature || null,
+            profilePicture: data.user.profilePicture || null,
+            permissions: data.user.permissions,
+          };
+
+          // Save to localStorage
+          storage.save('currentUser', restoredUser);
+
+          setUser(restoredUser);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (error) {
+      console.error('[useAuth] Failed to restore session from cookie:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const login = async (pin: string): Promise<boolean> => {
     try {
@@ -206,6 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
           createdAt: new Date().toISOString(),
           lastLogin: new Date().toISOString(),
           signature: data.user.signature || null,
+          profilePicture: data.user.profilePicture || null,
           permissions: data.user.permissions,
         };
 
@@ -331,6 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   const value: AuthContextType = {
     user,
     isAuthenticated,
+    isLoading,
     login,
     logout,
     hasPermission,

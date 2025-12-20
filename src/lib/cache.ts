@@ -89,7 +89,11 @@ export async function getCache<T>(key: string): Promise<T | null> {
 /**
  * Set value in cache with TTL
  */
-export async function setCache(key: string, value: any, ttl: number = CACHE_TTL.SHORT): Promise<boolean> {
+export async function setCache(
+  key: string,
+  value: any,
+  ttl: number = CACHE_TTL.SHORT,
+): Promise<boolean> {
   if (!isRedisConnected()) {
     return false;
   }

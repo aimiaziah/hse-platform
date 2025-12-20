@@ -21,11 +21,7 @@ export async function getCachedUserProfile(userId: string): Promise<UserRow | nu
     cacheKey,
     async () => {
       const supabase = getServiceSupabase();
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data, error } = await supabase.from('users').select('*').eq('id', userId).single();
 
       if (error) {
         logger.error('Error fetching user profile', error, { userId });
