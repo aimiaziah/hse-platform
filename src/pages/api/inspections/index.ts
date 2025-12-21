@@ -260,27 +260,32 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
           .single();
 
         // Send notification (fire and forget - don't wait for it)
-        fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/notifications/send`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            // Forward auth token from original request
-            'Cookie': req.headers.cookie || '',
-          },
-          body: JSON.stringify({
-            userId: assignedSupervisorId,
-            notificationType: 'inspection_assigned',
-            title: 'New Inspection Assigned',
-            body: `${actualInspectorName} submitted a ${formatInspectionType(formType)} inspection for your review.`,
-            data: {
-              inspectionId: newInspection.id,
-              inspectionType: formType,
-              inspectorName: actualInspectorName,
-              url: `/supervisor/review/${newInspection.id}`,
+        fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/notifications/send`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              // Forward auth token from original request
+              Cookie: req.headers.cookie || '',
             },
-            inspectionId: newInspection.id,
-          }),
-        }).catch((err) => {
+            body: JSON.stringify({
+              userId: assignedSupervisorId,
+              notificationType: 'inspection_assigned',
+              title: 'New Inspection Assigned',
+              body: `${actualInspectorName} submitted a ${formatInspectionType(
+                formType,
+              )} inspection for your review.`,
+              data: {
+                inspectionId: newInspection.id,
+                inspectionType: formType,
+                inspectorName: actualInspectorName,
+                url: `/supervisor/review/${newInspection.id}`,
+              },
+              inspectionId: newInspection.id,
+            }),
+          },
+        ).catch((err) => {
           console.error('Failed to send push notification:', err);
           // Don't fail the inspection creation if notification fails
         });

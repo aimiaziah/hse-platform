@@ -163,17 +163,19 @@ async function updateInspection(
     ) {
       try {
         const notificationType =
-          updateData.status === 'approved'
-            ? 'inspection_approved'
-            : 'inspection_rejected';
+          updateData.status === 'approved' ? 'inspection_approved' : 'inspection_rejected';
         const title =
           updateData.status === 'approved'
             ? 'Inspection Approved ✅'
             : 'Inspection Needs Revision ⚠️';
         const body =
           updateData.status === 'approved'
-            ? `Your ${formatInspectionType((existingInspection as any).inspection_type)} inspection has been approved by ${user.name}.`
-            : `Your ${formatInspectionType((existingInspection as any).inspection_type)} inspection needs revision. ${reviewComments ? 'Comments: ' + reviewComments : ''}`;
+            ? `Your ${formatInspectionType(
+                (existingInspection as any).inspection_type,
+              )} inspection has been approved by ${user.name}.`
+            : `Your ${formatInspectionType(
+                (existingInspection as any).inspection_type,
+              )} inspection needs revision. ${reviewComments ? 'Comments: ' + reviewComments : ''}`;
 
         // Send notification (fire and forget)
         fetch(
@@ -204,7 +206,9 @@ async function updateInspection(
           console.error('Failed to send push notification:', err);
         });
 
-        console.log(`📬 Notification queued for inspector: ${(existingInspection as any).inspector_id}`);
+        console.log(
+          `📬 Notification queued for inspector: ${(existingInspection as any).inspector_id}`,
+        );
       } catch (notificationError) {
         console.error('Error sending notification:', notificationError);
       }
