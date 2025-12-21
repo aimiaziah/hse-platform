@@ -15,11 +15,23 @@ services:
       branch: main
       deploy_on_push: true
 
-    # Production build configuration - optimized for minimal disk usage
-    # npm ci: Clean install from package-lock.json (faster, more reliable)
-    # --omit=dev: Skip devDependencies to reduce disk usage
-    # npm run build: Creates optimized standalone build in .next/standalone
-    build_command: npm ci --omit=dev && npm run build
+    # Production build configuration - aggressively optimized for minimal disk usage
+    # Step 1: Install ALL dependencies (needed for build)
+    # Step 2: Build the app (creates standalone build)
+    # Step 3: Remove all node_modules
+    # Step 4: Reinstall ONLY production dependencies
+    # Step 5: Clean up build artifacts
+    build_command: |
+      npm ci --prefer-offline --no-audit --no-fund &&
+      npm run build &&
+      rm -rf node_modules &&
+      npm ci --omit=dev --prefer-offline --no-audit --no-fund &&
+      rm -rf .next/cache .next/standalone/node_modules/.cache &&
+      find node_modules -name "*.md" -type f -delete &&
+      find node_modules -name "*.ts" -not -name "*.d.ts" -type f -delete &&
+      find node_modules -name "test" -type d -exec rm -rf {} + 2>/dev/null || true &&
+      find node_modules -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true &&
+      find node_modules -name "*.map" -type f -delete
 
     # Production run configuration - uses standalone build (minimal size)
     # Standalone mode includes only necessary files (~50MB vs 800MB+ for full .next)
@@ -29,10 +41,10 @@ services:
     environment_slug: node-js
     instance_count: 1
     # Production instance sizing:
-    # basic-xxs: $5/month (512MB RAM, 1 vCPU) - suitable for small production apps
-    # basic-xs: $12/month (1GB RAM, 1 vCPU) - recommended for production with moderate traffic
+    # basic-xxs: $5/month (512MB RAM, 1 vCPU) - too small for build process
+    # basic-xs: $12/month (1GB RAM, 1 vCPU) - recommended for production deployment
     # basic-s: $24/month (2GB RAM, 1 vCPU) - recommended for production with higher traffic
-    instance_size_slug: basic-xxs
+    instance_size_slug: basic-xs
 
     # HTTP configuration
     http_port: 8080

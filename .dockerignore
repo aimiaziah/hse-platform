@@ -135,3 +135,37 @@ tsconfig.node.json
 # Additional large dependencies that should be excluded
 .pnp.*
 .yarn/
+
+# Aggressive cleanup - exclude development files from node_modules
+node_modules/**/test/
+node_modules/**/tests/
+node_modules/**/__tests__/
+node_modules/**/*.test.js
+node_modules/**/*.spec.js
+node_modules/**/*.test.ts
+node_modules/**/*.spec.ts
+node_modules/**/example/
+node_modules/**/examples/
+node_modules/**/sample/
+node_modules/**/samples/
+node_modules/**/demo/
+node_modules/**/demos/
+node_modules/**/doc/
+node_modules/**/docs/
+node_modules/**/*.md
+node_modules/**/*.markdown
+node_modules/**/README*
+node_modules/**/CHANGELOG*
+node_modules/**/LICENSE*
+node_modules/**/CONTRIBUTING*
+node_modules/**/.github/
+node_modules/**/.vscode/
+node_modules/**/benchmark/
+node_modules/**/benchmarks/
+
+# Build cache and temporary files
+.npm/
+.node_repl_history
+*.log.*
+npm-debug.log*
+.eslintcache
