@@ -122,6 +122,24 @@ services:
         value: '900000'
         scope: RUN_TIME
 
+      # Email Whitelists for Role Assignment
+      - key: ADMIN_EMAIL_WHITELIST
+        value: 'hse-platform@theta-edge.com'
+        scope: RUN_TIME
+
+      - key: SUPERVISOR_EMAIL_WHITELIST
+        value: 'supervisor@theta-edge.com'
+        scope: RUN_TIME
+
+      - key: INSPECTOR_EMAIL_WHITELIST
+        value: 'aimi.azizul@theta-edge.com'
+        scope: RUN_TIME
+
+      # Microsoft Client Secret (for token exchange)
+      - key: MICROSOFT_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
       # DigitalOcean Spaces configuration (optional - for image storage)
       - key: DO_SPACES_NAME
         value: 'inspection-images'
@@ -145,24 +163,24 @@ services:
 
       # SharePoint OAuth (optional)
       - key: NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID
-        scope: RUN_TIME
-        type: SECRET
+        value: '3ea4b086-3ece-4fdd-9ce1-73d11370f869'
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_TENANT_ID
-        value: 'common'
-        scope: RUN_TIME
+        value: '9db535e1-8b66-42f5-8309-ef343fde94f5'
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_SITE_URL
         value: 'https://thetaedgebhd.sharepoint.com/sites/ThetaEdge'
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME
         value: 'Shared Documents'
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER
         value: 'HSE'
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
 
       # Production logging configuration
       - key: LOG_LEVEL
@@ -181,6 +199,11 @@ services:
 
       - key: NEXT_PUBLIC_APP_VERSION
         value: '1.0.0'
+        scope: RUN_AND_BUILD_TIME
+
+      # App URL (for OAuth redirects)
+      - key: NEXT_PUBLIC_APP_URL
+        value: 'https://hse-platform-j2zac.ondigitalocean.app'
         scope: RUN_AND_BUILD_TIME
 
       # AI Model Server Configuration
@@ -299,6 +322,24 @@ services:
         value: '900000'
         scope: RUN_TIME
 
+      # Email Whitelists for Role Assignment
+      - key: ADMIN_EMAIL_WHITELIST
+        value: 'hse-platform@theta-edge.com'
+        scope: RUN_TIME
+
+      - key: SUPERVISOR_EMAIL_WHITELIST
+        value: 'supervisor@theta-edge.com'
+        scope: RUN_TIME
+
+      - key: INSPECTOR_EMAIL_WHITELIST
+        value: 'aimi.azizul@theta-edge.com'
+        scope: RUN_TIME
+
+      # Microsoft Client Secret (for token exchange)
+      - key: MICROSOFT_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+
       # DigitalOcean Spaces configuration (optional - for image storage)
       - key: DO_SPACES_NAME
         value: 'inspection-images'
@@ -322,24 +363,24 @@ services:
 
       # SharePoint OAuth (optional)
       - key: NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID
-        scope: RUN_TIME
-        type: SECRET
+        value: '3ea4b086-3ece-4fdd-9ce1-73d11370f869'
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_TENANT_ID
-        value: 'common'
-        scope: RUN_TIME
+        value: '9db535e1-8b66-42f5-8309-ef343fde94f5'
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_SITE_URL
         value: 'https://thetaedgebhd.sharepoint.com/sites/ThetaEdge'
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME
         value: 'Shared Documents'
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
 
       - key: NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER
         value: 'HSE'
-        scope: RUN_TIME
+        scope: RUN_AND_BUILD_TIME
 
       # Production logging configuration
       - key: LOG_LEVEL
@@ -360,10 +401,10 @@ services:
         value: '1.0.0'
         scope: RUN_AND_BUILD_TIME
 
-      # Optional: App URL (for OAuth redirects - set after deployment)
-      # - key: NEXT_PUBLIC_APP_URL
-      #   value: 'https://your-app-name.ondigitalocean.app'
-      #   scope: RUN_AND_BUILD_TIME
+      # App URL (for OAuth redirects)
+      - key: NEXT_PUBLIC_APP_URL
+        value: 'https://hse-platform-j2zac.ondigitalocean.app'
+        scope: RUN_AND_BUILD_TIME
 
       # AI Model Server Configuration
       - key: AI_DEPLOYMENT_TYPE
