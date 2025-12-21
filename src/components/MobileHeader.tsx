@@ -72,14 +72,15 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           {/* Logo */}
           {showLogo && (
             <Link href="/" className="flex items-center flex-shrink-0">
-              <Image
-                src="/theta-logo.png"
-                alt="Logo"
-                width={52}
-                height={52}
-                className="rounded-lg"
-                style={{ width: 'auto', height: 'auto' }}
-              />
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center">
+                <Image
+                  src="/theta-logo.png"
+                  alt="Logo"
+                  width={48}
+                  height={48}
+                  className="object-contain w-full h-full"
+                />
+              </div>
             </Link>
           )}
         </div>

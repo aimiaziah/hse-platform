@@ -134,14 +134,15 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
               <div className="flex items-center space-x-4">
                 {/* Logo */}
                 <Link href="/supervisor" className="flex items-center gap-3">
-                  <Image
-                    src="/theta-logo.png"
-                    alt="Theta Logo"
-                    width={60}
-                    height={60}
-                    className="object-contain"
-                    style={{ width: 'auto', height: 'auto' }}
-                  />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex items-center justify-center">
+                    <Image
+                      src="/theta-logo.png"
+                      alt="Theta Logo"
+                      width={48}
+                      height={48}
+                      className="object-contain w-full h-full"
+                    />
+                  </div>
                   <div>
                     <p className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
                       Platform
