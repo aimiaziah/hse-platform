@@ -222,12 +222,12 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
               {/* Logo and Title - Original Design */}
               <div className="flex items-center gap-3">
                 <Link href="/" className="flex items-center gap-3">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
                     <Image
                       src="/theta-logo.png"
                       alt="Company Logo"
-                      width={48}
-                      height={48}
+                      width={56}
+                      height={56}
                       className="object-contain w-full h-full"
                     />
                   </div>

@@ -79,12 +79,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
               <div className="flex">
                 <div className="flex-shrink-0 flex items-center">
                   <Link href="/admin" className="flex items-center gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex items-center justify-center">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden flex items-center justify-center">
                       <Image
                         src="/theta-logo.png"
                         alt="Theta Logo"
-                        width={48}
-                        height={48}
+                        width={56}
+                        height={56}
                         className="object-contain w-full h-full"
                       />
                     </div>
