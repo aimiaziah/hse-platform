@@ -1,0 +1,85 @@
+# DigitalOcean Docker Build Optimization
+# This file excludes unnecessary files from the Docker image to reduce size
+
+# Dependencies - will be installed fresh during build
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Next.js build output and cache
+.next/
+out/
+*.tsbuildinfo
+
+# Git and version control
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode/
+.idea/
+.cursor/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation and guides
+*.md
+!README.md
+.do/
+docs/
+
+# Environment files (secrets should be in DigitalOcean UI)
+.env
+.env.*
+!.env.example
+
+# Testing and coverage
+coverage/
+.nyc_output/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+
+# Logs
+logs/
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Scripts and development tools
+scripts/
+*.sh
+*.bat
+
+# Large model files - should be downloaded during deployment
+models/*.pt
+models/*.onnx
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Husky git hooks
+.husky/

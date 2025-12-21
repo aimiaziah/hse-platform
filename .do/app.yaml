@@ -192,8 +192,10 @@ services:
       branch: main
       deploy_on_push: true
 
-    # Python build configuration
-    build_command: pip install -r requirements.txt
+    # Python build configuration - optimized for disk space
+    # --no-cache-dir prevents pip from caching packages (saves disk space)
+    # Installing onnxruntime FIRST prevents ultralytics from pulling PyTorch
+    build_command: pip install --no-cache-dir -r requirements.txt
 
     # Run FastAPI server
     run_command: python model_server.py --host 0.0.0.0 --port 8080
@@ -201,9 +203,9 @@ services:
     # Environment configuration
     environment_slug: python
     instance_count: 1
-    # AI model server needs more resources for ML inference
-    # basic-xs: $12/month (1GB RAM) - minimum for YOLO with ONNX
-    # basic-s: $24/month (2GB RAM) - recommended for PyTorch model
+    # AI model server using ONNX runtime (lightweight, ~200MB vs PyTorch ~2GB)
+    # basic-xxs: $5/month (512MB RAM) - sufficient for ONNX inference
+    # basic-xs: $12/month (1GB RAM) - recommended for better performance
     instance_size_slug: basic-xs
 
     # HTTP configuration
@@ -224,19 +226,14 @@ services:
 
     # Environment variables (configure these in DigitalOcean dashboard)
     envs:
-      # Node.js configuration
-      - key: NODE_ENV
-        value: production
-        scope: RUN_AND_BUILD_TIME
-
-      - key: NODE_VERSION
-        value: '18'
+      # Python configuration
+      - key: PYTHON_VERSION
+        value: '3.11'
         scope: BUILD_TIME
 
-      # Next.js configuration
-      - key: NEXT_TELEMETRY_DISABLED
+      - key: PYTHONUNBUFFERED
         value: '1'
-        scope: RUN_AND_BUILD_TIME
+        scope: RUN_TIME
 
       # Supabase configuration (set these in App Platform UI)
       - key: NEXT_PUBLIC_SUPABASE_URL

@@ -1,17 +1,22 @@
 # Python dependencies for YOLO AI Model Server
-# This file is used by DigitalOcean App Platform to deploy the model server
+# Optimized for DigitalOcean deployment with minimal disk usage
 
-ultralytics>=8.3.0
+# FastAPI server dependencies
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
-pillow==11.0.0
 python-multipart==0.0.18
 pydantic==2.10.0
 
-# For ONNX runtime (faster inference, smaller size)
-# onnxruntime==1.20.0
+# Image processing
+pillow==11.0.0
 
-# Note: torch and torchvision are heavy dependencies
-# Only include if not using ONNX format
-# torch==2.5.0 --index-url https://download.pytorch.org/whl/cpu
-# torchvision==0.20.0 --index-url https://download.pytorch.org/whl/cpu
+# ONNX runtime for YOLO inference (lightweight, CPU-only)
+# This is MUCH smaller than PyTorch and doesn't include CUDA/cuDNN
+onnxruntime==1.20.0
+
+# YOLO library - must be installed AFTER onnxruntime to avoid pulling PyTorch
+ultralytics>=8.3.0
+
+# Note: We use ONNX format (.onnx) models instead of PyTorch (.pt) to avoid
+# installing torch and torchvision which are very large (~2GB) and include
+# CUDA/cuDNN dependencies that cause DigitalOcean build failures
