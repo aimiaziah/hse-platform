@@ -21,13 +21,13 @@ module.exports = withPWA({
   reactStrictMode: true,
   // Optimize for production deployment - creates minimal standalone build
   output: 'standalone',
+  // Disable source maps in production to reduce deployment size
+  productionBrowserSourceMaps: false,
   // Compress images to reduce bundle size
   images: {
     unoptimized: false,
     formats: ['image/webp'],
   },
-  // Reduce build output size
-  swcMinify: true,
   // Explicitly expose environment variables to the browser
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

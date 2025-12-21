@@ -82,6 +82,11 @@ apply-profile-picture-migration.bat
 check-announcements-table.js
 download-templates-from-supabase.js
 generate-icons.js
+migrate-images-to-r2.js
+migrate-to-digitalocean.js
+analyze-first-aid-template.js
+check-manhours-data.js
+verify-user-permissions.js
 
 # Large model files - should be downloaded during deployment
 models/*.pt
@@ -111,3 +116,22 @@ temp/
 
 # TypeScript config (will use production config)
 tsconfig.node.json
+
+# Source maps - excluded to reduce deployment size
+**/*.map
+**/*.map.js
+
+# Build artifacts and cache directories
+.turbo/
+.swc/
+.cache/
+.parcel-cache/
+
+# Historical data and sample files - not needed in production
+**/sample-data/
+**/test-data/
+**/historical-data/
+
+# Additional large dependencies that should be excluded
+.pnp.*
+.yarn/
