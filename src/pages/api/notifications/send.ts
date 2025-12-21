@@ -80,11 +80,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     }
 
     // Check user notification preferences
-    const userIds = [...new Set(subscriptions.map((s) => s.user_id))];
+    const targetUserIds = [...new Set(subscriptions.map((s) => s.user_id))];
     const { data: preferences } = await supabase
       .from('notification_preferences')
       .select('*')
-      .in('user_id', userIds);
+      .in('user_id', targetUserIds);
 
     // Filter subscriptions based on preferences
     const filteredSubscriptions = subscriptions.filter((sub) => {

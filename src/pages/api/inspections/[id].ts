@@ -232,7 +232,6 @@ function formatInspectionType(type: string): string {
   };
   return typeMap[type] || type;
 }
-}
 
 // DELETE /api/inspections/[id]
 async function deleteInspection(

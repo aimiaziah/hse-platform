@@ -316,7 +316,6 @@ function formatInspectionType(type: string): string {
   };
   return typeMap[type] || type;
 }
-}
 
 export default withRBAC(handler, {
   requiredPermission: 'canViewInspections',
