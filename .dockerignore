@@ -19,7 +19,7 @@ venv/
 ENV/
 .venv
 
-# Next.js build output and cache
+# Next.js build output and cache - will be rebuilt in container
 .next/
 out/
 *.tsbuildinfo
@@ -40,11 +40,17 @@ out/
 *~
 .DS_Store
 
-# Documentation and guides
+# Documentation and guides - not needed in production
 *.md
 !README.md
 .do/
 docs/
+ACCOUNT_SWITCHING_GUIDE.md
+IMPLEMENTATION_SUMMARY.md
+MICROSOFT_AUTH_SETUP.md
+MICROSOFT_PROFILE_PICTURE_GUIDE.md
+PUSH_NOTIFICATIONS_QUICKSTART.md
+PUSH_NOTIFICATIONS_SETUP.md
 
 # Environment files (secrets should be in DigitalOcean UI)
 .env
@@ -67,14 +73,25 @@ logs/
 Thumbs.db
 .DS_Store
 
-# Scripts and development tools
+# Scripts and development tools - not needed in production
 scripts/
 *.sh
 *.bat
+apply-announcements-migration.js
+apply-profile-picture-migration.bat
+check-announcements-table.js
+download-templates-from-supabase.js
+generate-icons.js
 
 # Large model files - should be downloaded during deployment
 models/*.pt
 models/*.onnx
+
+# PWA assets that will be regenerated
+public/sw.js
+public/workbox-*.js
+public/manifest.json
+public/icons/
 
 # Temporary files
 tmp/
@@ -83,3 +100,14 @@ temp/
 
 # Husky git hooks
 .husky/
+
+# Editor config files
+.editorconfig
+.prettierrc
+.prettierignore
+.eslintrc.json
+.eslintignore
+.npmrc
+
+# TypeScript config (will use production config)
+tsconfig.node.json
