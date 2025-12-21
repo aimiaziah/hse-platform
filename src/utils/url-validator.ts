@@ -173,7 +173,61 @@ export const sanitizeFilename = (filename: string): string => {
 };
 
 /**
+ * Valid inspection types - used for type guard validation
+ */
+const VALID_INSPECTION_TYPES = [
+  'hse',
+  'fire_extinguisher',
+  'first_aid',
+  'hse_observation',
+  'manhours',
+] as const;
+export type ValidInspectionType = (typeof VALID_INSPECTION_TYPES)[number];
+
+/**
+ * Type guard to validate inspection type
+ * @param type - The type to validate
+ * @returns true if type is a valid inspection type
+ */
+export const isValidInspectionType = (type: unknown): type is ValidInspectionType => {
+  return typeof type === 'string' && VALID_INSPECTION_TYPES.includes(type as ValidInspectionType);
+};
+
+/**
+ * Validates and returns a safe inspection type
+ * @param type - The type from query params
+ * @returns Validated inspection type
+ * @throws Error if type is invalid
+ */
+export const validateInspectionType = (
+  type: string | string[] | undefined,
+): ValidInspectionType => {
+  if (!type) {
+    throw new Error('[SSRF Prevention] Inspection type is required');
+  }
+
+  const typeString = Array.isArray(type) ? type[0] : type;
+
+  if (!isValidInspectionType(typeString)) {
+    throw new Error(`[SSRF Prevention] Invalid inspection type: ${typeString}`);
+  }
+
+  return typeString;
+};
+
+/**
+ * UUID v4 regex pattern for strict ID validation
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Simple alphanumeric ID pattern (for legacy IDs)
+ */
+const SIMPLE_ID_PATTERN = /^[a-zA-Z0-9_-]{1,100}$/;
+
+/**
  * Sanitizes an ID parameter to prevent injection attacks
+ * Uses strict validation to ensure ID matches expected formats
  * @param id - The ID to sanitize
  * @returns Sanitized ID
  */
@@ -185,20 +239,60 @@ export const sanitizeId = (id: string | string[] | undefined): string => {
   // Convert array to string (take first element)
   const idString = Array.isArray(id) ? id[0] : id;
 
-  // Remove any characters that could be used for path traversal or injection
-  // Only allow alphanumeric, hyphens, and underscores
-  const sanitized = idString.replace(/[^a-zA-Z0-9\-_]/g, '');
-
-  // Ensure ID is not empty and has reasonable length
-  if (!sanitized || sanitized.length === 0) {
-    throw new Error('[SSRF Prevention] Invalid ID parameter');
+  // First, check if it's a valid UUID (preferred format)
+  if (UUID_PATTERN.test(idString)) {
+    return idString.toLowerCase();
   }
 
-  if (sanitized.length > 100) {
-    throw new Error('[SSRF Prevention] ID parameter too long');
+  // Fall back to simple ID validation for legacy support
+  if (SIMPLE_ID_PATTERN.test(idString)) {
+    return idString;
   }
 
-  return sanitized;
+  // If neither pattern matches, the ID is invalid
+  throw new Error('[SSRF Prevention] Invalid ID format - must be UUID or alphanumeric');
+};
+
+/**
+ * Validates that a string is a valid Graph API site/drive ID
+ * These IDs are in a specific format returned by Microsoft Graph API
+ * @param id - The ID to validate
+ * @returns true if valid Graph API ID format
+ */
+export const isValidGraphApiId = (id: unknown): boolean => {
+  if (typeof id !== 'string' || !id) {
+    return false;
+  }
+
+  // Graph API IDs are typically in formats like:
+  // - Site IDs: "contoso.sharepoint.com,guid,guid"
+  // - Drive IDs: alphanumeric with specific patterns
+  // Allow alphanumeric, hyphens, underscores, periods, commas (for composite IDs)
+  const GRAPH_ID_PATTERN = /^[a-zA-Z0-9._,-]{1,500}$/;
+
+  if (!GRAPH_ID_PATTERN.test(id)) {
+    return false;
+  }
+
+  // Additional check: prevent path traversal sequences
+  if (id.includes('..') || id.includes('//')) {
+    return false;
+  }
+
+  return true;
+};
+
+/**
+ * Sanitizes a Graph API ID (site ID, drive ID, etc.)
+ * @param id - The ID from API response
+ * @param idType - Type description for error messages
+ * @returns Sanitized ID
+ */
+export const sanitizeGraphApiId = (id: unknown, idType: string = 'ID'): string => {
+  if (!isValidGraphApiId(id)) {
+    throw new Error(`[SSRF Prevention] Invalid ${idType} format from API response`);
+  }
+  return id as string;
 };
 
 /**

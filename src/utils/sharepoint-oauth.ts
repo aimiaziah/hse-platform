@@ -7,6 +7,7 @@ import {
   safeFetch,
   sanitizeFilename,
   sanitizeFolderPath,
+  sanitizeGraphApiId,
 } from './url-validator';
 
 interface SharePointOAuthConfig {
@@ -304,7 +305,8 @@ const uploadToSharePoint = async (
         }
 
         const siteData = await siteResponse.json();
-        const siteId = siteData.id;
+        // Validate site ID from API response to prevent SSRF
+        const siteId = sanitizeGraphApiId(siteData.id, 'Site ID');
 
         // Get drive (document library) ID
         const drivesResponse = await safeFetch(buildGraphApiUrl(`sites/${siteId}/drives`), {
@@ -322,7 +324,8 @@ const uploadToSharePoint = async (
           throw new Error(`Document library "${libraryName}" not found`);
         }
 
-        const driveId = drive.id;
+        // Validate drive ID from API response to prevent SSRF
+        const driveId = sanitizeGraphApiId(drive.id, 'Drive ID');
 
         // Sanitize inputs to prevent SSRF
         const sanitizedFilename = sanitizeFilename(filename);
@@ -490,7 +493,8 @@ const createFolder = async (folderPath: string): Promise<void> => {
 
         if (siteResponse.ok) {
           const siteData = await siteResponse.json();
-          const siteId = siteData.id;
+          // Validate site ID from API response to prevent SSRF
+          const siteId = sanitizeGraphApiId(siteData.id, 'Site ID');
 
           const drivesResponse = await safeFetch(buildGraphApiUrl(`sites/${siteId}/drives`), {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -501,7 +505,9 @@ const createFolder = async (folderPath: string): Promise<void> => {
             const drive = drivesData.value.find((d: any) => d.name === libraryName);
 
             if (drive) {
-              await createSharePointFolder(accessToken, siteId, drive.id, sanitizedPath);
+              // Validate drive ID from API response to prevent SSRF
+              const validatedDriveId = sanitizeGraphApiId(drive.id, 'Drive ID');
+              await createSharePointFolder(accessToken, siteId, validatedDriveId, sanitizedPath);
               return;
             }
           }

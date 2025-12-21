@@ -21,7 +21,11 @@ const LoginPage: React.FC = () => {
     console.error('Auth context not available:', error);
     authHook = null;
   }
-  const { login, isAuthenticated, isLoading: authLoading } = authHook || {
+  const {
+    login,
+    isAuthenticated,
+    isLoading: authLoading,
+  } = authHook || {
     login: null,
     isAuthenticated: false,
     isLoading: false,

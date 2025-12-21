@@ -138,7 +138,9 @@ export function getMicrosoftLogoutUrl(): string {
     post_logout_redirect_uri: `${postLogoutRedirectUri}/login`,
   });
 
-  return `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/logout?${params.toString()}`;
+  return `https://login.microsoftonline.com/${
+    config.tenantId
+  }/oauth2/v2.0/logout?${params.toString()}`;
 }
 
 /**

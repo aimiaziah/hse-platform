@@ -4,7 +4,12 @@ import { useRouter } from 'next/router';
 import SupervisorLayout from '@/roles/supervisor/layouts/SupervisorLayout';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import { storage } from '@/utils/storage';
-import { safeFetch, sanitizeId } from '@/utils/url-validator';
+import {
+  safeFetch,
+  sanitizeId,
+  validateInspectionType,
+  type ValidInspectionType,
+} from '@/utils/url-validator';
 import { useAuth } from '@/hooks/useAuth';
 import {
   exportToSharePoint as exportToSharePointOAuth,
@@ -39,7 +44,8 @@ type InspectionStatus =
   | 'Open'
   | 'Closed'
   | 'Ongoing';
-type InspectionType = 'hse' | 'fire_extinguisher' | 'first_aid' | 'hse_observation' | 'manhours';
+// Use the validated type from url-validator for type safety
+type InspectionType = ValidInspectionType;
 
 interface Inspection {
   id: string;
@@ -66,7 +72,17 @@ const InspectionReview: React.FC = (): JSX.Element => {
   const { user, updateSignature } = useAuth();
   const router = useRouter();
   const { id } = router.query;
-  const inspectionType = router.query.type as InspectionType;
+
+  // Validate inspection type from URL to prevent SSRF - returns validated type or throws
+  const getValidatedInspectionType = (): InspectionType | null => {
+    try {
+      if (!router.query.type) return null;
+      return validateInspectionType(router.query.type);
+    } catch {
+      return null;
+    }
+  };
+  const inspectionType = getValidatedInspectionType();
 
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [loading, setLoading] = useState(true);
@@ -381,6 +397,12 @@ const InspectionReview: React.FC = (): JSX.Element => {
   };
 
   const loadInspection = async () => {
+    // Guard against invalid inspection type (SSRF prevention)
+    if (!inspectionType) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       // Sanitize ID to prevent SSRF
@@ -1395,6 +1417,25 @@ const InspectionReview: React.FC = (): JSX.Element => {
         <SupervisorLayout title="Review Inspection">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          </div>
+        </SupervisorLayout>
+      </ProtectedRoute>
+    );
+  }
+
+  // Guard against invalid inspection type (SSRF prevention)
+  if (!inspectionType) {
+    return (
+      <ProtectedRoute requiredPermission="canReviewInspections">
+        <SupervisorLayout title="Review Inspection">
+          <div className="text-center py-12">
+            <p className="text-red-500">Invalid inspection type</p>
+            <button
+              onClick={() => router.back()}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Go Back
+            </button>
           </div>
         </SupervisorLayout>
       </ProtectedRoute>
