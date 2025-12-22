@@ -211,8 +211,10 @@ services:
         value: 'digitalocean'
         scope: RUN_TIME
 
+      # Use DigitalOcean's internal service discovery
+      # The ${service.PRIVATE_URL} syntax provides internal communication
       - key: AI_MODEL_ENDPOINT
-        value: 'http://ai-model-server:8080'
+        value: '${ai-model-server.PRIVATE_URL}'
         scope: RUN_TIME
 
       - key: AI_MIN_CONFIDENCE
@@ -263,7 +265,7 @@ services:
       success_threshold: 1
       failure_threshold: 3
 
-    # Environment variables (configure these in DigitalOcean dashboard)
+    # Environment variables for AI model server (minimal config)
     envs:
       # Python configuration
       - key: PYTHON_VERSION
@@ -274,153 +276,9 @@ services:
         value: '1'
         scope: RUN_TIME
 
-      # Supabase configuration (set these in App Platform UI)
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        scope: RUN_AND_BUILD_TIME
-        type: SECRET
-
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        scope: RUN_TIME
-        type: SECRET
-
-      # Authentication configuration
-      - key: JWT_SECRET
-        scope: RUN_TIME
-        type: SECRET
-
-      - key: JWT_EXPIRES_IN
-        value: '7d'
-        scope: RUN_TIME
-
-      - key: ALLOWED_EMAIL_DOMAINS
-        value: 'theta-edge.com'
-        scope: RUN_TIME
-
-      # Feature flags
-      - key: ENABLE_PIN_AUTH
-        value: 'true'
-        scope: RUN_TIME
-
-      - key: ENABLE_MICROSOFT_AUTH
-        value: 'true'
-        scope: RUN_TIME
-
-      - key: PREFER_MICROSOFT_AUTH
-        value: 'true'
-        scope: RUN_TIME
-
-      # Rate limiting configuration
-      - key: AUTH_RATE_LIMIT_MAX_REQUESTS
-        value: '5'
-        scope: RUN_TIME
-
-      - key: AUTH_RATE_LIMIT_WINDOW_MS
-        value: '900000'
-        scope: RUN_TIME
-
-      # Email Whitelists for Role Assignment
-      - key: ADMIN_EMAIL_WHITELIST
-        value: 'hse-platform@theta-edge.com'
-        scope: RUN_TIME
-
-      - key: SUPERVISOR_EMAIL_WHITELIST
-        value: 'supervisor@theta-edge.com'
-        scope: RUN_TIME
-
-      - key: INSPECTOR_EMAIL_WHITELIST
-        value: 'aimi.azizul@theta-edge.com'
-        scope: RUN_TIME
-
-      # Microsoft Client Secret (for token exchange)
-      - key: MICROSOFT_CLIENT_SECRET
-        scope: RUN_TIME
-        type: SECRET
-
-      # DigitalOcean Spaces configuration (optional - for image storage)
-      - key: DO_SPACES_NAME
-        value: 'inspection-images'
-        scope: RUN_TIME
-
-      - key: DO_SPACES_REGION
-        value: 'sgp1'
-        scope: RUN_TIME
-
-      - key: DO_SPACES_ENDPOINT
-        value: 'https://sgp1.digitaloceanspaces.com'
-        scope: RUN_TIME
-
-      - key: DO_SPACES_KEY
-        scope: RUN_TIME
-        type: SECRET
-
-      - key: DO_SPACES_SECRET
-        scope: RUN_TIME
-        type: SECRET
-
-      # SharePoint OAuth (optional)
-      - key: NEXT_PUBLIC_SHAREPOINT_OAUTH_CLIENT_ID
-        value: '3ea4b086-3ece-4fdd-9ce1-73d11370f869'
-        scope: RUN_AND_BUILD_TIME
-
-      - key: NEXT_PUBLIC_SHAREPOINT_TENANT_ID
-        value: '9db535e1-8b66-42f5-8309-ef343fde94f5'
-        scope: RUN_AND_BUILD_TIME
-
-      - key: NEXT_PUBLIC_SHAREPOINT_SITE_URL
-        value: 'https://thetaedgebhd.sharepoint.com/sites/ThetaEdge'
-        scope: RUN_AND_BUILD_TIME
-
-      - key: NEXT_PUBLIC_SHAREPOINT_LIBRARY_NAME
-        value: 'Shared Documents'
-        scope: RUN_AND_BUILD_TIME
-
-      - key: NEXT_PUBLIC_SHAREPOINT_BASE_FOLDER
-        value: 'HSE'
-        scope: RUN_AND_BUILD_TIME
-
-      # Production logging configuration
-      - key: LOG_LEVEL
-        value: 'info'
-        scope: RUN_TIME
-
-      # Production optimizations
-      - key: NEXT_PUBLIC_APP_ENV
-        value: 'production'
-        scope: RUN_AND_BUILD_TIME
-
-      # Application settings
-      - key: NEXT_PUBLIC_APP_NAME
-        value: 'PWA Inspection Platform'
-        scope: RUN_AND_BUILD_TIME
-
-      - key: NEXT_PUBLIC_APP_VERSION
-        value: '1.0.0'
-        scope: RUN_AND_BUILD_TIME
-
-      # App URL (for OAuth redirects)
-      - key: NEXT_PUBLIC_APP_URL
-        value: 'https://hse-platform-j2zac.ondigitalocean.app'
-        scope: RUN_AND_BUILD_TIME
-
-      # AI Model Server Configuration
-      - key: AI_DEPLOYMENT_TYPE
-        value: 'digitalocean'
-        scope: RUN_TIME
-
-      - key: AI_MODEL_ENDPOINT
-        value: 'http://ai-model-server:8080'
-        scope: RUN_TIME
-
+      # Model configuration (optional - defaults in model_server.py)
       - key: AI_MIN_CONFIDENCE
         value: '0.5'
-        scope: RUN_TIME
-
-      - key: AI_TIMEOUT_MS
-        value: '30000'
         scope: RUN_TIME
 
 # Production alerts configuration
