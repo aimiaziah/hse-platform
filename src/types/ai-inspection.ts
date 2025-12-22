@@ -33,6 +33,7 @@ export interface AIInspectionResult {
   }[];
   processingTime?: number;
   error?: string;
+  warning?: string;
 }
 
 export interface CapturedImage {

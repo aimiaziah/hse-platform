@@ -657,9 +657,16 @@ const FireExtinguisherChecklist: React.FC = () => {
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       const result: AIInspectionResult = await response.json();
       if (result.success) {
-        applyAIResults(scanningExtinguisherIndex, result, images);
-        setCurrentAIResults(result);
-        setShowAIResults(true);
+        // Check if there's a warning (e.g., not a fire extinguisher)
+        if (result.warning) {
+          alert(`⚠️ AI Detection Warning\n\n${result.warning}`);
+        } else if (result.detections.length > 0) {
+          applyAIResults(scanningExtinguisherIndex, result, images);
+          setCurrentAIResults(result);
+          setShowAIResults(true);
+        } else {
+          alert('No components detected. Please ensure the photo clearly shows a fire extinguisher.');
+        }
       } else {
         alert(`AI Analysis failed: ${result.error || 'Unknown error'}`);
       }

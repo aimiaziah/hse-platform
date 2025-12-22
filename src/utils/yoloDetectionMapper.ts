@@ -44,6 +44,35 @@ export function mapYOLOToInspectionResults(
 
   console.log('[YOLO Mapper] Grouped by component:', componentDetections);
 
+  // VALIDATION: Check if this is actually a fire extinguisher
+  // A real fire extinguisher should have at least 3 core components detected
+  const coreComponentTypes = ['shell', 'hose', 'nozzle', 'pressure_gauge', 'safety_pin', 'pin_seal'];
+  const detectedCoreComponents = coreComponentTypes.filter(type =>
+    componentDetections[type] && componentDetections[type].length > 0
+  );
+
+  const isLikelyFireExtinguisher = detectedCoreComponents.length >= 3;
+
+  console.log('[YOLO Mapper] Validation:', {
+    detectedCoreComponents,
+    count: detectedCoreComponents.length,
+    isLikelyFireExtinguisher
+  });
+
+  // If this doesn't look like a fire extinguisher, return empty results
+  if (!isLikelyFireExtinguisher) {
+    console.warn('[YOLO Mapper] ⚠️  Not enough fire extinguisher components detected - likely not a fire extinguisher');
+    console.warn('[YOLO Mapper] Detected only:', detectedCoreComponents.join(', '));
+
+    return {
+      success: true,
+      detections: [],
+      extractedData: {},
+      processingTime: 0,
+      warning: `Only ${detectedCoreComponents.length} core components detected (${detectedCoreComponents.join(', ')}). This may not be a fire extinguisher. Please ensure the photo clearly shows a fire extinguisher.`
+    };
+  }
+
   // Generate inspection results for each field
   const detections: AIDetectionResult[] = [];
 
