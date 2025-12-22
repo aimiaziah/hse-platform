@@ -20,9 +20,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       ? `${process.env.NEXT_PUBLIC_SHAREPOINT_TENANT_ID.substring(0, 8)}...`
       : 'NOT_SET',
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'NOT_SET',
-    MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET
-      ? 'SET (hidden)'
-      : 'NOT_SET',
+    MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET ? 'SET (hidden)' : 'NOT_SET',
 
     // Feature flags
     ENABLE_MICROSOFT_AUTH: process.env.ENABLE_MICROSOFT_AUTH || 'NOT_SET',
