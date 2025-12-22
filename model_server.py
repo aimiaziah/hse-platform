@@ -44,15 +44,15 @@ MODEL_PATH = "models/best.onnx"  # ONNX model for CPU inference
 PORT = 8000
 HOST = "0.0.0.0"
 
-# YOLO class names (update based on your model)
+# YOLO class names (must match yoloDetectionMapper.ts expectations)
 CLASS_NAMES = {
     0: "shell",
     1: "hose",
     2: "nozzle",
-    3: "gauge",
-    4: "pin",
-    5: "seal",
-    6: "tag",
+    3: "pressure_gauge",  # Changed from "gauge"
+    4: "safety_pin",      # Changed from "pin"
+    5: "pin_seal",        # Changed from "seal"
+    6: "service_tag",     # Changed from "tag"
 }
 
 # ============================================================================
