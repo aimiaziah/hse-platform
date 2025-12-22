@@ -13,6 +13,7 @@ Usage:
     python model_server.py --model models/best.onnx --port 8000
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -84,13 +85,30 @@ class DetectionResponse(BaseModel):
     error: Optional[str] = None
 
 # ============================================================================
+# LIFESPAN HANDLER
+# ============================================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler - load model on startup"""
+    try:
+        load_model(MODEL_PATH)
+    except Exception as e:
+        print(f"❌ Failed to load model: {e}")
+        print("   Server will start but /detect will fail until model is loaded")
+    yield
+    # Cleanup on shutdown (if needed)
+    print("🛑 Shutting down server...")
+
+# ============================================================================
 # FASTAPI APP
 # ============================================================================
 
 app = FastAPI(
     title="Fire Extinguisher AI Detection API",
     description="YOLO ONNX-based fire extinguisher component detection",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS
@@ -351,19 +369,6 @@ async def detect(request: DetectionRequest):
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# ============================================================================
-# STARTUP
-# ============================================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Load model on startup"""
-    try:
-        load_model(MODEL_PATH)
-    except Exception as e:
-        print(f"❌ Failed to load model: {e}")
-        print("   Server will start but /detect will fail until model is loaded")
 
 # ============================================================================
 # MAIN
