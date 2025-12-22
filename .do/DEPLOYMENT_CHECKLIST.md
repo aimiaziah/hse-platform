@@ -56,6 +56,18 @@ Go to Settings → App-Level Environment Variables and add:
 - [ ] `ENABLE_MICROSOFT_AUTH` = `true`
 - [ ] `PREFER_MICROSOFT_AUTH` = `true`
 
+**AI Detection (Required for Fire Extinguisher AI):**
+- [ ] `AI_DEPLOYMENT_TYPE` = `digitalocean` (or `roboflow` for cloud-based detection)
+- [ ] `AI_MODEL_ENDPOINT` = `http://ai-model-server:8080` (for internal DO service)
+- [ ] `AI_MIN_CONFIDENCE` = `0.5`
+- [ ] `AI_TIMEOUT_MS` = `30000`
+
+> **⚠️ Important:** If using `AI_DEPLOYMENT_TYPE=digitalocean`, you MUST deploy the `ai-model-server` service.
+> Alternatively, use Roboflow for cloud-based detection:
+> - [ ] `AI_DEPLOYMENT_TYPE` = `roboflow`
+> - [ ] `ROBOFLOW_API_KEY` = `<your-roboflow-api-key>` (encrypt)
+> - [ ] `ROBOFLOW_MODEL_ENDPOINT` = `https://detect.roboflow.com/your-model/version`
+
 **Optional (DigitalOcean Spaces):**
 - [ ] `DO_SPACES_NAME` = `inspection-images`
 - [ ] `DO_SPACES_REGION` = `sgp1`
@@ -124,6 +136,37 @@ If deployment fails, check:
 3. Supabase credentials are correct
 4. Health check endpoint is responding
 5. See DIGITALOCEAN_DEPLOYMENT.md for detailed troubleshooting
+
+### AI Detection Not Working
+
+If AI fire extinguisher detection isn't working:
+
+1. **Check AI Health Endpoint:**
+   ```bash
+   curl https://your-app.ondigitalocean.app/api/ai/health
+   ```
+   This will show if the AI server is reachable and the model is loaded.
+
+2. **Verify ai-model-server is Deployed:**
+   - Go to DigitalOcean App Platform dashboard
+   - Check if you have TWO services: `web` AND `ai-model-server`
+   - If only `web` is showing, redeploy with the full `app.yaml`
+
+3. **Check ai-model-server Logs:**
+   - Go to App Platform → Runtime Logs
+   - Select `ai-model-server` component
+   - Look for errors like "Model file not found" or "Failed to load model"
+
+4. **Common Issues:**
+   - **Model not loading:** Ensure `models/best.onnx` is committed to Git (not in .gitignore)
+   - **Connection refused:** The `ai-model-server` service isn't running. Check logs.
+   - **Timeout:** The model file is too large or server is overloaded. Increase `AI_TIMEOUT_MS`
+
+5. **Fallback to Roboflow:**
+   If internal AI server doesn't work, use Roboflow cloud:
+   - Set `AI_DEPLOYMENT_TYPE=roboflow` in environment variables
+   - Add `ROBOFLOW_API_KEY` and `ROBOFLOW_MODEL_ENDPOINT`
+   - Redeploy the web app
 
 ## Rollback Plan
 

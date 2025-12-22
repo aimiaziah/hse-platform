@@ -210,11 +210,45 @@ async function detectWithDigitalOcean(
   extinguisherInfo: any,
 ): Promise<YOLOImageResult[]> {
   if (!AI_MODEL_ENDPOINT) {
-    console.warn('[AI Analysis] DigitalOcean AI endpoint not configured, using mock data');
-    return generateMockDetections(images);
+    console.error('[AI Analysis] ❌ AI_MODEL_ENDPOINT environment variable is not set!');
+    console.error(
+      '[AI Analysis] Please set AI_MODEL_ENDPOINT in DigitalOcean App Platform settings',
+    );
+
+    // Try Roboflow as fallback if configured
+    if (ROBOFLOW_API_KEY && ROBOFLOW_MODEL_ENDPOINT) {
+      console.log('[AI Analysis] Falling back to Roboflow...');
+      return detectWithRoboflow(images);
+    }
+
+    throw new Error(
+      'AI Model Server is not configured. Please configure AI_MODEL_ENDPOINT or set up Roboflow as fallback.',
+    );
   }
 
+  console.log(`[DigitalOcean AI] Attempting to connect to: ${AI_MODEL_ENDPOINT}/detect`);
+  console.log(
+    `[DigitalOcean AI] Processing ${images.length} image(s), confidence threshold: ${MIN_CONFIDENCE}`,
+  );
+
   try {
+    // First, check if the AI server is healthy
+    const healthCheck = await checkAIServerHealth();
+    if (!healthCheck.healthy) {
+      console.error(`[DigitalOcean AI] ❌ AI Server health check failed: ${healthCheck.error}`);
+
+      // Try Roboflow as fallback if configured
+      if (ROBOFLOW_API_KEY && ROBOFLOW_MODEL_ENDPOINT) {
+        console.log('[AI Analysis] Falling back to Roboflow...');
+        return detectWithRoboflow(images);
+      }
+
+      throw new Error(
+        `AI Model Server is not responding. Health check failed: ${healthCheck.error}. ` +
+          `Please check if the ai-model-server service is deployed and running on DigitalOcean.`,
+      );
+    }
+
     const response = await fetch(`${AI_MODEL_ENDPOINT}/detect`, {
       method: 'POST',
       headers: {
@@ -229,11 +263,20 @@ async function detectWithDigitalOcean(
     });
 
     if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error response');
+      console.error(`[DigitalOcean AI] Server returned ${response.status}: ${errorText}`);
       throw new Error(`DigitalOcean AI Server error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('[DigitalOcean AI] Raw response:', data);
+    console.log('[DigitalOcean AI] Raw response:', JSON.stringify(data, null, 2));
+
+    // Check if the response indicates model not loaded
+    if (data.error && data.error.includes('Model not loaded')) {
+      throw new Error(
+        'AI Model is not loaded on the server. Please ensure models/best.onnx is deployed correctly.',
+      );
+    }
 
     // Map Python server response format to our format
     // Python server returns: { results: [{ stepId, detections: [{ class_name, confidence, bbox }] }] }
@@ -247,11 +290,60 @@ async function detectWithDigitalOcean(
       })),
     }));
 
-    console.log('[DigitalOcean AI] Mapped results:', mappedResults);
+    console.log('[DigitalOcean AI] Mapped results:', JSON.stringify(mappedResults, null, 2));
+    console.log(
+      `[DigitalOcean AI] ✅ Detection complete. Found ${mappedResults.reduce(
+        (acc: number, r: any) => acc + r.detections.length,
+        0,
+      )} total detections`,
+    );
+
     return mappedResults;
   } catch (error: any) {
-    console.error('[DigitalOcean AI] Error:', error);
+    console.error('[DigitalOcean AI] ❌ Error:', error.message);
+
+    // Provide more helpful error messages
+    if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      throw new Error(
+        `AI Server request timed out after ${DETECTION_TIMEOUT}ms. ` +
+          `The server may be overloaded or the model file may be too large.`,
+      );
+    }
+
+    if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
+      throw new Error(
+        `Cannot connect to AI Model Server at ${AI_MODEL_ENDPOINT}. ` +
+          `Please verify that the ai-model-server service is deployed and running on DigitalOcean.`,
+      );
+    }
+
     throw error;
+  }
+}
+
+// Helper function to check AI server health
+async function checkAIServerHealth(): Promise<{ healthy: boolean; error?: string }> {
+  if (!AI_MODEL_ENDPOINT) {
+    return { healthy: false, error: 'AI_MODEL_ENDPOINT not configured' };
+  }
+
+  try {
+    const response = await fetch(`${AI_MODEL_ENDPOINT}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000), // 5 second timeout for health check
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.model_loaded === false) {
+        return { healthy: false, error: 'Model not loaded on server' };
+      }
+      return { healthy: true };
+    } else {
+      return { healthy: false, error: `Health check returned ${response.status}` };
+    }
+  } catch (error: any) {
+    return { healthy: false, error: error.message };
   }
 }
 
@@ -353,30 +445,31 @@ async function detectWithAzure(
 // ============================================================================
 
 async function generateMockDetections(images: CapturedImage[]): Promise<YOLOImageResult[]> {
-  console.log('[AI Analysis] Using mock detection data for testing');
+  // Check if we're in production - NEVER use mock data in production
+  const isProduction =
+    process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+
+  if (isProduction) {
+    console.error('[AI Analysis] ⚠️  CRITICAL: AI service not configured in production!');
+    throw new Error(
+      'AI detection service is not configured. Please set up one of the following: ' +
+        'ROBOFLOW_API_KEY, AI_MODEL_ENDPOINT, GCP_CLOUD_RUN_ENDPOINT, or AZURE_FUNCTION_ENDPOINT',
+    );
+  }
+
+  console.warn('[AI Analysis] ⚠️  Using mock detection data - FOR DEVELOPMENT ONLY');
+  console.warn(
+    '[AI Analysis] Mock data will return EMPTY detections to simulate "not a fire extinguisher"',
+  );
 
   // Simulate processing delay (like a real AI service)
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  // Generate realistic mock detections
+  // Return EMPTY detections to properly test the validation logic
+  // This will trigger the "not a fire extinguisher" warning in the mapper
   return images.map((image) => ({
     stepId: image.stepId,
-    detections: [
-      // Shell component
-      { class: 'shell', confidence: 0.92, bbox: [100, 50, 300, 500] },
-      // Hose component
-      { class: 'hose', confidence: 0.88, bbox: [250, 100, 350, 400] },
-      // Nozzle component
-      { class: 'nozzle', confidence: 0.85, bbox: [250, 80, 350, 150] },
-      // Pressure gauge
-      { class: 'pressure_gauge', confidence: 0.95, bbox: [150, 150, 250, 250] },
-      // Safety pin
-      { class: 'safety_pin', confidence: 0.9, bbox: [180, 100, 220, 140] },
-      // Pin seal
-      { class: 'pin_seal', confidence: 0.87, bbox: [180, 110, 220, 130] },
-      // Service tag
-      { class: 'service_tag', confidence: 0.91, bbox: [120, 300, 220, 400] },
-    ],
+    detections: [],
   }));
 }
 
