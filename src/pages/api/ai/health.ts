@@ -48,11 +48,11 @@ export default async function handler(
     }
 
     // Try to reach the AI model server health endpoint
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     try {
       console.log(`[AI Health] Checking AI server at: ${AI_MODEL_ENDPOINT}/health`);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const response = await fetch(`${AI_MODEL_ENDPOINT}/health`, {
         method: 'GET',
@@ -79,6 +79,7 @@ export default async function handler(
         return res.status(503).json(result);
       }
     } catch (error: any) {
+      clearTimeout(timeoutId);
       console.error('[AI Health] Error connecting to AI server:', error);
 
       result.status = 'unhealthy';

@@ -222,7 +222,7 @@ async function detectWithDigitalOcean(
     }
 
     throw new Error(
-      'AI Model Server is not configured. Please configure AI_MODEL_ENDPOINT or set up Roboflow as fallback.',
+      'AI service not configured. Please contact your administrator to set up AI detection.',
     );
   }
 
@@ -232,7 +232,7 @@ async function detectWithDigitalOcean(
   );
 
   try {
-    // First, check if the AI server is healthy
+    // First, check if the AI server is healthy (with a short timeout)
     const healthCheck = await checkAIServerHealth();
     if (!healthCheck.healthy) {
       console.error(`[DigitalOcean AI] ❌ AI Server health check failed: ${healthCheck.error}`);
@@ -243,81 +243,104 @@ async function detectWithDigitalOcean(
         return detectWithRoboflow(images);
       }
 
+      // Provide user-friendly error message
       throw new Error(
-        `AI Model Server is not responding. Health check failed: ${healthCheck.error}. ` +
-          `Please check if the ai-model-server service is deployed and running on DigitalOcean.`,
+        'AI detection service is temporarily unavailable. Please try again later or submit the inspection manually without AI assistance.',
       );
     }
 
-    const response = await fetch(`${AI_MODEL_ENDPOINT}/detect`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        images,
-        extinguisherInfo,
-        minConfidence: MIN_CONFIDENCE,
-      }),
-      signal: AbortSignal.timeout(DETECTION_TIMEOUT),
-    });
+    // Create AbortController for timeout (more compatible than AbortSignal.timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DETECTION_TIMEOUT);
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unable to read error response');
-      console.error(`[DigitalOcean AI] Server returned ${response.status}: ${errorText}`);
-      throw new Error(`DigitalOcean AI Server error: ${response.status} ${response.statusText}`);
-    }
+    try {
+      const response = await fetch(`${AI_MODEL_ENDPOINT}/detect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          images,
+          extinguisherInfo,
+          minConfidence: MIN_CONFIDENCE,
+        }),
+        signal: controller.signal,
+      });
 
-    const data = await response.json();
-    console.log('[DigitalOcean AI] Raw response:', JSON.stringify(data, null, 2));
+      clearTimeout(timeoutId);
 
-    // Check if the response indicates model not loaded
-    if (data.error && data.error.includes('Model not loaded')) {
-      throw new Error(
-        'AI Model is not loaded on the server. Please ensure models/best.onnx is deployed correctly.',
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error(`[DigitalOcean AI] Server returned ${response.status}: ${errorText}`);
+        throw new Error(`AI server returned error ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('[DigitalOcean AI] Raw response:', JSON.stringify(data, null, 2));
+
+      // Check if the response indicates model not loaded
+      if (data.error && data.error.includes('Model not loaded')) {
+        throw new Error('AI model is still loading. Please wait a moment and try again.');
+      }
+
+      // Map Python server response format to our format
+      // Python server returns: { results: [{ stepId, detections: [{ class_name, confidence, bbox }] }] }
+      // We need: { results: [{ stepId, detections: [{ class, confidence, bbox }] }] }
+      const mappedResults = (data.results || []).map((result: any) => ({
+        stepId: result.stepId,
+        detections: (result.detections || []).map((det: any) => ({
+          class: det.class_name || det.class, // Map class_name to class
+          confidence: det.confidence,
+          bbox: det.bbox,
+        })),
+      }));
+
+      console.log('[DigitalOcean AI] Mapped results:', JSON.stringify(mappedResults, null, 2));
+      console.log(
+        `[DigitalOcean AI] ✅ Detection complete. Found ${mappedResults.reduce(
+          (acc: number, r: any) => acc + r.detections.length,
+          0,
+        )} total detections`,
       );
+
+      return mappedResults;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    // Map Python server response format to our format
-    // Python server returns: { results: [{ stepId, detections: [{ class_name, confidence, bbox }] }] }
-    // We need: { results: [{ stepId, detections: [{ class, confidence, bbox }] }] }
-    const mappedResults = (data.results || []).map((result: any) => ({
-      stepId: result.stepId,
-      detections: (result.detections || []).map((det: any) => ({
-        class: det.class_name || det.class, // Map class_name to class
-        confidence: det.confidence,
-        bbox: det.bbox,
-      })),
-    }));
-
-    console.log('[DigitalOcean AI] Mapped results:', JSON.stringify(mappedResults, null, 2));
-    console.log(
-      `[DigitalOcean AI] ✅ Detection complete. Found ${mappedResults.reduce(
-        (acc: number, r: any) => acc + r.detections.length,
-        0,
-      )} total detections`,
-    );
-
-    return mappedResults;
   } catch (error: any) {
     console.error('[DigitalOcean AI] ❌ Error:', error.message);
 
-    // Provide more helpful error messages
-    if (error.name === 'AbortError' || error.message.includes('timeout')) {
+    // Provide more helpful error messages for users
+    if (
+      error.name === 'AbortError' ||
+      error.message.includes('timeout') ||
+      error.message.includes('aborted')
+    ) {
       throw new Error(
-        `AI Server request timed out after ${DETECTION_TIMEOUT}ms. ` +
-          `The server may be overloaded or the model file may be too large.`,
+        'AI analysis is taking too long. Please try with a smaller/clearer image or submit manually.',
       );
     }
 
-    if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
+    if (
+      error.message.includes('ECONNREFUSED') ||
+      error.message.includes('fetch failed') ||
+      error.message.includes('ENOTFOUND')
+    ) {
       throw new Error(
-        `Cannot connect to AI Model Server at ${AI_MODEL_ENDPOINT}. ` +
-          `Please verify that the ai-model-server service is deployed and running on DigitalOcean.`,
+        'AI detection service is currently unavailable. Please try again later or submit the inspection manually.',
       );
     }
 
-    throw error;
+    // Re-throw if it's already a user-friendly message
+    if (
+      error.message.includes('temporarily unavailable') ||
+      error.message.includes('still loading') ||
+      error.message.includes('try again')
+    ) {
+      throw error;
+    }
+
+    throw new Error('AI analysis failed. Please try again or submit the inspection manually.');
   }
 }
 
@@ -327,11 +350,17 @@ async function checkAIServerHealth(): Promise<{ healthy: boolean; error?: string
     return { healthy: false, error: 'AI_MODEL_ENDPOINT not configured' };
   }
 
+  // Create AbortController for timeout (more compatible than AbortSignal.timeout)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
   try {
     const response = await fetch(`${AI_MODEL_ENDPOINT}/health`, {
       method: 'GET',
-      signal: AbortSignal.timeout(5000), // 5 second timeout for health check
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json();
@@ -343,7 +372,11 @@ async function checkAIServerHealth(): Promise<{ healthy: boolean; error?: string
       return { healthy: false, error: `Health check returned ${response.status}` };
     }
   } catch (error: any) {
-    return { healthy: false, error: error.message };
+    clearTimeout(timeoutId);
+    return {
+      healthy: false,
+      error: error.name === 'AbortError' ? 'Connection timeout' : error.message,
+    };
   }
 }
 
