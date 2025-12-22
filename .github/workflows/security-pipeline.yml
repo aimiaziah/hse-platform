@@ -93,7 +93,7 @@ jobs:
           semgrep scan --config=auto --sarif --output=semgrep-results.sarif || true
 
       - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         continue-on-error: true  # Allow failure for private repos without code scanning
         if: always()
         with:
