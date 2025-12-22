@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0  # Full history for secret scanning
 
       - name: TruffleHog Secret Scan
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.85.0
         continue-on-error: true  # Allow failure for initial commits
         with:
           path: ./
