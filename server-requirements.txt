@@ -12,3 +12,4 @@ pydantic>=2.4.2
 # Optional but recommended for better performance
 python-multipart>=0.0.6
 onnxruntime>=1.16.0  # For ONNX model inference (faster)
+onnx>=1.15.0  # For model conversion/manipulation

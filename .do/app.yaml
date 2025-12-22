@@ -2,7 +2,7 @@
 # Production deployment configuration for PWA Inspection Platform
 # This file defines how your app should be built and deployed on DigitalOcean
 
-name: pwa-inspection-platform
+name: hse-platform
 region: sgp
 
 # Services - defines the components of your application

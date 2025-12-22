@@ -219,15 +219,22 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
         <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-20 py-3">
-              {/* Logo and Title - Original Design */}
+              {/* Role and Logo/Title - Swapped Design */}
               <div className="flex items-center gap-3">
+                {/* Role Badge */}
+                {user && (
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">
+                    {user.role.toUpperCase()}
+                  </span>
+                )}
+
                 <Link href="/" className="flex items-center gap-3">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
                     <Image
                       src="/theta-logo.png"
                       alt="Company Logo"
-                      width={56}
-                      height={56}
+                      width={64}
+                      height={64}
                       className="object-contain w-full h-full"
                     />
                   </div>
@@ -240,13 +247,6 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
                     </p>
                   </div>
                 </Link>
-
-                {/* Role Badge */}
-                {user && (
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200 ml-2">
-                    {user.role.toUpperCase()}
-                  </span>
-                )}
               </div>
 
               {/* Desktop Navigation */}

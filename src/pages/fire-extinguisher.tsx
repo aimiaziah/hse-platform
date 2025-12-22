@@ -665,7 +665,9 @@ const FireExtinguisherChecklist: React.FC = () => {
           setCurrentAIResults(result);
           setShowAIResults(true);
         } else {
-          alert('No components detected. Please ensure the photo clearly shows a fire extinguisher.');
+          alert(
+            'No components detected. Please ensure the photo clearly shows a fire extinguisher.',
+          );
         }
       } else {
         alert(`AI Analysis failed: ${result.error || 'Unknown error'}`);

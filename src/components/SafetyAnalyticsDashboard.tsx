@@ -114,7 +114,9 @@ const SafetyAnalyticsDashboard: React.FC = () => {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
 
-  const [activeTab, setActiveTab] = useState<TabType>('manhours');
+  const [activeTab, setActiveTab] = useState<TabType>(
+    isRole('employee') ? 'announcements' : 'manhours',
+  );
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -264,6 +266,21 @@ const SafetyAnalyticsDashboard: React.FC = () => {
 
           {/* Tabs */}
           <div className="mt-2 flex gap-6 border-b border-gray-200">
+            {(isRole('employee') || isRole('inspector') || isRole('supervisor')) && (
+              <button
+                onClick={() => setActiveTab('announcements')}
+                className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
+                  activeTab === 'announcements'
+                    ? 'text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Announcements
+                {activeTab === 'announcements' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                )}
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('manhours')}
               className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
@@ -286,21 +303,6 @@ const SafetyAnalyticsDashboard: React.FC = () => {
               >
                 Inspections & Alerts
                 {activeTab === 'inspections' && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
-                )}
-              </button>
-            )}
-            {(isRole('employee') || isRole('inspector') || isRole('supervisor')) && (
-              <button
-                onClick={() => setActiveTab('announcements')}
-                className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
-                  activeTab === 'announcements'
-                    ? 'text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Announcements
-                {activeTab === 'announcements' && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
                 )}
               </button>
