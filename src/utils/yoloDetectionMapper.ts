@@ -45,31 +45,50 @@ export function mapYOLOToInspectionResults(
   console.log('[YOLO Mapper] Grouped by component:', componentDetections);
 
   // VALIDATION: Check if this is actually a fire extinguisher
-  // A real fire extinguisher should have at least 3 core components detected
+  // A real fire extinguisher MUST have certain core components detected
   const coreComponentTypes = ['shell', 'hose', 'nozzle', 'pressure_gauge', 'safety_pin', 'pin_seal'];
   const detectedCoreComponents = coreComponentTypes.filter(type =>
     componentDetections[type] && componentDetections[type].length > 0
   );
 
-  const isLikelyFireExtinguisher = detectedCoreComponents.length >= 3;
+  // More strict validation:
+  // 1. Must have at least 4 core components (increased from 3)
+  // 2. Shell is MANDATORY (a fire extinguisher always has a body)
+  const hasShell = componentDetections['shell'] && componentDetections['shell'].length > 0;
+  const hasPressureGauge = componentDetections['pressure_gauge'] && componentDetections['pressure_gauge'].length > 0;
+  const minimumComponentsDetected = detectedCoreComponents.length >= 4;
+
+  const isLikelyFireExtinguisher = hasShell && minimumComponentsDetected;
 
   console.log('[YOLO Mapper] Validation:', {
     detectedCoreComponents,
     count: detectedCoreComponents.length,
+    hasShell,
+    hasPressureGauge,
+    minimumComponentsDetected,
     isLikelyFireExtinguisher
   });
 
-  // If this doesn't look like a fire extinguisher, return empty results
+  // If this doesn't look like a fire extinguisher, return empty results with clear warning
   if (!isLikelyFireExtinguisher) {
-    console.warn('[YOLO Mapper] ⚠️  Not enough fire extinguisher components detected - likely not a fire extinguisher');
-    console.warn('[YOLO Mapper] Detected only:', detectedCoreComponents.join(', '));
+    console.warn('[YOLO Mapper] ⚠️  VALIDATION FAILED - This is likely NOT a fire extinguisher');
+    console.warn('[YOLO Mapper] Detected components:', detectedCoreComponents.join(', ') || 'NONE');
+
+    let warningMessage = '';
+    if (!hasShell) {
+      warningMessage = '⚠️ No fire extinguisher detected in the image. The fire extinguisher body/shell was not found. Please take a clear photo of an actual fire extinguisher.';
+    } else if (!minimumComponentsDetected) {
+      warningMessage = `⚠️ Insufficient fire extinguisher components detected. Found only ${detectedCoreComponents.length} components (${detectedCoreComponents.join(', ')}). A valid fire extinguisher photo should show at least 4 core components clearly. Please retake the photo with a better angle.`;
+    } else {
+      warningMessage = `⚠️ This does not appear to be a fire extinguisher. Only ${detectedCoreComponents.length} components detected (${detectedCoreComponents.join(', ')}). Please ensure the photo shows a real fire extinguisher.`;
+    }
 
     return {
       success: true,
       detections: [],
       extractedData: {},
       processingTime: 0,
-      warning: `Only ${detectedCoreComponents.length} core components detected (${detectedCoreComponents.join(', ')}). This may not be a fire extinguisher. Please ensure the photo clearly shows a fire extinguisher.`
+      warning: warningMessage
     };
   }
 
@@ -81,22 +100,19 @@ export function mapYOLOToInspectionResults(
   if (shellDetections.length > 0) {
     const avgConfidence = average(shellDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not CONDITION - mark as NA for manual inspection
     detections.push({
       field: 'shell',
-      value: avgConfidence > 0.75 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.85
-        ? `Shell detected with ${confidencePercent}% confidence - appears intact`
-        : avgConfidence > 0.75
-        ? `Shell detected with ${confidencePercent}% confidence - condition acceptable`
-        : `Shell detected with ${confidencePercent}% confidence - needs manual verification`
+      reasoning: `Shell detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify condition (rust, dents, damage)`
     });
   } else {
     detections.push({
       field: 'shell',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Shell not detected in image - check if extinguisher is visible'
+      reasoning: 'Shell not detected in image - check if extinguisher is visible or may be missing'
     });
   }
 
@@ -105,22 +121,19 @@ export function mapYOLOToInspectionResults(
   if (hoseDetections.length > 0) {
     const avgConfidence = average(hoseDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not CONDITION - mark as NA for manual inspection
     detections.push({
       field: 'hose',
-      value: avgConfidence > 0.65 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.80
-        ? `Hose detected at ${confidencePercent}% confidence - clearly visible and attached`
-        : avgConfidence > 0.65
-        ? `Hose detected at ${confidencePercent}% confidence - appears attached`
-        : `Hose detected at ${confidencePercent}% confidence - may need closer inspection`
+      reasoning: `Hose detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify integrity (cracks, leaks, attachment)`
     });
   } else {
     detections.push({
       field: 'hose',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Hose not detected - may be missing or not visible in photo'
+      reasoning: 'Hose not detected - may be missing, detached, or not visible in photo'
     });
   }
 
@@ -129,22 +142,19 @@ export function mapYOLOToInspectionResults(
   if (nozzleDetections.length > 0) {
     const avgConfidence = average(nozzleDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not CONDITION - mark as NA for manual inspection
     detections.push({
       field: 'nozzle',
-      value: avgConfidence > 0.65 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.80
-        ? `Nozzle detected at ${confidencePercent}% confidence - clearly visible and attached`
-        : avgConfidence > 0.65
-        ? `Nozzle detected at ${confidencePercent}% confidence - appears present`
-        : `Nozzle detected at ${confidencePercent}% confidence - verify attachment`
+      reasoning: `Nozzle detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify attachment and condition`
     });
   } else {
     detections.push({
       field: 'nozzle',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Nozzle not detected - may be missing or obscured in photo'
+      reasoning: 'Nozzle not detected - may be missing, detached, or obscured in photo'
     });
   }
 
@@ -153,32 +163,35 @@ export function mapYOLOToInspectionResults(
   if (gaugeDetections.length > 0) {
     const avgConfidence = average(gaugeDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not READ the gauge - mark as NA for manual inspection
     detections.push({
       field: 'pressureGauge',
-      value: avgConfidence > 0.70 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.85
-        ? `Pressure gauge detected at ${confidencePercent}% confidence - clearly readable`
-        : avgConfidence > 0.70
-        ? `Pressure gauge detected at ${confidencePercent}% confidence - appears visible`
-        : `Pressure gauge detected at ${confidencePercent}% confidence - may be obscured`
+      reasoning: `Pressure gauge detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to read pressure level (green zone check)`
     });
 
-    // Also infer pressure status (if gauge visible, assume pressure OK)
-    if (avgConfidence > 0.70) {
-      detections.push({
-        field: 'emptyPressureLow',
-        value: '√',
-        confidence: avgConfidence * 0.9,
-        reasoning: `Pressure gauge visible at ${confidencePercent}% confidence - appears in operational range`
-      });
-    }
+    // CANNOT infer pressure status from gauge detection - need to READ the gauge
+    detections.push({
+      field: 'emptyPressureLow',
+      value: 'NA',
+      confidence: avgConfidence * 0.7,
+      reasoning: `Pressure gauge detected but AI cannot read gauge value - MANUAL INSPECTION REQUIRED to verify pressure is in green zone`
+    });
   } else {
     detections.push({
       field: 'pressureGauge',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Pressure gauge not detected - verify gauge is visible in photo'
+      reasoning: 'Pressure gauge not detected - verify gauge is present and visible in photo'
+    });
+
+    // If no gauge detected, also mark pressure check as not done
+    detections.push({
+      field: 'emptyPressureLow',
+      value: 'X',
+      confidence: 0.9,
+      reasoning: 'Pressure gauge not visible - cannot verify pressure level'
     });
   }
 
@@ -187,22 +200,19 @@ export function mapYOLOToInspectionResults(
   if (pinDetections.length > 0) {
     const avgConfidence = average(pinDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not verify if properly installed - mark as NA
     detections.push({
       field: 'safetyPin',
-      value: avgConfidence > 0.65 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.80
-        ? `Safety pin detected at ${confidencePercent}% confidence - clearly in place`
-        : avgConfidence > 0.65
-        ? `Safety pin detected at ${confidencePercent}% confidence - appears intact`
-        : `Safety pin detected at ${confidencePercent}% confidence - verify it's in place`
+      reasoning: `Safety pin detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify proper installation and condition`
     });
   } else {
     detections.push({
       field: 'safetyPin',
       value: 'X',
       confidence: 0.85,
-      reasoning: 'Safety pin not detected - verify pin is present'
+      reasoning: 'Safety pin not detected - may be missing or not visible in photo'
     });
   }
 
@@ -211,22 +221,19 @@ export function mapYOLOToInspectionResults(
   if (sealDetections.length > 0) {
     const avgConfidence = average(sealDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not verify if intact/unbroken - mark as NA
     detections.push({
       field: 'pinSeal',
-      value: avgConfidence > 0.65 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.80
-        ? `Pin seal detected at ${confidencePercent}% confidence - clearly intact`
-        : avgConfidence > 0.65
-        ? `Pin seal detected at ${confidencePercent}% confidence - appears present`
-        : `Pin seal detected at ${confidencePercent}% confidence - verify condition`
+      reasoning: `Pin seal detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify seal is intact and unbroken`
     });
   } else {
     detections.push({
       field: 'pinSeal',
       value: 'X',
       confidence: 0.85,
-      reasoning: 'Pin seal not detected - verify seal is unbroken'
+      reasoning: 'Pin seal not detected - may be broken, missing, or not visible in photo'
     });
   }
 
@@ -235,28 +242,24 @@ export function mapYOLOToInspectionResults(
   if (serviceTagDetections.length > 0) {
     const avgConfidence = average(serviceTagDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+    // AI can only detect PRESENCE, not read the tag - mark as NA
     detections.push({
       field: 'servicingTags',
-      value: avgConfidence > 0.60 ? '√' : 'X',
+      value: 'NA',
       confidence: avgConfidence,
-      reasoning: avgConfidence > 0.75
-        ? `Service tag detected at ${confidencePercent}% confidence - clearly readable`
-        : avgConfidence > 0.60
-        ? `Service tag detected at ${confidencePercent}% confidence - appears visible`
-        : `Service tag detected at ${confidencePercent}% confidence - may be hard to read`
+      reasoning: `Service tag detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify dates and completeness`
     });
   } else {
     detections.push({
       field: 'servicingTags',
       value: 'X',
       confidence: 0.85,
-      reasoning: 'Service tag not detected - verify tag is attached and visible'
+      reasoning: 'Service tag not detected - may be missing, faded, or not visible in photo'
     });
   }
 
   // 8. Accessibility check - based on component visibility
-  // If all 6 core components are clearly visible with high confidence (>85%),
-  // we can infer the extinguisher is accessible (nothing blocking the view)
+  // We can make a GUESS about accessibility based on what's visible, but mark as NA
   const coreComponents = [
     { name: 'shell', detections: componentDetections['shell'] || [] },
     { name: 'hose', detections: componentDetections['hose'] || [] },
@@ -277,30 +280,13 @@ export function mapYOLOToInspectionResults(
     const overallConfidence = average(componentConfidences);
     const confidencePercent = Math.round(overallConfidence * 100);
 
-    // If all components visible with high confidence, infer accessibility
-    if (overallConfidence > 0.85) {
-      detections.push({
-        field: 'accessible',
-        value: '√',
-        confidence: overallConfidence,
-        reasoning: `All components clearly visible at ${confidencePercent}% confidence - appears accessible with no obstructions`
-      });
-    } else if (overallConfidence > 0.70) {
-      detections.push({
-        field: 'accessible',
-        value: '√',
-        confidence: overallConfidence,
-        reasoning: `All components detected at ${confidencePercent}% confidence - likely accessible`
-      });
-    } else {
-      // Lower confidence - don't auto-fill, let inspector decide
-      detections.push({
-        field: 'accessible',
-        value: 'NA',
-        confidence: overallConfidence,
-        reasoning: `All components detected but confidence ${confidencePercent}% - manual verification recommended`
-      });
-    }
+    // Even if all components visible, we can't verify actual site accessibility - mark NA
+    detections.push({
+      field: 'accessible',
+      value: 'NA',
+      confidence: overallConfidence,
+      reasoning: `All components detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify on-site accessibility (nothing blocking access)`
+    });
   } else {
     // Not all components detected - something might be blocking or missing
     const missingComponents = coreComponents
@@ -311,24 +297,33 @@ export function mapYOLOToInspectionResults(
       field: 'accessible',
       value: 'NA',
       confidence: 0.70,
-      reasoning: `Components not fully visible (missing: ${missingComponents.join(', ')}) - manual accessibility check required`
+      reasoning: `Some components not visible (${missingComponents.join(', ')}) - MANUAL INSPECTION REQUIRED for accessibility`
     });
   }
 
   // 9. Missing/Not in place check
+  // AI can see extinguisher but cannot verify if it's in the CORRECT location
   const bracketDetections = componentDetections['mounting_bracket'] || [];
   const hasBracket = bracketDetections.length > 0;
 
-  detections.push({
-    field: 'missingNotInPlace',
-    value: hasBracket ? '√' : 'X',
-    confidence: hasBracket
-      ? average(bracketDetections.map(d => d.confidence))
-      : 0.80,
-    reasoning: hasBracket
-      ? 'Extinguisher appears properly mounted'
-      : 'Mounting bracket not visible, may not be in designated location'
-  });
+  if (hasBracket) {
+    const avgConfidence = average(bracketDetections.map(d => d.confidence));
+    const confidencePercent = Math.round(avgConfidence * 100);
+    detections.push({
+      field: 'missingNotInPlace',
+      value: 'NA',
+      confidence: avgConfidence,
+      reasoning: `Mounting bracket detected at ${confidencePercent}% confidence - MANUAL INSPECTION REQUIRED to verify correct location per floor plan`
+    });
+  } else {
+    // Bracket not detected - mark as needing inspection (could be wrong angle, or actually missing)
+    detections.push({
+      field: 'missingNotInPlace',
+      value: 'NA',
+      confidence: 0.70,
+      reasoning: 'Mounting bracket not visible - MANUAL INSPECTION REQUIRED to verify extinguisher is in designated location'
+    });
+  }
 
   // Extract expiry date if visible
   const extractedData: any = {};
