@@ -88,9 +88,9 @@ analyze-first-aid-template.js
 check-manhours-data.js
 verify-user-permissions.js
 
-# Large model files - should be downloaded during deployment
-models/*.pt
-models/*.onnx
+# Large model files - included in deployment for AI detection
+models/*.pt  # Exclude PyTorch model (not needed for ONNX inference)
+# models/*.onnx  # Keep ONNX model in deployment (required for AI detection)
 
 # PWA assets that will be regenerated
 public/sw.js
