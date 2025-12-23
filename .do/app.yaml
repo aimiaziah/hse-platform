@@ -211,10 +211,10 @@ services:
         value: 'digitalocean'
         scope: RUN_TIME
 
-      # Use DigitalOcean's internal service discovery
-      # The ${service.PRIVATE_URL} syntax provides internal communication
+      # Internal service communication using DigitalOcean's private networking
+      # Services within the same app can communicate using service-name:port
       - key: AI_MODEL_ENDPOINT
-        value: '${ai-model-server.PRIVATE_URL}'
+        value: 'http://ai-model-server:8080'
         scope: RUN_TIME
 
       - key: AI_MIN_CONFIDENCE

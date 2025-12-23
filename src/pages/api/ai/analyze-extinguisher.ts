@@ -125,6 +125,12 @@ export default async function handler(
     return res.status(200).json(inspectionResult);
   } catch (error: any) {
     console.error('[AI Analysis API] Error:', error);
+    console.error('[AI Analysis API] Error stack:', error.stack);
+    console.error('[AI Analysis API] Config:', {
+      deploymentType: DEPLOYMENT_TYPE,
+      aiModelEndpoint: AI_MODEL_ENDPOINT ? 'set' : 'not set',
+      roboflowConfigured: !!(ROBOFLOW_API_KEY && ROBOFLOW_MODEL_ENDPOINT),
+    });
 
     return res.status(500).json({
       success: false,
@@ -132,6 +138,11 @@ export default async function handler(
       extractedData: {},
       error: error.message || 'Failed to analyze images',
       processingTime: Date.now() - startTime,
+      debug: {
+        deploymentType: DEPLOYMENT_TYPE,
+        aiEndpointConfigured: !!AI_MODEL_ENDPOINT,
+        errorType: error.name || 'Error',
+      },
     });
   }
 }
