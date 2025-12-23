@@ -124,7 +124,7 @@ const LoginPage: React.FC = () => {
     return (
       <>
         <Head>
-          <title>Login - HSE Inspection System</title>
+          <title>Theta HSE</title>
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         </Head>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -144,7 +144,7 @@ const LoginPage: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Login - HSE Inspection System</title>
+        <title>Theta HSE</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-200 flex items-center justify-center p-4">

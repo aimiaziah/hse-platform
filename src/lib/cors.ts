@@ -7,7 +7,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
  */
 const ALLOWED_ORIGINS = [
   'http://localhost:8080',
-  'http://localhost:3000',
+  'https://hse-platform-j2zac.ondigitalocean.app/',
   // Add your production domains here
   process.env.NEXT_PUBLIC_APP_URL,
 ].filter(Boolean) as string[];

@@ -261,7 +261,10 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
 
         // Send notification (fire and forget - don't wait for it)
         fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/notifications/send`,
+          `${
+            process.env.NEXT_PUBLIC_BASE_URL ||
+            'https://hse-platform-j2zac.ondigitalocean.app/login'
+          }/api/notifications/send`,
           {
             method: 'POST',
             headers: {

@@ -164,10 +164,10 @@ async function updateInspection(
       try {
         const notificationType =
           updateData.status === 'approved' ? 'inspection_approved' : 'inspection_rejected';
-        const title =
+        const title =localhost:8080
           updateData.status === 'approved'
-            ? 'Inspection Approved ✅'
-            : 'Inspection Needs Revision ⚠️';
+            ? 'Inspection Approved'
+            : 'Inspection Needs Revision';
         const body =
           updateData.status === 'approved'
             ? `Your ${formatInspectionType(
@@ -179,7 +179,7 @@ async function updateInspection(
 
         // Send notification (fire and forget)
         fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:8080'}/api/notifications/send`,
+          `${process.env.NEXT_PUBLIC_BASE_URL || 'https://hse-platform-j2zac.ondigitalocean.app/'}/api/notifications/send`,
           {
             method: 'POST',
             headers: {
