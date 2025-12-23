@@ -22,10 +22,10 @@ services:
     # Step 4: Reinstall ONLY production dependencies
     # Step 5: Clean up build artifacts
     build_command: |
-      npm ci --prefer-offline --no-audit --no-fund &&
+      npm install --prefer-offline --no-audit --no-fund &&
       npm run build &&
       rm -rf node_modules &&
-      npm ci --omit=dev --prefer-offline --no-audit --no-fund &&
+      npm install --omit=dev --prefer-offline --no-audit --no-fund &&
       rm -rf .next/cache .next/standalone/node_modules/.cache &&
       find node_modules -name "*.md" -type f -delete &&
       find node_modules -name "*.ts" -not -name "*.d.ts" -type f -delete &&
