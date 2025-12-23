@@ -191,7 +191,11 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.user) {
-          console.log('[useAuth] Session restored from cookie:', data.user.name);
+          console.log('[useAuth] Session restored from cookie:', {
+            name: data.user.name,
+            hasProfilePicture: !!data.user.profilePicture,
+            profilePictureLength: (data.user.profilePicture || '').length,
+          });
 
           // Map the API response to our User type
           const restoredUser: User = {
@@ -206,6 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
             profilePicture: data.user.profilePicture || null,
             permissions: data.user.permissions,
           };
+
+          console.log('[useAuth] Restored user object:', {
+            name: restoredUser.name,
+            hasProfilePicture: !!restoredUser.profilePicture,
+            profilePictureLength: (restoredUser.profilePicture || '').length,
+          });
 
           // Save to localStorage
           storage.save('currentUser', restoredUser);
@@ -241,7 +251,11 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       });
 
       if (response.ok && data.success && data.user) {
-        console.log('[useAuth] Login successful, user:', data.user.name);
+        console.log('[useAuth] Login successful:', {
+          name: data.user.name,
+          hasProfilePicture: !!data.user.profilePicture,
+          profilePictureLength: (data.user.profilePicture || '').length,
+        });
 
         // Map the API response to our User type
         const loggedInUser: User = {
@@ -256,6 +270,12 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
           profilePicture: data.user.profilePicture || null,
           permissions: data.user.permissions,
         };
+
+        console.log('[useAuth] Logged in user object:', {
+          name: loggedInUser.name,
+          hasProfilePicture: !!loggedInUser.profilePicture,
+          profilePictureLength: (loggedInUser.profilePicture || '').length,
+        });
 
         // Set session
         console.log('[useAuth] Saving user and token to localStorage...');

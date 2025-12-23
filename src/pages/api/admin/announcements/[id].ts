@@ -38,7 +38,7 @@ async function handler(req: any, res: NextApiResponse, user: User) {
 
     // PUT - Update announcement
     if (req.method === 'PUT') {
-      const { title, body, is_published } = req.body;
+      const { title, body, is_published, is_pinned } = req.body;
 
       // Get existing announcement for audit trail
       const { data: existingAnnouncement } = await supabase
@@ -69,6 +69,9 @@ async function handler(req: any, res: NextApiResponse, user: User) {
         if (is_published === false) {
           updateData.published_at = null;
         }
+      }
+      if (is_pinned !== undefined) {
+        updateData.is_pinned = is_pinned === true;
       }
 
       const { data: announcement, error } = await supabase

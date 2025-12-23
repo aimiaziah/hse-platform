@@ -17,6 +17,7 @@ async function handler(req: any, res: NextApiResponse, user: User) {
       const { data: announcements, error } = await supabase
         .from('announcements')
         .select('*')
+        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -32,7 +33,7 @@ async function handler(req: any, res: NextApiResponse, user: User) {
 
     // POST - Create new announcement
     if (req.method === 'POST') {
-      const { title, body, is_published } = req.body;
+      const { title, body, is_published, is_pinned } = req.body;
 
       if (!title || !body) {
         return res.status(400).json({ error: 'Title and body are required' });
@@ -42,6 +43,7 @@ async function handler(req: any, res: NextApiResponse, user: User) {
         title: title.trim(),
         body: body.trim(),
         is_published: is_published === true,
+        is_pinned: is_pinned === true,
         created_by: user.id,
       };
 

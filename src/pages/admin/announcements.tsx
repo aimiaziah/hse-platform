@@ -9,6 +9,7 @@ interface Announcement {
   title: string;
   body: string;
   is_published: boolean;
+  is_pinned: boolean;
   published_at: string | null;
   created_by: string;
   created_at: string;
@@ -26,6 +27,7 @@ const AnnouncementsManagement: React.FC = () => {
     title: '',
     body: '',
     is_published: false,
+    is_pinned: false,
   });
 
   useEffect(() => {
@@ -57,6 +59,7 @@ const AnnouncementsManagement: React.FC = () => {
       title: '',
       body: '',
       is_published: false,
+      is_pinned: false,
     });
     setShowModal(true);
   };
@@ -67,6 +70,7 @@ const AnnouncementsManagement: React.FC = () => {
       title: announcement.title,
       body: announcement.body,
       is_published: announcement.is_published,
+      is_pinned: announcement.is_pinned || false,
     });
     setShowModal(true);
   };
@@ -151,6 +155,30 @@ const AnnouncementsManagement: React.FC = () => {
     }
   };
 
+  const handleTogglePin = async (announcement: Announcement) => {
+    try {
+      const response = await fetch(`/api/admin/announcements/${announcement.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...announcement,
+          is_pinned: !announcement.is_pinned,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update announcement');
+      }
+
+      await loadAnnouncements();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update announcement');
+    }
+  };
+
   if (loading) {
     return (
       <ProtectedRoute requiredRole="admin">
@@ -212,7 +240,10 @@ const AnnouncementsManagement: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            {announcement.is_pinned && (
+                              <span className="text-lg">📌</span>
+                            )}
                             {announcement.title}
                           </h3>
                           <span
@@ -224,6 +255,11 @@ const AnnouncementsManagement: React.FC = () => {
                           >
                             {announcement.is_published ? 'Published' : 'Draft'}
                           </span>
+                          {announcement.is_pinned && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              Pinned
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                           {announcement.body}
@@ -252,6 +288,18 @@ const AnnouncementsManagement: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
+                        <button
+                          onClick={() => handleTogglePin(announcement)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 ${
+                            announcement.is_pinned
+                              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                          }`}
+                          title={announcement.is_pinned ? 'Unpin' : 'Pin to top'}
+                        >
+                          <span className="text-sm">📌</span>
+                          {announcement.is_pinned ? 'Unpin' : 'Pin'}
+                        </button>
                         <button
                           onClick={() => handleTogglePublish(announcement)}
                           className={`px-3 py-1.5 text-xs font-medium rounded ${
@@ -319,17 +367,34 @@ const AnnouncementsManagement: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="is_published"
-                      checked={formData.is_published}
-                      onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="is_published" className="ml-2 text-sm text-gray-700">
-                      Publish immediately
-                    </label>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_published"
+                        checked={formData.is_published}
+                        onChange={(e) =>
+                          setFormData({ ...formData, is_published: e.target.checked })
+                        }
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="is_published" className="ml-2 text-sm text-gray-700">
+                        Publish immediately
+                      </label>
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is_pinned"
+                        checked={formData.is_pinned}
+                        onChange={(e) => setFormData({ ...formData, is_pinned: e.target.checked })}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="is_pinned" className="ml-2 text-sm text-gray-700">
+                        Pin to top (keeps this announcement at the top)
+                      </label>
+                    </div>
                   </div>
                 </div>
 

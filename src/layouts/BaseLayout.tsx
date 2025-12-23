@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import UserAvatar from '@/components/UserAvatar';
 
 interface BaseLayoutProps {
   children: React.ReactNode;
@@ -319,20 +320,13 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
 
               {/* User Menu - Enhanced with better logout */}
               <div className="flex items-center gap-4">
-                {user && (
+                {user && user.role !== 'employee' && (
                   <div className="relative">
                     <button
                       onClick={() => setShowUserMenu(!showUserMenu)}
                       className="flex items-center gap-2 text-sm rounded-lg bg-white px-3 py-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                     >
-                      <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-medium text-blue-600">
-                          {user.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </span>
-                      </div>
+                      <UserAvatar user={user} size="md" showBorder={false} />
                       <span className="ml-1 text-gray-700 hidden sm:block font-medium">
                         {user.name}
                       </span>
@@ -357,14 +351,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
                           {/* User Info Section */}
                           <div className="px-4 py-3 border-b border-gray-100">
                             <div className="flex items-center">
-                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                                <span className="text-sm font-medium text-blue-600">
-                                  {user.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')}
-                                </span>
-                              </div>
+                              <UserAvatar user={user} size="md" className="mr-3" showBorder={false} />
                               <div className="mt-1">
                                 <div className="font-medium text-gray-900 leading-tight mb-0">
                                   {user.name}

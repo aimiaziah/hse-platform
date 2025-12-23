@@ -7,6 +7,8 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import MobileHeader from '@/components/MobileHeader';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import NotificationBell from '@/components/NotificationBell';
+import { UserAvatarIcon } from '@/components/UserAvatar';
 
 interface EmployeeLayoutProps {
   children: React.ReactNode;
@@ -53,67 +55,42 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({
       <div className="min-h-screen bg-white pb-20 md:pb-0">
         {/* Mobile Header - Shows only on mobile */}
         <div className="md:hidden">
-          <MobileHeader title="" showLogo />
+          <MobileHeader title="" showLogo showNotificationForEmployee />
         </div>
 
-        {/* Desktop Navigation Header - Hidden on mobile */}
-        <nav className="hidden md:block bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              {/* Logo and Title */}
-              <div className="flex">
-                <div className="flex-shrink-0 flex items-center">
-                  <Link href="/analytics" className="flex items-center gap-3">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden flex items-center justify-center">
-                      <Image
-                        src="/theta-logo.png"
-                        alt="Theta Logo"
-                        width={56}
-                        height={56}
-                        className="object-contain w-full h-full"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
-                        Platform
-                      </p>
-                      <p className="text-xs text-gray-600">Theta Edge Berhad</p>
-                    </div>
-                  </Link>
-                </div>
-                <div className="hidden md:ml-6 md:flex md:space-x-1 md:items-center">
-                  {navigation.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        isActive(item.href)
-                          ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-700'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="material-icons mr-2 text-xl md:text-2xl">{item.icon}</span>
-                      {item.name}
-                    </Link>
-                  ))}
-                </div>
+        {/* Desktop Navigation Header - Hidden on mobile - Sticky Header */}
+        <header className="hidden md:block sticky top-0 bg-white shadow-sm border-b border-gray-200 z-40">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              {/* Left side - Logo */}
+              <div className="flex items-center">
+                <Link href="/analytics" className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <Image
+                      src="/theta-logo.png"
+                      alt="Theta Logo"
+                      width={48}
+                      height={48}
+                      className="object-contain w-full h-full"
+                      priority
+                    />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-[#1e3a8a] leading-tight" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+                      Theta
+                    </p>
+                    <p className="text-xs text-gray-600 leading-tight">Platform</p>
+                  </div>
+                </Link>
               </div>
 
-              {/* User menu */}
-              <div className="flex items-center space-x-4">
-                <div className="hidden sm:flex items-center space-x-3">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
-                  </div>
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                    {user?.role}
-                  </span>
-                </div>
+              {/* Right side - Notification Bell */}
+              <div className="flex items-center gap-4">
+                <NotificationBell />
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-3 py-1.5 text-xs sm:text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors inline-flex items-center gap-2"
+                  className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors inline-flex items-center gap-2"
                 >
                   <span className="material-icons text-base">logout</span>
                   Logout
@@ -121,7 +98,7 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({
               </div>
             </div>
           </div>
-        </nav>
+        </header>
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto py-4 md:py-6 px-4 sm:px-6 lg:px-8">{children}</main>

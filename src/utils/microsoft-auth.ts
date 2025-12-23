@@ -206,6 +206,7 @@ export async function exchangeCodeForToken(
  */
 export async function getMicrosoftUserPhoto(accessToken: string): Promise<string | null> {
   try {
+    console.log('[Microsoft Auth] Fetching profile photo from Graph API...');
     const response = await safeFetch(buildGraphApiUrl('me/photo/$value'), {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -214,21 +215,28 @@ export async function getMicrosoftUserPhoto(accessToken: string): Promise<string
 
     if (!response.ok) {
       // User doesn't have a profile photo
+      console.log('[Microsoft Auth] No profile photo available (status:', response.status, ')');
       return null;
     }
 
+    console.log('[Microsoft Auth] Profile photo response OK, converting to base64...');
     // Get the image blob
     const blob = await response.blob();
+    console.log('[Microsoft Auth] Blob size:', blob.size, 'bytes, type:', blob.type);
 
     // Convert blob to base64 data URL
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        console.log('[Microsoft Auth] Profile photo converted to base64, length:', result.length);
+        resolve(result);
+      };
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error('Failed to fetch Microsoft profile photo:', error);
+    console.error('[Microsoft Auth] Failed to fetch Microsoft profile photo:', error);
     return null;
   }
 }
@@ -251,6 +259,11 @@ export async function getMicrosoftUserInfo(accessToken: string): Promise<Microso
 
   // Fetch profile photo
   const profilePictureUrl = await getMicrosoftUserPhoto(accessToken);
+  console.log('[Microsoft Auth] User info fetched:', {
+    displayName: userData.displayName,
+    hasProfilePicture: !!profilePictureUrl,
+    profilePictureLength: profilePictureUrl?.length || 0,
+  });
 
   return {
     id: userData.id,

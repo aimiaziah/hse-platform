@@ -69,6 +69,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const permissions = (userData as any).user_permissions || {};
 
+    // Debug logging for profile picture
+    console.log('[/api/auth/me] User data:', {
+      userId: (userData as any).id,
+      name: (userData as any).name,
+      hasProfilePicture: !!(userData as any).profile_picture,
+      profilePictureLength: ((userData as any).profile_picture || '').length,
+    });
+
     // Return user data
     const userResponse = {
       id: (userData as any).id,

@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import MobileHeader from '@/components/MobileHeader';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import { UserAvatarIcon } from '@/components/UserAvatar';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -79,20 +80,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
               <div className="flex">
                 <div className="flex-shrink-0 flex items-center">
                   <Link href="/admin" className="flex items-center gap-3">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden flex items-center justify-center">
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg overflow-hidden flex items-center justify-center">
                       <Image
                         src="/theta-logo.png"
                         alt="Theta Logo"
-                        width={56}
-                        height={56}
+                        width={72}
+                        height={72}
                         className="object-contain w-full h-full"
                       />
                     </div>
                     <div>
-                      <p className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
+                      <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
                         Platform
                       </p>
-                      <p className="text-xs text-gray-600">Theta Edge Berhad</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Theta Edge Berhad</p>
                     </div>
                   </Link>
                 </div>
@@ -116,14 +117,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
 
               {/* User menu */}
               <div className="flex items-center space-x-4">
-                <div className="hidden sm:flex items-center space-x-3">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                <div className="hidden sm:flex items-center gap-3">
+                  <div className="text-right space-y-0">
+                    <p className="text-sm font-semibold text-gray-900 leading-none mt-1 mb-0">{user?.name}</p>
+                    <p className="text-xs text-gray-500 capitalize font-normal leading-none -mt-0.5">{user?.role}</p>
                   </div>
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
-                    {user?.role}
-                  </span>
+                  {/* Profile Icon */}
+                  {user && <UserAvatarIcon user={user} size="md" />}
                 </div>
                 <button
                   type="button"

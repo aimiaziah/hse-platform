@@ -7,6 +7,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import MobileHeader from '@/components/MobileHeader';
 import MobileBottomNav from '@/components/MobileBottomNav';
+import { UserAvatarIcon } from '@/components/UserAvatar';
 
 interface SupervisorLayoutProps {
   children: React.ReactNode;
@@ -77,40 +78,26 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
         <nav className="hidden md:block bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
-              {/* Left side - User Info */}
+              {/* Left side - Logo */}
               <div className="flex">
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-3">
-                    {/* Profile Link */}
-                    <Link
-                      href="/supervisor/profile"
-                      className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                      title="Go to Profile"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                    </Link>
-                    <div className="text-left flex flex-col justify-center">
-                      <p className="text-sm font-medium text-gray-900 leading-none mb-0">
-                        {user?.name}
-                      </p>
-                      <p className="text-xs text-gray-500 capitalize font-medium leading-none mt-1">
-                        {user?.role}
-                      </p>
+                <div className="flex-shrink-0 flex items-center">
+                  <Link href="/supervisor" className="flex items-center gap-3">
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg overflow-hidden flex items-center justify-center">
+                      <Image
+                        src="/theta-logo.png"
+                        alt="Theta Logo"
+                        width={72}
+                        height={72}
+                        className="object-contain w-full h-full"
+                      />
                     </div>
-                  </div>
+                    <div>
+                      <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
+                        Platform
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-600">Theta Edge Berhad</p>
+                    </div>
+                  </Link>
                 </div>
                 <div className="hidden md:ml-6 md:flex md:space-x-1 md:items-center">
                   {navigation.map((item) => (
@@ -130,26 +117,28 @@ const SupervisorLayout: React.FC<SupervisorLayoutProps> = ({
                 </div>
               </div>
 
-              {/* Right side - Logo and Logout */}
+              {/* Right side - User Info and Logout */}
               <div className="flex items-center space-x-4">
-                {/* Logo */}
-                <Link href="/supervisor" className="flex items-center gap-3">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden flex items-center justify-center">
-                    <Image
-                      src="/theta-logo.png"
-                      alt="Theta Logo"
-                      width={56}
-                      height={56}
-                      className="object-contain w-full h-full"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base md:text-lg font-bold text-gray-900">
-                      Platform
+                <div className="flex items-center gap-3">
+                  <div className="text-right space-y-0">
+                    <p className="text-sm font-semibold text-gray-900 leading-none mt-1 mb-0">
+                      {user?.name}
                     </p>
-                    <p className="text-xs text-gray-600">Theta Edge Berhad</p>
+                    <p className="text-xs text-gray-500 capitalize font-normal leading-none -mt-0.5">
+                      {user?.role}
+                    </p>
                   </div>
-                </Link>
+                  {/* Profile Link */}
+                  {user && (
+                    <Link
+                      href="/supervisor/profile"
+                      className="hover:opacity-80 transition-opacity"
+                      title="Go to Profile"
+                    >
+                      <UserAvatarIcon user={user} size="md" />
+                    </Link>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleLogout}

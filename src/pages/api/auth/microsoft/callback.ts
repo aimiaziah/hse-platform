@@ -116,6 +116,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Only include profile_picture if we have a URL (column may not exist yet)
       if (userInfo.profilePictureUrl) {
         updateData.profile_picture = userInfo.profilePictureUrl;
+        logger.info('Updating user with profile picture', {
+          userId: user.id,
+          hasProfilePicture: true,
+          pictureLength: userInfo.profilePictureUrl.length,
+        });
+      } else {
+        logger.info('No profile picture to update', { userId: user.id });
       }
 
       const { error: updateError } = await (supabase.from('users') as any)
@@ -184,6 +191,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Only include profile_picture if we have a URL (column may not exist yet)
       if (userInfo.profilePictureUrl) {
         insertData.profile_picture = userInfo.profilePictureUrl;
+        logger.info('Creating new user with profile picture', {
+          email: userInfo.mail,
+          hasProfilePicture: true,
+          pictureLength: userInfo.profilePictureUrl.length,
+        });
+      } else {
+        logger.info('Creating new user without profile picture', { email: userInfo.mail });
       }
 
       const { data: newUser, error: createError } = await (supabase.from('users') as any)

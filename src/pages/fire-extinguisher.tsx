@@ -11,7 +11,7 @@ import {
   getConfidenceColor,
 } from '@/types/ai-inspection';
 
-type RatingType = '√' | 'X' | 'NA' | null;
+type RatingType = '✓' | 'X' | 'NA' | null;
 
 interface FireExtinguisherRow {
   no: number;
@@ -657,10 +657,7 @@ const FireExtinguisherChecklist: React.FC = () => {
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       const result: AIInspectionResult = await response.json();
       if (result.success) {
-        // Check if there's a warning (e.g., not a fire extinguisher)
-        if (result.warning) {
-          alert(`⚠️ AI Detection Warning\n\n${result.warning}`);
-        } else if (result.detections.length > 0) {
+        if (result.detections.length > 0) {
           applyAIResults(scanningExtinguisherIndex, result, images);
           setCurrentAIResults(result);
           setShowAIResults(true);
@@ -819,7 +816,7 @@ const FireExtinguisherChecklist: React.FC = () => {
     let bgColor = 'bg-gray-100 hover:bg-gray-200 border-gray-300';
     let textColor = 'text-gray-800';
     if (isSelected) {
-      if (value === '√') (bgColor = 'bg-green-600 border-green-600'), (textColor = 'text-white');
+      if (value === '✓') (bgColor = 'bg-green-600 border-green-600'), (textColor = 'text-white');
       else if (value === 'X') (bgColor = 'bg-red-600 border-red-600'), (textColor = 'text-white');
       else (bgColor = 'bg-blue-600 border-blue-600'), (textColor = 'text-white');
     }
@@ -983,7 +980,7 @@ const FireExtinguisherChecklist: React.FC = () => {
                 <p className="text-sm font-medium text-blue-800 mb-2">LEGEND:</p>
                 <div className="flex flex-wrap gap-4 text-sm">
                   <span className="flex items-center gap-1">
-                    <span className="text-green-600 font-bold">√</span> = OK / Good Condition
+                    <span className="text-green-600 font-bold">✓</span> = OK / Good Condition
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="text-red-600 font-bold">X</span> = Not in good condition
@@ -1089,13 +1086,13 @@ const FireExtinguisherChecklist: React.FC = () => {
                                 </div>
                                 <div className="flex gap-2">
                                   <RatingButton
-                                    value="√"
+                                    value="✓"
                                     current={ext[field as keyof FireExtinguisherRow] as RatingType}
                                     onChange={() =>
                                       updateExtinguisher(
                                         index,
                                         field as keyof FireExtinguisherRow,
-                                        '√',
+                                        '✓',
                                       )
                                     }
                                   />
@@ -1300,10 +1297,10 @@ const FireExtinguisherChecklist: React.FC = () => {
                           <td key={field} className="border border-gray-200 px-2 py-2">
                             <div className="flex gap-1 justify-center">
                               <RatingButton
-                                value="√"
+                                value="✓"
                                 current={ext[field as keyof FireExtinguisherRow] as RatingType}
                                 onChange={() =>
-                                  updateExtinguisher(index, field as keyof FireExtinguisherRow, '√')
+                                  updateExtinguisher(index, field as keyof FireExtinguisherRow, '✓')
                                 }
                               />
                               <RatingButton
@@ -1586,7 +1583,7 @@ const FireExtinguisherChecklist: React.FC = () => {
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              detection.value === '√'
+                              detection.value === '✓'
                                 ? 'bg-green-100 text-green-700'
                                 : detection.value === 'X'
                                 ? 'bg-red-100 text-red-700'

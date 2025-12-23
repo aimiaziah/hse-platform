@@ -81,6 +81,7 @@ interface Announcement {
   title: string;
   body: string;
   published_at: string;
+  is_pinned?: boolean;
 }
 
 const MONTH_LABELS = [
@@ -292,7 +293,7 @@ const SafetyAnalyticsDashboard: React.FC = () => {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
               )}
             </button>
-            {!isRole('employee') && (
+            {isRole('admin') && (
               <button
                 onClick={() => setActiveTab('inspections')}
                 className={`pb-1.5 px-1 font-medium text-xs transition-colors relative ${
@@ -551,11 +552,20 @@ const SafetyAnalyticsDashboard: React.FC = () => {
                 {announcements.map((announcement) => (
                   <div
                     key={announcement.id}
-                    className="border border-gray-200 rounded-lg p-3 hover:border-gray-300 transition-colors"
+                    className={`border rounded-lg p-3 hover:border-gray-300 transition-colors ${
+                      announcement.is_pinned
+                        ? 'border-blue-300 bg-blue-50'
+                        : 'border-gray-200'
+                    }`}
                   >
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                      {announcement.title}
-                    </h4>
+                    <div className="flex items-start gap-2 mb-2">
+                      {announcement.is_pinned && (
+                        <span className="text-base flex-shrink-0">📌</span>
+                      )}
+                      <h4 className="text-sm font-semibold text-gray-900 flex-1">
+                        {announcement.title}
+                      </h4>
+                    </div>
                     <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
                       {announcement.body}
                     </p>
@@ -579,8 +589,8 @@ const SafetyAnalyticsDashboard: React.FC = () => {
           </div>
         )}
 
-      {/* Inspections Tab (Non-employee only) */}
-      {!isRole('employee') && activeTab === 'inspections' && (
+      {/* Inspections Tab (Admin only) */}
+      {isRole('admin') && activeTab === 'inspections' && (
         <>
           {/* Monthly Progress Circle */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">

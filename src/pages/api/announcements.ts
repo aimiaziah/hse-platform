@@ -19,10 +19,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     const supabase = getServiceSupabase();
 
     // Fetch published announcements from database
+    // Order by: pinned first (DESC), then by published_at (DESC)
     const { data: announcements, error } = await supabase
       .from('announcements')
-      .select('id, title, body, published_at')
+      .select('id, title, body, published_at, is_pinned')
       .eq('is_published', true)
+      .order('is_pinned', { ascending: false })
       .order('published_at', { ascending: false })
       .limit(limitNum);
 

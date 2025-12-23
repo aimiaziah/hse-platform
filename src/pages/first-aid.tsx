@@ -685,13 +685,13 @@ const FirstAidInspection: React.FC = () => {
                               )}
                               {expiryStatus.expired > 0 && (
                                 <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
-                                  ⚠️
+
                                   {expiryStatus.expired} expired
                                 </span>
                               )}
                               {expiryStatus.expiringSoon > 0 && (
                                 <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md font-medium flex items-center gap-1">
-                                  ⏰{expiryStatus.expiringSoon} expiring soon
+                                  {expiryStatus.expiringSoon} expiring soon
                                 </span>
                               )}
                             </div>
