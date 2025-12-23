@@ -103,5 +103,10 @@
   "engines": {
     "node": ">=18.17.0",
     "npm": ">=9.0.0"
+  },
+  "optionalDependencies": {
+    "@next/swc-linux-x64-gnu": "16.0.10",
+    "@next/swc-linux-x64-musl": "16.0.10",
+    "@next/swc-win32-x64-msvc": "16.0.10"
   }
 }

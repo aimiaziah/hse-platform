@@ -164,7 +164,7 @@ async function updateInspection(
       try {
         const notificationType =
           updateData.status === 'approved' ? 'inspection_approved' : 'inspection_rejected';
-        const title =localhost:8080
+        const title =
           updateData.status === 'approved'
             ? 'Inspection Approved'
             : 'Inspection Needs Revision';
