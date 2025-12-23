@@ -150,11 +150,41 @@ def load_model(model_path: str):
     # Get input details
     input_name = ort_session.get_inputs()[0].name
     input_shape = ort_session.get_inputs()[0].shape
+    
+    # Get output details
+    output_info = ort_session.get_outputs()[0]
+    output_shape = output_info.shape
+    output_name = output_info.name
 
     print(f"✅ Model loaded successfully!")
     print(f"   Input name: {input_name}")
     print(f"   Input shape: {input_shape}")
-    print(f"   Classes: {list(CLASS_NAMES.values())}")
+    print(f"   Output name: {output_name}")
+    print(f"   Output shape: {output_shape}")
+    
+    # Analyze expected class count from output shape
+    # YOLOv8 format: [1, num_classes+4, num_predictions]
+    if output_shape and len(output_shape) >= 2:
+        # Handle dynamic dimensions (marked as strings or None)
+        dim1 = output_shape[1] if isinstance(output_shape[1], int) else None
+        dim2 = output_shape[2] if len(output_shape) > 2 and isinstance(output_shape[2], int) else None
+        
+        if dim1 and dim2:
+            # Determine which dimension is features vs predictions
+            if dim1 < dim2:  # [1, features, predictions]
+                num_classes_in_model = dim1 - 4
+            else:  # [1, predictions, features]
+                num_classes_in_model = dim2 - 4
+                
+            expected_classes = len(CLASS_NAMES)
+            print(f"   Model classes: {num_classes_in_model} (expected: {expected_classes})")
+            
+            if num_classes_in_model != expected_classes:
+                print(f"   ⚠️  WARNING: Class count mismatch!")
+                print(f"      Model has {num_classes_in_model} classes but CLASS_NAMES has {expected_classes}")
+                print(f"      Update CLASS_NAMES dict if your model has different classes")
+    
+    print(f"   Expected classes: {list(CLASS_NAMES.values())}")
 
 def decode_base64_image(data_url: str) -> Image.Image:
     """Decode base64 data URL to PIL Image"""
@@ -206,46 +236,84 @@ def preprocess_image(image: Image.Image, input_shape: tuple) -> np.ndarray:
 
     return img_batch
 
+def sigmoid(x: np.ndarray) -> np.ndarray:
+    """Apply sigmoid activation to convert logits to probabilities"""
+    # Clip to avoid overflow in exp
+    x = np.clip(x, -500, 500)
+    return 1 / (1 + np.exp(-x))
+
+
 def postprocess_detections(
     outputs: np.ndarray,
     min_confidence: float,
     img_width: int,
     img_height: int
 ) -> List[Detection]:
-    """Postprocess YOLO ONNX outputs to detection objects"""
+    """Postprocess YOLOv8 ONNX outputs to detection objects
+    
+    YOLOv8 output format: [1, num_classes+4, num_predictions]
+    e.g., [1, 11, 8400] for 7 classes
+    
+    Each column contains: [x_center, y_center, width, height, class0_score, ..., classN_score]
+    Note: YOLOv8 does NOT have objectness score - confidence is max(class_scores)
+    """
     detections = []
 
-    # YOLO output format varies by model version
-    # Typically: [1, num_detections, 85] or [1, 85, num_detections]
-    # where 85 = x, y, w, h, objectness, 80 class scores
+    print(f"[PostProcess] Raw output shape: {outputs.shape}")
 
+    # YOLOv8 outputs shape: [1, num_features, num_predictions]
+    # num_features = 4 (bbox) + num_classes
+    # We need to transpose to [num_predictions, num_features]
+    
     if len(outputs.shape) == 3:
-        # Transpose if needed to get [num_detections, 85]
-        if outputs.shape[1] > outputs.shape[2]:
-            outputs = np.transpose(outputs[0], (1, 0))
-        else:
-            outputs = outputs[0]
+        # Remove batch dimension and transpose: [1, 11, 8400] -> [8400, 11]
+        outputs = np.transpose(outputs[0], (1, 0))
+    elif len(outputs.shape) == 2:
+        # Already in [num_predictions, num_features] format
+        if outputs.shape[0] < outputs.shape[1]:
+            outputs = np.transpose(outputs, (1, 0))
+
+    print(f"[PostProcess] Transposed shape: {outputs.shape}")
+    
+    num_features = outputs.shape[1]
+    num_classes = num_features - 4  # First 4 are bbox coords
+    
+    print(f"[PostProcess] Detected {num_classes} classes in model output")
+    
+    # Check if we need to apply sigmoid (YOLOv8 ONNX may output raw logits)
+    # Sample the max class score to determine if sigmoid is needed
+    sample_scores = outputs[:100, 4:]  # First 100 detections
+    max_score = np.max(sample_scores)
+    needs_sigmoid = max_score > 1.0 or max_score < 0.0
+    
+    if needs_sigmoid:
+        print(f"[PostProcess] Applying sigmoid (max raw score: {max_score:.2f})")
+        # Apply sigmoid to class scores only (not bbox coords)
+        outputs[:, 4:] = sigmoid(outputs[:, 4:])
+    else:
+        print(f"[PostProcess] Scores already normalized (max: {max_score:.4f})")
 
     # Get model input size for scaling
     model_size = input_shape[2] if input_shape else 640
 
     for detection in outputs:
-        # Extract box coordinates and scores
+        # Extract box coordinates (first 4 values)
         x_center, y_center, width, height = detection[:4]
-        objectness = detection[4] if len(detection) > 4 else 1.0
-        class_scores = detection[5:] if len(detection) > 5 else detection[4:]
-
+        
+        # Extract class scores (remaining values after bbox)
+        # YOLOv8 does NOT have objectness - class scores ARE the confidence
+        class_scores = detection[4:]
+        
         # Get class with highest score
         class_id = int(np.argmax(class_scores))
-        class_confidence = float(class_scores[class_id])
-
-        # Combined confidence
-        confidence = objectness * class_confidence
-
+        confidence = float(class_scores[class_id])
+        
+        # Skip low confidence detections
         if confidence < min_confidence:
             continue
 
         # Convert from center format to corner format
+        # Scale from model coordinates to image coordinates
         x1 = (x_center - width / 2) * img_width / model_size
         y1 = (y_center - height / 2) * img_height / model_size
         x2 = (x_center + width / 2) * img_width / model_size
@@ -257,13 +325,74 @@ def postprocess_detections(
         x2 = max(0, min(x2, img_width))
         y2 = max(0, min(y2, img_height))
 
+        # Get class name from mapping
+        class_name = CLASS_NAMES.get(class_id, f"unknown_class_{class_id}")
+        
         detections.append(Detection(
-            class_name=CLASS_NAMES.get(class_id, f"class_{class_id}"),
+            class_name=class_name,
             confidence=confidence,
             bbox=[float(x1), float(y1), float(x2), float(y2)]
         ))
 
+    # Apply Non-Maximum Suppression (NMS) to remove duplicate detections
+    if len(detections) > 0:
+        detections = apply_nms(detections, iou_threshold=0.5)
+
+    print(f"[PostProcess] Final detections after NMS: {len(detections)}")
+    
     return detections
+
+
+def apply_nms(detections: List[Detection], iou_threshold: float = 0.5) -> List[Detection]:
+    """Apply Non-Maximum Suppression to remove overlapping detections"""
+    if len(detections) == 0:
+        return []
+    
+    # Sort by confidence (highest first)
+    detections = sorted(detections, key=lambda x: x.confidence, reverse=True)
+    
+    keep = []
+    
+    while detections:
+        # Keep the detection with highest confidence
+        best = detections.pop(0)
+        keep.append(best)
+        
+        # Remove detections that overlap too much with the best one
+        remaining = []
+        for det in detections:
+            if compute_iou(best.bbox, det.bbox) < iou_threshold:
+                remaining.append(det)
+        detections = remaining
+    
+    return keep
+
+
+def compute_iou(box1: List[float], box2: List[float]) -> float:
+    """Compute Intersection over Union (IoU) between two bounding boxes"""
+    x1_1, y1_1, x2_1, y2_1 = box1
+    x1_2, y1_2, x2_2, y2_2 = box2
+    
+    # Compute intersection
+    x1_i = max(x1_1, x1_2)
+    y1_i = max(y1_1, y1_2)
+    x2_i = min(x2_1, x2_2)
+    y2_i = min(y2_1, y2_2)
+    
+    if x2_i < x1_i or y2_i < y1_i:
+        return 0.0
+    
+    intersection = (x2_i - x1_i) * (y2_i - y1_i)
+    
+    # Compute union
+    area1 = (x2_1 - x1_1) * (y2_1 - y1_1)
+    area2 = (x2_2 - x1_2) * (y2_2 - y1_2)
+    union = area1 + area2 - intersection
+    
+    if union == 0:
+        return 0.0
+    
+    return intersection / union
 
 def run_detection(image: Image.Image, min_confidence: float) -> List[Detection]:
     """Run ONNX inference on image"""
