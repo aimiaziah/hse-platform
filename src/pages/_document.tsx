@@ -3,8 +3,11 @@ import React from 'react';
 
 export default function Document() {
   return (
-    <Html lang="en">
+    <Html lang="en" style={{ colorScheme: 'light' }}>
       <Head>
+        {/* Force light mode to prevent dark backgrounds */}
+        <meta name="color-scheme" content="light" />
+
         {/* Material Icons Font */}
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 
@@ -14,7 +17,8 @@ export default function Document() {
 
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: dark)" />
 
         {/* Apple Touch Icon */}
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -25,7 +29,7 @@ export default function Document() {
         {/* PWA and SEO meta tags are handled in _app.tsx and layouts */}
         {/* Additional document-level head elements can go here */}
       </Head>
-      <body>
+      <body style={{ backgroundColor: '#ffffff' }}>
         <Main />
         <NextScript />
       </body>

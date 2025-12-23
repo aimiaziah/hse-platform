@@ -9,6 +9,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    color-scheme: light;
+    background-color: #ffffff;
   }
 
   body {
@@ -16,6 +18,7 @@
     font-weight: 400;
     line-height: 1.6;
     letter-spacing: -0.011em;
+    background-color: #ffffff !important;
   }
 
   /* Typography scale - optimized for inspection platform */
