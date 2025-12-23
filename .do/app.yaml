@@ -249,10 +249,9 @@ services:
     # basic-xs: $12/month (1GB RAM) - recommended for better performance
     instance_size_slug: basic-xs
 
-    # HTTP configuration
-    http_port: 8080
-    # Make this service internal only (not publicly accessible)
-    # The Next.js app will communicate with it internally
+    # Internal service only - not publicly accessible
+    # The Next.js web app communicates with this service internally
+    # DO NOT set http_port for internal-only services
     internal_ports:
       - 8080
 
