@@ -66,7 +66,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'shell',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Shell detected at ${confidencePercent}% confidence`
     });
@@ -86,7 +86,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'hose',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Hose detected at ${confidencePercent}% confidence`
     });
@@ -106,7 +106,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'nozzle',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Nozzle detected at ${confidencePercent}% confidence`
     });
@@ -126,7 +126,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'pressureGauge',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Pressure gauge detected at ${confidencePercent}% confidence`
     });
@@ -134,7 +134,7 @@ export function mapYOLOToInspectionResults(
     // Assume pressure is OK if gauge is detected
     detections.push({
       field: 'emptyPressureLow',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence * 0.7,
       reasoning: `Pressure gauge visible (${confidencePercent}% confidence)`
     });
@@ -161,7 +161,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'safetyPin',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Safety pin detected at ${confidencePercent}% confidence`
     });
@@ -181,7 +181,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'pinSeal',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Pin seal detected at ${confidencePercent}% confidence`
     });
@@ -201,7 +201,7 @@ export function mapYOLOToInspectionResults(
     const confidencePercent = Math.round(avgConfidence * 100);
     detections.push({
       field: 'servicingTags',
-      value: '√',
+      value: '✓',
       confidence: avgConfidence,
       reasoning: `Service tag detected at ${confidencePercent}% confidence`
     });
@@ -237,7 +237,7 @@ export function mapYOLOToInspectionResults(
 
     detections.push({
       field: 'accessible',
-      value: '√',
+      value: '✓',
       confidence: overallConfidence,
       reasoning: `Components visible at ${confidencePercent}% confidence`
     });
@@ -254,7 +254,7 @@ export function mapYOLOToInspectionResults(
   if (detectedCount >= 1) {
     detections.push({
       field: 'missingNotInPlace',
-      value: '√',
+      value: '✓',
       confidence: 0.80,
       reasoning: 'Fire extinguisher detected in image'
     });
@@ -283,7 +283,7 @@ export function mapYOLOToInspectionResults(
   console.log('[YOLO Mapper] Final detections:', detections);
   console.log('[YOLO Mapper] Summary:', {
     totalDetections: detections.length,
-    passed: detections.filter(d => d.value === '√').length,
+    passed: detections.filter(d => d.value === '✓').length,
     failed: detections.filter(d => d.value === 'X').length,
     fields: detections.map(d => `${d.field}: ${d.value} (${Math.round(d.confidence * 100)}%)`).join(', ')
   });

@@ -76,7 +76,13 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({
                     />
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-[#1e3a8a] leading-tight" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+                    <p
+                      className="text-lg font-bold text-[#1e3a8a] leading-tight"
+                      style={{
+                        fontFamily:
+                          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                      }}
+                    >
                       Theta
                     </p>
                     <p className="text-xs text-gray-600 leading-tight">Platform</p>

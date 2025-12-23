@@ -613,7 +613,7 @@ const FormTemplatesManagement: React.FC = () => {
                             >
                               <option value="text">Text</option>
                               <option value="number">Number</option>
-                              <option value="rating">Rating (√/X/NA)</option>
+                              <option value="rating">Rating (✓/X/NA)</option>
                               <option value="date">Date</option>
                               <option value="textarea">Textarea</option>
                               <option value="select">Select</option>

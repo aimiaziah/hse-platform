@@ -241,9 +241,7 @@ const AnnouncementsManagement: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            {announcement.is_pinned && (
-                              <span className="text-lg">📌</span>
-                            )}
+                            {announcement.is_pinned && <span className="text-lg">📌</span>}
                             {announcement.title}
                           </h3>
                           <span

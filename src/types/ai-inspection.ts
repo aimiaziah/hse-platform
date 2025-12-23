@@ -2,7 +2,7 @@
 
 export interface AIDetectionResult {
   field: string;
-  value: '√' | 'X' | 'NA';
+  value: '✓' | 'X' | 'NA';
   confidence: number; // 0-1 scale
   reasoning?: string;
 }

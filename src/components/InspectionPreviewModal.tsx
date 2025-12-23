@@ -867,7 +867,7 @@ const InspectionPreviewModal: React.FC<InspectionPreviewModalProps> = ({
                                       </span>
                                       <span
                                         className={`font-bold text-sm px-3 py-1 rounded ${
-                                          item[key] === '√' || item[key] === 'PASS'
+                                          item[key] === '✓' || item[key] === 'PASS'
                                             ? 'bg-green-100 text-green-700'
                                             : item[key] === 'X' || item[key] === 'FAIL'
                                             ? 'bg-red-100 text-red-700'

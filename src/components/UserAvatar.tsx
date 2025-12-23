@@ -35,20 +35,20 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   const getMicrosoftStyleColor = () => {
     // Hash the user's name to get a consistent color
     const colors = [
-      'bg-[#A8C7E7]',  // Soft Blue
-      'bg-[#B8D8BA]',  // Soft Green
-      'bg-[#D4B5D4]',  // Soft Purple/Lavender
-      'bg-[#F4C2A8]',  // Soft Peach
-      'bg-[#F5B6C8]',  // Soft Pink
-      'bg-[#A8D5D5]',  // Soft Teal
-      'bg-[#E5B8B8]',  // Soft Rose
-      'bg-[#B8C5E5]',  // Soft Periwinkle
-      'bg-[#FFD6A5]',  // Soft Orange
-      'bg-[#B8E5E5]',  // Soft Cyan
-      'bg-[#E5D4B8]',  // Soft Gold
-      'bg-[#D5C5E5]',  // Soft Violet
+      'bg-[#A8C7E7]', // Soft Blue
+      'bg-[#B8D8BA]', // Soft Green
+      'bg-[#D4B5D4]', // Soft Purple/Lavender
+      'bg-[#F4C2A8]', // Soft Peach
+      'bg-[#F5B6C8]', // Soft Pink
+      'bg-[#A8D5D5]', // Soft Teal
+      'bg-[#E5B8B8]', // Soft Rose
+      'bg-[#B8C5E5]', // Soft Periwinkle
+      'bg-[#FFD6A5]', // Soft Orange
+      'bg-[#B8E5E5]', // Soft Cyan
+      'bg-[#E5D4B8]', // Soft Gold
+      'bg-[#D5C5E5]', // Soft Violet
     ];
-    
+
     // Simple hash function to get consistent color for same name
     let hash = 0;
     for (let i = 0; i < user.name.length; i++) {
@@ -94,7 +94,10 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
         alt={user.name}
         className={baseClasses}
         onError={(e) => {
-          console.error('[UserAvatar] Failed to load profile picture:', user.profilePicture?.substring(0, 50));
+          console.error(
+            '[UserAvatar] Failed to load profile picture:',
+            user.profilePicture?.substring(0, 50),
+          );
         }}
       />
     );
@@ -112,7 +115,9 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   };
 
   return (
-    <div className={`${baseClasses} ${getMicrosoftStyleColor()} flex items-center justify-center text-gray-800 font-semibold`}>
+    <div
+      className={`${baseClasses} ${getMicrosoftStyleColor()} flex items-center justify-center text-gray-800 font-semibold`}
+    >
       {getInitials()}
     </div>
   );
@@ -134,20 +139,20 @@ export const UserAvatarIcon: React.FC<UserAvatarProps> = ({
   // Soft pastel colors based on name hash - variety of colors but muted/soft tones
   const getMicrosoftStyleColor = () => {
     const colors = [
-      'bg-[#A8C7E7]',  // Soft Blue
-      'bg-[#B8D8BA]',  // Soft Green
-      'bg-[#D4B5D4]',  // Soft Purple/Lavender
-      'bg-[#F4C2A8]',  // Soft Peach
-      'bg-[#F5B6C8]',  // Soft Pink
-      'bg-[#A8D5D5]',  // Soft Teal
-      'bg-[#E5B8B8]',  // Soft Rose
-      'bg-[#B8C5E5]',  // Soft Periwinkle
-      'bg-[#FFD6A5]',  // Soft Orange
-      'bg-[#B8E5E5]',  // Soft Cyan
-      'bg-[#E5D4B8]',  // Soft Gold
-      'bg-[#D5C5E5]',  // Soft Violet
+      'bg-[#A8C7E7]', // Soft Blue
+      'bg-[#B8D8BA]', // Soft Green
+      'bg-[#D4B5D4]', // Soft Purple/Lavender
+      'bg-[#F4C2A8]', // Soft Peach
+      'bg-[#F5B6C8]', // Soft Pink
+      'bg-[#A8D5D5]', // Soft Teal
+      'bg-[#E5B8B8]', // Soft Rose
+      'bg-[#B8C5E5]', // Soft Periwinkle
+      'bg-[#FFD6A5]', // Soft Orange
+      'bg-[#B8E5E5]', // Soft Cyan
+      'bg-[#E5D4B8]', // Soft Gold
+      'bg-[#D5C5E5]', // Soft Violet
     ];
-    
+
     let hash = 0;
     for (let i = 0; i < user.name.length; i++) {
       hash = user.name.charCodeAt(i) + ((hash << 5) - hash);
@@ -175,7 +180,10 @@ export const UserAvatarIcon: React.FC<UserAvatarProps> = ({
         alt={user.name}
         className={`${sizeClasses[size]} rounded-full flex-shrink-0 object-cover ${borderClass} ${className}`}
         onError={(e) => {
-          console.error('[UserAvatarIcon] Failed to load profile picture:', user.profilePicture?.substring(0, 50));
+          console.error(
+            '[UserAvatarIcon] Failed to load profile picture:',
+            user.profilePicture?.substring(0, 50),
+          );
         }}
       />
     );
@@ -191,11 +199,14 @@ export const UserAvatarIcon: React.FC<UserAvatarProps> = ({
   };
 
   return (
-    <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center ${getMicrosoftStyleColor()} text-gray-800 font-semibold ${borderClass} ${className}`}>
+    <div
+      className={`${
+        sizeClasses[size]
+      } rounded-full flex items-center justify-center ${getMicrosoftStyleColor()} text-gray-800 font-semibold ${borderClass} ${className}`}
+    >
       {getInitials()}
     </div>
   );
 };
 
 export default UserAvatar;
-

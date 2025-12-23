@@ -102,21 +102,21 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
   if (hasOverallImage) {
     detections.push({
       field: 'shell',
-      value: '√',
+      value: '✓',
       confidence: 0.92,
       reasoning: 'Fire extinguisher shell appears intact with no visible dents or corrosion',
     });
 
     detections.push({
       field: 'hose',
-      value: '√',
+      value: '✓',
       confidence: 0.88,
       reasoning: 'Hose detected and appears to be in good condition',
     });
 
     detections.push({
       field: 'nozzle',
-      value: '√',
+      value: '✓',
       confidence: 0.85,
       reasoning: 'Nozzle is present and properly attached',
     });
@@ -126,14 +126,14 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
   if (hasPressureImage) {
     detections.push({
       field: 'pressureGauge',
-      value: '√',
+      value: '✓',
       confidence: 0.95,
       reasoning: 'Pressure gauge needle is in the green zone indicating proper pressure',
     });
 
     detections.push({
       field: 'emptyPressureLow',
-      value: '√',
+      value: '✓',
       confidence: 0.93,
       reasoning: 'Pressure appears normal based on gauge reading',
     });
@@ -143,14 +143,14 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
   if (hasPinSealImage) {
     detections.push({
       field: 'safetyPin',
-      value: '√',
+      value: '✓',
       confidence: 0.9,
       reasoning: 'Safety pin is present and properly inserted',
     });
 
     detections.push({
       field: 'pinSeal',
-      value: '√',
+      value: '✓',
       confidence: 0.87,
       reasoning: 'Pin seal appears intact and unbroken',
     });
@@ -160,7 +160,7 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
   if (hasServiceTagImage) {
     detections.push({
       field: 'servicingTags',
-      value: '√',
+      value: '✓',
       confidence: 0.91,
       reasoning: 'Service tag is visible and appears to be up to date',
     });
@@ -170,14 +170,14 @@ function performMockAIDetection(images: any[], extinguisherInfo: any): AIDetecti
   if (hasSurroundingImage) {
     detections.push({
       field: 'accessible',
-      value: '√',
+      value: '✓',
       confidence: 0.89,
       reasoning: 'Fire extinguisher appears accessible with clear path',
     });
 
     detections.push({
       field: 'missingNotInPlace',
-      value: '√',
+      value: '✓',
       confidence: 0.94,
       reasoning: 'Fire extinguisher is properly mounted in designated location',
     });

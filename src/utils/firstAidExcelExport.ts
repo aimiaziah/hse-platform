@@ -147,7 +147,7 @@ export async function generateFirstAidExcel(
         const col = String.fromCharCode(65 + colIndex); // A=65
 
         let statusValue = '';
-        if (item.status === '✓') statusValue = '√';
+        if (item.status === '✓') statusValue = '✓';
         else if (item.status === 'X') statusValue = 'X';
         else if (item.status === 'NA') statusValue = 'N/A';
 

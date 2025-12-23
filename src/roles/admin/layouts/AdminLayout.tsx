@@ -119,8 +119,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Admin Dash
               <div className="flex items-center space-x-4">
                 <div className="hidden sm:flex items-center gap-3">
                   <div className="text-right space-y-0">
-                    <p className="text-sm font-semibold text-gray-900 leading-none mt-1 mb-0">{user?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize font-normal leading-none -mt-0.5">{user?.role}</p>
+                    <p className="text-sm font-semibold text-gray-900 leading-none mt-1 mb-0">
+                      {user?.name}
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize font-normal leading-none -mt-0.5">
+                      {user?.role}
+                    </p>
                   </div>
                   {/* Profile Icon */}
                   {user && <UserAvatarIcon user={user} size="md" />}

@@ -553,9 +553,7 @@ const SafetyAnalyticsDashboard: React.FC = () => {
                   <div
                     key={announcement.id}
                     className={`border rounded-lg p-3 hover:border-gray-300 transition-colors ${
-                      announcement.is_pinned
-                        ? 'border-blue-300 bg-blue-50'
-                        : 'border-gray-200'
+                      announcement.is_pinned ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
                     }`}
                   >
                     <div className="flex items-start gap-2 mb-2">

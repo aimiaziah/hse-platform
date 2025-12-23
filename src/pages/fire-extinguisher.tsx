@@ -1350,9 +1350,7 @@ const FireExtinguisherChecklist: React.FC = () => {
                                   }`}
                                 >
                                   <span>
-                                    {checkExpiryDate(ext.expiryDate)?.type === 'expired'
-                                      ? '⚠️'
-                                      : '⏰'}
+                                    {checkExpiryDate(ext.expiryDate)?.type === 'expired' ? '' : ''}
                                   </span>
                                   <span>
                                     {checkExpiryDate(ext.expiryDate)?.type === 'expired'

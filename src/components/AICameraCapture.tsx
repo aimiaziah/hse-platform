@@ -415,7 +415,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
 
   return (
     <div
-      className="fixed inset-0 bg-black z-[9999] flex flex-col"
+      className="fixed inset-0 bg-gray-50 z-[9999] flex flex-col"
       style={{
         touchAction: 'none',
         WebkitOverflowScrolling: 'touch',
@@ -423,36 +423,36 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
       }}
     >
       {/* Camera View or Preview */}
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 relative bg-white">
         {/* Debug toggle button - top left corner */}
         <button
           type="button"
           onClick={() => setShowDebug(!showDebug)}
-          className="fixed top-20 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded z-[99998]"
+          className="fixed top-20 left-2 bg-white border border-gray-300 text-gray-700 text-xs px-2 py-1 rounded-md z-[99998] shadow-sm"
         >
           {showDebug ? '✗ Debug' : '⚙️'}
         </button>
 
         {/* Debug info panel - collapsible, only shown when toggled */}
         {showDebug && (
-          <div className="fixed top-28 left-2 right-2 bg-black/90 text-white text-xs p-3 rounded-lg z-[99999] font-mono border border-white/20">
-            <p className="font-bold mb-2 text-yellow-400">Camera Status:</p>
+          <div className="fixed top-28 left-2 right-2 bg-white text-gray-800 text-xs p-3 rounded-lg z-[99999] font-mono border border-gray-300 shadow-lg">
+            <p className="font-bold mb-2 text-blue-600">Camera Status:</p>
             <div className="space-y-1">
               <div>
                 Camera Active:{' '}
-                <span className={isCameraActive ? 'text-green-400' : 'text-red-400'}>
+                <span className={isCameraActive ? 'text-green-600' : 'text-red-600'}>
                   {isCameraActive ? 'YES ✓' : 'NO ✗'}
                 </span>
               </div>
               <div>
                 Initializing:{' '}
-                <span className={isInitializing ? 'text-yellow-400' : 'text-gray-400'}>
+                <span className={isInitializing ? 'text-yellow-600' : 'text-gray-500'}>
                   {isInitializing ? 'YES...' : 'NO'}
                 </span>
               </div>
               <div>
                 Error:{' '}
-                <span className={error ? 'text-red-400' : 'text-green-400'}>
+                <span className={error ? 'text-red-600' : 'text-green-600'}>
                   {error ? `YES - ${error}` : 'NONE ✓'}
                 </span>
               </div>
@@ -464,7 +464,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
             {!isCameraActive && !isInitializing && !error && (
               <button
                 onClick={startCamera}
-                className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded font-bold"
+                className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700"
               >
                 Start Camera Manually
               </button>
@@ -486,20 +486,20 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
 
         {isInitializing && !error ? (
           // Loading state while camera initializes
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-white z-10">
             <div className="bg-blue-100 p-4 rounded-full mb-4 animate-pulse">
               <Camera className="w-12 h-12 text-blue-600" />
             </div>
-            <h3 className="text-white text-2xl font-bold mb-2">Initializing Camera...</h3>
-            <p className="text-gray-300 mb-4 text-lg">Please allow camera access if prompted</p>
-            <Loader2 className="w-8 h-8 text-white animate-spin mb-6" />
+            <h3 className="text-gray-800 text-2xl font-bold mb-2">Initializing Camera...</h3>
+            <p className="text-gray-600 mb-4 text-base">Please allow camera access if prompted</p>
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-6" />
 
             {/* Debug Log Display */}
             {debugLog.length > 0 && (
-              <div className="mt-4 bg-black/50 rounded-lg p-3 max-w-md w-full">
-                <p className="text-yellow-400 font-bold mb-2">Camera Log:</p>
+              <div className="mt-4 bg-gray-50 rounded-lg p-3 max-w-md w-full border border-gray-200">
+                <p className="text-blue-600 font-bold mb-2 text-sm">Camera Log:</p>
                 {debugLog.map((log, idx) => (
-                  <p key={idx} className="text-xs text-gray-300 font-mono mb-1">
+                  <p key={idx} className="text-xs text-gray-600 font-mono mb-1">
                     {log}
                   </p>
                 ))}
@@ -509,25 +509,25 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
             {/* Manual cancel if taking too long */}
             <button
               onClick={handleCancel}
-              className="mt-6 bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700"
+              className="mt-6 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-md font-medium hover:bg-gray-50"
             >
               Cancel
             </button>
           </div>
         ) : error ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black z-10">
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-white z-10">
             <div className="bg-red-100 p-4 rounded-full mb-4">
               <Camera className="w-12 h-12 text-red-600" />
             </div>
-            <h3 className="text-white text-2xl font-bold mb-3">Camera Error</h3>
-            <p className="text-red-300 text-base mb-4 px-4">{error}</p>
+            <h3 className="text-gray-800 text-2xl font-bold mb-3">Camera Error</h3>
+            <p className="text-red-600 text-base mb-4 px-4">{error}</p>
 
             {/* Debug Log Display */}
             {debugLog.length > 0 && (
-              <div className="mt-4 bg-black/50 rounded-lg p-3 max-w-md w-full mb-4">
-                <p className="text-yellow-400 font-bold mb-2">Error Log:</p>
+              <div className="mt-4 bg-gray-50 rounded-lg p-3 max-w-md w-full mb-4 border border-gray-200">
+                <p className="text-blue-600 font-bold mb-2 text-sm">Error Log:</p>
                 {debugLog.map((log, idx) => (
-                  <p key={idx} className="text-xs text-gray-300 font-mono mb-1">
+                  <p key={idx} className="text-xs text-gray-600 font-mono mb-1">
                     {log}
                   </p>
                 ))}
@@ -537,22 +537,22 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
             <div className="flex flex-col gap-3 w-full max-w-xs">
               <button
                 onClick={startCamera}
-                className="bg-red-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-red-700 transition-colors"
+                className="bg-blue-600 text-white px-8 py-3 rounded-md font-medium hover:bg-blue-700 transition-colors"
               >
                 Try Again
               </button>
               <button
                 onClick={handleCancel}
-                className="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
+                className="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-md font-medium hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
             </div>
 
             {/* Help text */}
-            <div className="mt-6 bg-blue-900/30 rounded-lg p-4 max-w-md">
-              <p className="text-sm text-blue-200">
-                <strong>Troubleshooting:</strong>
+            <div className="mt-6 bg-blue-50 rounded-lg p-4 max-w-md border border-blue-200">
+              <p className="text-sm text-gray-700">
+                <strong className="text-blue-800">Troubleshooting:</strong>
                 <br />
                 • Make sure camera permissions are allowed
                 <br />
@@ -565,13 +565,13 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
           </div>
         ) : !isCameraActive && capturedImages.length === CAPTURE_STEPS.length ? (
           // All photos captured - show completion screen
-          <div className="absolute inset-0 h-full flex flex-col items-center justify-center p-6 text-center bg-black z-50 overflow-y-auto">
+          <div className="absolute inset-0 h-full flex flex-col items-center justify-center p-6 text-center bg-white z-50 overflow-y-auto">
             {/* Show captured images preview */}
             {capturedImages.length > 0 && (
               <div className="mb-6 space-y-4 max-w-md w-full">
                 {capturedImages.map((img, idx) => (
-                  <div key={img.stepId} className="rounded-lg overflow-hidden shadow-2xl">
-                    <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 py-2 text-sm font-semibold">
+                  <div key={img.stepId} className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+                    <div className="bg-blue-600 text-white px-3 py-2 text-sm font-medium">
                       Photo {idx + 1}: {CAPTURE_STEPS[idx]?.title}
                     </div>
                     <img src={img.dataUrl} alt={`Captured ${idx + 1}`} className="w-full h-auto" />
@@ -579,14 +579,14 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                 ))}
               </div>
             )}
-            <div className="bg-green-100 p-4 rounded-full mb-4 animate-bounce">
+            <div className="bg-green-100 p-4 rounded-full mb-4">
               <CheckCircle2 className="w-12 h-12 text-green-600" />
             </div>
-            <h3 className="text-white text-2xl font-bold mb-2">
-              {capturedImages.length} Photos Captured Successfully!
+            <h3 className="text-gray-800 text-2xl font-bold mb-2">
+              {capturedImages.length} Photo{capturedImages.length !== 1 ? 's' : ''} Captured Successfully!
             </h3>
-            <p className="text-gray-300 mb-8 text-lg">Ready to process with AI</p>
-            <div className="flex flex-col gap-4 w-full max-w-md">
+            <p className="text-gray-600 mb-8 text-base">Ready to process with AI</p>
+            <div className="flex flex-col gap-3 w-full max-w-md">
               <button
                 type="button"
                 onTouchStart={(e) => {
@@ -599,14 +599,14 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                   console.log('[AI Camera] Process with AI button CLICKED');
                   handleComplete();
                 }}
-                className="bg-gradient-to-r from-red-600 to-orange-600 text-white py-6 px-8 rounded-xl font-bold text-lg active:scale-95 transition-transform flex items-center justify-center gap-3 shadow-2xl"
+                className="bg-blue-600 text-white py-3 px-8 rounded-md font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                   userSelect: 'none',
                 }}
               >
-                <CheckCircle2 className="w-6 h-6" />
+                <CheckCircle2 className="w-5 h-5" />
                 Submit for AI Analysis
               </button>
               <button
@@ -623,7 +623,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                   setCapturedImages([]);
                   startCamera();
                 }}
-                className="bg-gray-600 text-white py-4 px-6 rounded-xl font-semibold active:bg-gray-700 transition-colors flex items-center justify-center gap-2"
+                className="bg-white border border-gray-300 text-gray-700 py-3 px-6 rounded-md font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
@@ -638,7 +638,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
         ) : showPreview && currentPreview ? (
           // Show preview of captured photo - MOBILE OPTIMIZED
           <div
-            className="absolute inset-0 h-full flex flex-col bg-black z-[99999]"
+            className="absolute inset-0 h-full flex flex-col bg-white z-[99999]"
             style={{
               touchAction: 'auto',
               position: 'fixed',
@@ -648,7 +648,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
               bottom: 0,
             }}
           >
-            <div className="flex-1 overflow-hidden bg-black flex items-center justify-center">
+            <div className="flex-1 overflow-hidden bg-gray-100 flex items-center justify-center border-b border-gray-200">
               <img
                 src={currentPreview}
                 alt="Preview"
@@ -657,7 +657,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
             </div>
             {/* MOBILE OPTIMIZED BUTTONS - Large touch targets */}
             <div
-              className="p-6 bg-gradient-to-t from-black via-black to-transparent flex gap-4 z-[99999]"
+              className="p-4 bg-white flex gap-3 z-[99999] border-t border-gray-200"
               style={{ touchAction: 'auto' }}
             >
               <button
@@ -672,13 +672,14 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                   console.log('[AI Camera] Retake button CLICKED');
                   retakePhoto();
                 }}
-                className="flex-1 bg-gray-600 text-white py-6 px-4 rounded-xl font-bold active:bg-gray-700 flex flex-col items-center justify-center gap-2 text-base min-h-[80px]"
+                className="flex-1 bg-white border border-gray-300 text-gray-700 py-4 px-4 rounded-md font-medium hover:bg-gray-50 flex items-center justify-center gap-2 text-base min-h-[60px]"
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                   userSelect: 'none',
                 }}
               >
+                <RefreshCw className="w-5 h-5" />
                 <span>Retake</span>
               </button>
               <button
@@ -693,14 +694,15 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                   console.log('[AI Camera] Submit button CLICKED');
                   confirmCapture();
                 }}
-                className="flex-1 bg-green-600 text-white py-6 px-4 rounded-xl font-bold active:bg-green-700 flex flex-col items-center justify-center gap-2 text-base shadow-2xl min-h-[80px] animate-pulse"
+                className="flex-1 bg-blue-600 text-white py-4 px-4 rounded-md font-medium hover:bg-blue-700 flex items-center justify-center gap-2 text-base min-h-[60px]"
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                   userSelect: 'none',
                 }}
               >
-                <span>Submit & Analyze</span>
+                <CheckCircle2 className="w-5 h-5" />
+                <span>Confirm</span>
               </button>
             </div>
           </div>
@@ -711,24 +713,24 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
             <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
               {/* Center crosshair indicator */}
               <div className="relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-white/60 shadow-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-white/60 shadow-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-green-400 rounded-full shadow-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white/40 rounded-full animate-pulse"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-blue-500/70 shadow-lg"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-0.5 bg-blue-500/70 shadow-lg"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-blue-400/50 rounded-full"></div>
               </div>
             </div>
 
             {/* Instruction banner */}
             <div className="absolute top-4 left-4 right-4">
-              <div className="bg-black/60 backdrop-blur-md rounded-2xl p-4 shadow-2xl border border-white/20">
+              <div className="bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-200">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-3xl">{currentStep.icon}</span>
-                  <h3 className="text-white text-lg font-bold flex-1">{currentStep.title}</h3>
-                  <span className="bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  <span className="text-2xl">{currentStep.icon || '📸'}</span>
+                  <h3 className="text-gray-800 text-base font-semibold flex-1">{currentStep.title}</h3>
+                  <span className="bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-md">
                     {currentStepIndex + 1}/{CAPTURE_STEPS.length}
                   </span>
                 </div>
-                <p className="text-white/90 text-sm">{currentStep.description}</p>
+                <p className="text-gray-600 text-sm">{currentStep.description}</p>
               </div>
             </div>
 
@@ -737,27 +739,27 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
               <button
                 type="button"
                 onClick={toggleTorch}
-                className={`p-4 rounded-full backdrop-blur-md transition-all shadow-lg ${
+                className={`p-3 rounded-lg backdrop-blur-sm transition-all shadow-md border ${
                   torchEnabled
-                    ? 'bg-yellow-500 text-white'
-                    : 'bg-black/60 text-white hover:bg-black/80'
+                    ? 'bg-yellow-500 text-white border-yellow-600'
+                    : 'bg-white/95 text-gray-700 border-gray-300 hover:bg-white'
                 }`}
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                 }}
               >
-                {torchEnabled ? <Zap className="w-6 h-6" /> : <ZapOff className="w-6 h-6" />}
+                {torchEnabled ? <Zap className="w-5 h-5" /> : <ZapOff className="w-5 h-5" />}
               </button>
             </div>
 
             {/* Capture button - MOBILE OPTIMIZED - LARGER & MORE OBVIOUS */}
-            <div className="fixed bottom-0 left-0 right-0 pb-8 pt-6 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-center gap-4 px-4 z-[9999]">
+            <div className="fixed bottom-0 left-0 right-0 pb-6 pt-4 bg-white/95 backdrop-blur-sm flex justify-center items-center gap-3 px-4 z-[9999] border-t border-gray-200">
               {currentStepIndex > 0 && (
                 <button
                   type="button"
                   onClick={goToPreviousStep}
-                  className="bg-gray-600/90 backdrop-blur-sm text-white px-6 py-3 rounded-full font-semibold active:bg-gray-700"
+                  className="bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-md font-medium hover:bg-gray-50"
                   style={{
                     WebkitTapHighlightColor: 'transparent',
                     touchAction: 'manipulation',
@@ -778,18 +780,16 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                   console.log('[AI Camera] Capture button CLICKED');
                   capturePhoto();
                 }}
-                className="bg-white text-red-600 rounded-full active:scale-95 shadow-2xl flex items-center justify-center border-8 border-red-600 transition-transform"
+                className="bg-blue-600 text-white rounded-full active:scale-95 shadow-lg flex items-center justify-center border-4 border-blue-200 transition-transform hover:bg-blue-700"
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                   userSelect: 'none',
-                  width: '90px',
-                  height: '90px',
+                  width: '80px',
+                  height: '80px',
                 }}
               >
-                <div className="bg-red-600 rounded-full p-4">
-                  <Camera className="w-10 h-10 text-white" />
-                </div>
+                <Camera className="w-8 h-8 text-white" />
               </button>
             </div>
 
@@ -798,16 +798,16 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
         ) : (
           // Initial state - start camera
           <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-            <div className="bg-red-100 p-4 rounded-full mb-4">
-              <Camera className="w-12 h-12 text-red-600" />
+            <div className="bg-blue-100 p-4 rounded-full mb-4">
+              <Camera className="w-12 h-12 text-blue-600" />
             </div>
-            <h3 className="text-white text-xl font-bold mb-2">Start Camera</h3>
-            <p className="text-gray-300 mb-6">
-              We'll guide you through capturing {CAPTURE_STEPS.length} photos
+            <h3 className="text-gray-800 text-xl font-bold mb-2">Start Camera</h3>
+            <p className="text-gray-600 mb-6">
+              We'll guide you through capturing {CAPTURE_STEPS.length} photo{CAPTURE_STEPS.length !== 1 ? 's' : ''}
             </p>
             <button
               onClick={startCamera}
-              className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+              className="bg-blue-600 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-700 transition-all"
             >
               Start Capturing
             </button>

@@ -139,7 +139,8 @@ export default function NotificationBell({ onSettingsClick }: NotificationBellPr
             {announcements.length > 0 && (
               <div className="p-3 border-t border-gray-200 bg-gray-50 text-center">
                 <p className="text-xs text-gray-500">
-                  Showing {announcements.length} pinned announcement{announcements.length !== 1 ? 's' : ''}
+                  Showing {announcements.length} pinned announcement
+                  {announcements.length !== 1 ? 's' : ''}
                 </p>
               </div>
             )}

@@ -53,7 +53,8 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
             {user && user.role === 'employee' && showNotificationForEmployee ? (
               <NotificationBell />
             ) : (
-              user && user.role !== 'employee' && (
+              user &&
+              user.role !== 'employee' && (
                 <>
                   {/* User Name and Role */}
                   <div className="text-right space-y-0">

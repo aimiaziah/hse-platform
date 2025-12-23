@@ -134,7 +134,7 @@ function buildInspectionTable(doc: jsPDF, kits: FirstAidKitInspection[], startY:
       kit.location,
       kit.modelNo, // Model No. column
       ...kit.items.map((item) => {
-        if (item.status === '✓') return '√';
+        if (item.status === '✓') return '✓';
         if (item.status === 'X') return 'X';
         if (item.status === 'NA') return 'N/A';
         return 'N/A';
@@ -214,7 +214,7 @@ function buildInspectionTable(doc: jsPDF, kits: FirstAidKitInspection[], startY:
       }
 
       // Bold checkmarks
-      if (cellData.cell.raw === '√') {
+      if (cellData.cell.raw === '✓') {
         cellData.cell.styles.textColor = [0, 128, 0];
         cellData.cell.styles.fontStyle = 'bold';
       }

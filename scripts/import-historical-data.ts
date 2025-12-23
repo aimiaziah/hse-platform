@@ -126,7 +126,7 @@ function normalizeRating(value: any): RatingType | null {
 
   const str = String(value).trim().toUpperCase();
 
-  if (['✓', '√', 'OK', 'YES', 'Y', 'PASS', 'GOOD'].includes(str)) return '✓';
+  if (['✓', 'OK', 'YES', 'Y', 'PASS', 'GOOD'].includes(str)) return '✓';
   if (['X', '✗', 'NO', 'N', 'FAIL', 'BAD'].includes(str)) return 'X';
   if (['NA', 'N/A', 'NOT APPLICABLE', '-'].includes(str)) return 'NA';
 

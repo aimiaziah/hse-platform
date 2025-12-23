@@ -312,7 +312,7 @@ Wait for the server to start (usually at `http://localhost:3000`)
 **Steps:**
 1. After AI analysis completes
 2. Capture the inspection form showing:
-   - Auto-filled checkboxes (√/X)
+   - Auto-filled checkboxes (✓/X)
    - Confidence indicators (if visible)
    - Fields that were detected by AI
 
