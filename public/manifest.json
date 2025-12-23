@@ -1,7 +1,7 @@
 {
-  "name": "HSE Inspection Platform",
-  "short_name": "Health, Safety & Environment Platform",
-  "description": "Health, Safety & Environment inspection management system",
+  "name": "Theta HSE",
+  "short_name": "Theta HSE",
+  "description": "Theta HSE - Health, Safety & Environment inspection management system",
   "icons": [
     {
       "src": "/icon-72x72.png",

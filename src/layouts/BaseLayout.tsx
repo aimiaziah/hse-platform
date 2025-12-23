@@ -17,8 +17,8 @@ interface BaseLayoutProps {
 
 const BaseLayout: React.FC<BaseLayoutProps> = ({
   children,
-  title = 'HSE Inspection System',
-  description = 'Comprehensive Health, Safety & Environment inspection management system',
+  title = 'Theta HSE',
+  description = 'Theta HSE - Comprehensive Health, Safety & Environment inspection management system',
   requireAuth = true,
 }) => {
   const router = useRouter();
@@ -212,7 +212,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="HSE Inspector" />
+        <meta name="apple-mobile-web-app-title" content="Theta HSE" />
       </Head>
 
       <div className="min-h-screen bg-white pb-20 lg:pb-0">
@@ -351,7 +351,12 @@ const BaseLayout: React.FC<BaseLayoutProps> = ({
                           {/* User Info Section */}
                           <div className="px-4 py-3 border-b border-gray-100">
                             <div className="flex items-center">
-                              <UserAvatar user={user} size="md" className="mr-3" showBorder={false} />
+                              <UserAvatar
+                                user={user}
+                                size="md"
+                                className="mr-3"
+                                showBorder={false}
+                              />
                               <div className="mt-1">
                                 <div className="font-medium text-gray-900 leading-tight mb-0">
                                   {user.name}

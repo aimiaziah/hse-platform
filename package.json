@@ -34,6 +34,8 @@
     "lint": "next lint --fix .",
     "prepare": "node -e \"try { require('husky').install() } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e }\" || true",
     "start": "next start -p 8080",
+    "test:pwa": "node test-pwa.js",
+    "generate:icons": "node generate-icons.js",
     "import-data": "ts-node --project tsconfig.json scripts/import-historical-data.ts",
     "create-sample-data": "ts-node --project tsconfig.json scripts/create-sample-data.ts",
     "migrate:r2": "node migrate-images-to-r2.js",
