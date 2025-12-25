@@ -503,6 +503,7 @@ const FireExtinguisherChecklist: React.FC = () => {
   const [currentAIResults, setCurrentAIResults] = useState<AIInspectionResult | null>(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [aiErrorMessage, setAiErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasPermission('canCreateInspections')) {
@@ -662,19 +663,18 @@ const FireExtinguisherChecklist: React.FC = () => {
           setCurrentAIResults(result);
           setShowAIResults(true);
         } else {
-          alert(
-            'No components detected. Please ensure the photo clearly shows a fire extinguisher.',
-          );
+          setAiErrorMessage('Please take a picture of a fire extinguisher');
         }
       } else {
-        alert(`AI Analysis failed: ${result.error || 'Unknown error'}`);
+        // Check if error is specifically about not being a fire extinguisher
+        if (result.error === 'NOT_FIRE_EXTINGUISHER') {
+          setAiErrorMessage('Please take a picture of a fire extinguisher');
+        } else {
+          setAiErrorMessage('AI analysis failed. Please try again or fill the form manually');
+        }
       }
     } catch (error) {
-      alert(
-        `Failed to process images with AI: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-      );
+      setAiErrorMessage('Failed to process image. Please try again or fill the form manually');
     } finally {
       setIsProcessingAI(false);
     }
@@ -1546,6 +1546,23 @@ const FireExtinguisherChecklist: React.FC = () => {
                 <p className="text-gray-600">
                   Processing your photos and detecting fire extinguisher components...
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* AI Error Message Dialog */}
+          {aiErrorMessage && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg border border-gray-200 p-6 max-w-md w-full shadow-lg">
+                <div className="mb-4">
+                  <p className="text-gray-800 text-base leading-relaxed">{aiErrorMessage}</p>
+                </div>
+                <button
+                  onClick={() => setAiErrorMessage(null)}
+                  className="w-full rounded-md bg-blue-600 text-white py-2.5 font-medium hover:bg-blue-700 transition-all"
+                >
+                  OK
+                </button>
               </div>
             </div>
           )}

@@ -56,6 +56,20 @@ export function mapYOLOToInspectionResults(
     totalDetections: allDetections.length
   });
 
+  // Validate that this is actually a fire extinguisher
+  // If no detections at all OR fewer than 1 core component detected, it's likely not a fire extinguisher
+  // Lowered threshold to 1 to be more lenient with detection
+  if (allDetections.length === 0 || detectedCoreComponents.length < 1) {
+    console.warn('[YOLO Mapper] Not a fire extinguisher - insufficient components detected');
+    return {
+      success: false,
+      detections: [],
+      extractedData: {},
+      processingTime: 0,
+      error: 'NOT_FIRE_EXTINGUISHER'
+    };
+  }
+
   // Generate inspection results for each field
   const detections: AIDetectionResult[] = [];
 
@@ -224,10 +238,10 @@ export function mapYOLOToInspectionResults(
     { name: 'pin_seal', detections: componentDetections['pin_seal'] || [] }
   ];
 
-  // Check if most components are detected (at least 3)
+  // Check if components are detected (lowered threshold to 2 for better detection)
   const detectedCount = coreComponents.filter(c => c.detections.length > 0).length;
 
-  if (detectedCount >= 3) {
+  if (detectedCount >= 2) {
     // Calculate average confidence across detected components
     const componentConfidences = coreComponents
       .filter(c => c.detections.length > 0)

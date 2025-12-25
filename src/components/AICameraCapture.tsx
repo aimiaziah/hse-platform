@@ -23,14 +23,14 @@ interface AICameraCaptureProps {
 const CAPTURE_STEPS: CaptureStep[] = [
   {
     id: 'overall',
-    title: 'Overall View',
-    description: 'Capture a clear photo of the entire fire extinguisher',
+    title: 'Full Fire Extinguisher',
+    description: 'Center the entire extinguisher in frame with good lighting',
     icon: '',
   },
   {
     id: 'closeup',
-    title: 'Close-up Details',
-    description: 'Capture a close-up of the pressure gauge, tags, and serial number',
+    title: 'Gauge & Tags',
+    description: 'Capture pressure gauge, tags, and labels clearly',
     icon: '',
   },
 ];
@@ -47,6 +47,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
   const [debugLog, setDebugLog] = useState<string[]>([]);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [showGuide, setShowGuide] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -96,12 +97,13 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
         console.log('[AI Camera] Trying back camera with mobile-optimized settings...');
         addDebugLog('Requesting back camera...');
 
-        // Try back camera first (ideal for taking photos)
+        // Try back camera first (ideal for taking photos) with high quality settings
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
+            width: { ideal: 3840, min: 1280 },
+            height: { ideal: 2160, min: 720 },
+            aspectRatio: { ideal: 16/9 },
           },
           audio: false,
         });
@@ -297,7 +299,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         console.log('[AI Camera] Photo captured successfully, data URL length:', dataUrl.length);
 
         // Verify we actually got image data
@@ -415,7 +417,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
 
   return (
     <div
-      className="fixed inset-0 bg-gray-50 z-[9999] flex flex-col"
+      className="fixed inset-0 bg-black z-[9999] flex flex-col"
       style={{
         touchAction: 'none',
         WebkitOverflowScrolling: 'touch',
@@ -423,7 +425,7 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
       }}
     >
       {/* Camera View or Preview */}
-      <div className="flex-1 relative bg-white">
+      <div className="flex-1 relative bg-black">
         {/* Debug toggle button - top left corner */}
         <button
           type="button"
@@ -707,42 +709,51 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
             </div>
           </div>
         ) : isCameraActive ? (
-          // Show live camera feed with overlays
+          // Show live camera feed with minimal overlays
           <>
-            {/* Simple center crosshair - minimal and non-intrusive */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              {/* Center crosshair indicator */}
-              <div className="relative">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-blue-500/70 shadow-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-0.5 bg-blue-500/70 shadow-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-lg"></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-blue-400/50 rounded-full"></div>
-              </div>
-            </div>
-
-            {/* Instruction banner */}
-            <div className="absolute top-4 left-4 right-4">
-              <div className="bg-white/95 backdrop-blur-sm rounded-lg p-4 shadow-lg border border-gray-200">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{currentStep.icon || '📸'}</span>
-                  <h3 className="text-gray-800 text-base font-semibold flex-1">{currentStep.title}</h3>
-                  <span className="bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-md">
-                    {currentStepIndex + 1}/{CAPTURE_STEPS.length}
-                  </span>
+            {/* Minimalist viewfinder frame - subtle guide for framing */}
+            {showGuide && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                {/* Rule of thirds grid - very subtle */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute top-1/3 left-0 right-0 h-px bg-white"></div>
+                  <div className="absolute top-2/3 left-0 right-0 h-px bg-white"></div>
+                  <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white"></div>
+                  <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white"></div>
                 </div>
-                <p className="text-gray-600 text-sm">{currentStep.description}</p>
+                {/* Center frame guide */}
+                <div className="relative w-[85%] max-w-md aspect-[3/4]">
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-white/60 rounded-tl-lg"></div>
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-white/60 rounded-tr-lg"></div>
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-white/60 rounded-bl-lg"></div>
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-white/60 rounded-br-lg"></div>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Flash/Torch toggle button */}
-            <div className="absolute top-32 right-4">
+            {/* Top controls - minimalist */}
+            <div className="absolute top-4 left-0 right-0 flex justify-between items-start px-4 z-10">
+              {/* Cancel button */}
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="bg-black/40 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-black/60 transition-all"
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation',
+                }}
+              >
+                Cancel
+              </button>
+
+              {/* Flash/Torch toggle button */}
               <button
                 type="button"
                 onClick={toggleTorch}
-                className={`p-3 rounded-lg backdrop-blur-sm transition-all shadow-md border ${
+                className={`p-2.5 rounded-full backdrop-blur-sm transition-all ${
                   torchEnabled
-                    ? 'bg-yellow-500 text-white border-yellow-600'
-                    : 'bg-white/95 text-gray-700 border-gray-300 hover:bg-white'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-black/40 text-white hover:bg-black/60'
                 }`}
                 style={{
                   WebkitTapHighlightColor: 'transparent',
@@ -753,21 +764,24 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
               </button>
             </div>
 
-            {/* Capture button - MOBILE OPTIMIZED - LARGER & MORE OBVIOUS */}
-            <div className="fixed bottom-0 left-0 right-0 pb-6 pt-4 bg-white/95 backdrop-blur-sm flex justify-center items-center gap-3 px-4 z-[9999] border-t border-gray-200">
-              {currentStepIndex > 0 && (
-                <button
-                  type="button"
-                  onClick={goToPreviousStep}
-                  className="bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-md font-medium hover:bg-gray-50"
-                  style={{
-                    WebkitTapHighlightColor: 'transparent',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  Back
-                </button>
-              )}
+            {/* Bottom capture area - clean and simple */}
+            <div className="fixed bottom-0 left-0 right-0 pb-8 pt-6 flex justify-center items-center gap-6 px-4 z-[9999]">
+              {/* Guide toggle */}
+              <button
+                type="button"
+                onClick={() => setShowGuide(!showGuide)}
+                className="bg-black/40 backdrop-blur-sm text-white p-3 rounded-full hover:bg-black/60 transition-all"
+                style={{
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation',
+                }}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+
+              {/* Capture button - large and centered like native camera */}
               <button
                 type="button"
                 onTouchStart={(e) => {
@@ -780,20 +794,23 @@ const AICameraCapture: React.FC<AICameraCaptureProps> = ({ onComplete, onCancel 
                   console.log('[AI Camera] Capture button CLICKED');
                   capturePhoto();
                 }}
-                className="bg-blue-600 text-white rounded-full active:scale-95 shadow-lg flex items-center justify-center border-4 border-blue-200 transition-transform hover:bg-blue-700"
+                className="bg-white rounded-full active:scale-95 shadow-2xl flex items-center justify-center border-4 border-white/30 transition-transform hover:border-white/50"
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   touchAction: 'manipulation',
                   userSelect: 'none',
-                  width: '80px',
-                  height: '80px',
+                  width: '72px',
+                  height: '72px',
                 }}
               >
-                <Camera className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-white rounded-full border-2 border-gray-300"></div>
               </button>
-            </div>
 
-            {/* Removed label for capture button to reduce clutter */}
+              {/* Step indicator (minimal) */}
+              <div className="bg-black/40 backdrop-blur-sm text-white px-3 py-2 rounded-full text-sm font-medium">
+                {currentStepIndex + 1}/{CAPTURE_STEPS.length}
+              </div>
+            </div>
           </>
         ) : (
           // Initial state - start camera

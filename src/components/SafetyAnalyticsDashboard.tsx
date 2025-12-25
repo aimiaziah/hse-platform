@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CircularProgress from '@/components/CircularProgress';
 import { useAuth } from '@/hooks/useAuth';
+import { storage } from '@/utils/storage';
 import {
   ComposedChart,
   Line,
@@ -136,12 +137,14 @@ const SafetyAnalyticsDashboard: React.FC = () => {
     setLoading(true);
 
     try {
+      const authToken = storage.load('authToken', null);
       // Fetch data from API with year filter only (showing all months)
       const response = await fetch(`/api/analytics/dashboard?year=${selectedYear}&month=0`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
         },
       });
 
@@ -163,19 +166,28 @@ const SafetyAnalyticsDashboard: React.FC = () => {
     setLoadingAnnouncements(true);
 
     try {
+      const authToken = storage.load('authToken', null);
+      console.log('[Announcements] Auth token:', authToken ? 'exists' : 'missing');
+
       const response = await fetch('/api/announcements?limit=3', {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
         },
       });
 
+      console.log('[Announcements] Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch announcements');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[Announcements] Error response:', errorData);
+        throw new Error(`Failed to fetch announcements: ${response.status} ${errorData.error || ''}`);
       }
 
       const data = await response.json();
+      console.log('[Announcements] Success! Received', data.announcements?.length || 0, 'announcements');
       setAnnouncements(data.announcements || []);
     } catch (error) {
       console.error('Error loading announcements:', error);
