@@ -1007,6 +1007,15 @@ const HSEInspectionForm = () => {
                     );
                     if (!confirmed) return;
                   }
+
+                  // Check internet connectivity first
+                  if (!navigator.onLine) {
+                    alert(
+                      '❌ No Internet Connection\n\nYou are currently offline. Please connect to the internet and try again.\n\nYour data will be saved locally.',
+                    );
+                    return;
+                  }
+
                   try {
                     const authToken = storage.load('authToken', null);
                     if (!authToken) {
@@ -1016,6 +1025,17 @@ const HSEInspectionForm = () => {
                       router.push('/login');
                       return;
                     }
+
+                    console.log('[HSE Inspection] Starting submission...', {
+                      contractor: formData.contractor,
+                      location: formData.location,
+                      observationsCount: observations.length,
+                    });
+
+                    // Submit with timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
                     const response = await fetch('/api/inspections', {
                       method: 'POST',
                       headers: {
@@ -1043,7 +1063,13 @@ const HSEInspectionForm = () => {
                         locationId: null,
                         assetId: null,
                       }),
+                      signal: controller.signal,
                     });
+
+                    clearTimeout(timeoutId);
+
+                    console.log('[HSE Inspection] Response status:', response.status);
+
                     if (!response.ok) {
                       const errorData = await response
                         .json()
@@ -1071,8 +1097,10 @@ const HSEInspectionForm = () => {
                       alert(`Submission Error:\n\n${errorMessage}`);
                       return;
                     }
+
                     const result = await response.json();
-                    console.log('Inspection saved successfully:', result);
+                    console.log('[HSE Inspection] Submission successful:', result);
+
                     try {
                       const checklistData = {
                         contractor: formData.contractor,
@@ -1107,16 +1135,29 @@ const HSEInspectionForm = () => {
                       router.push('/inspector/forms');
                     }, 2000);
                   } catch (error) {
-                    console.error('Error saving inspection:', error);
+                    console.error('[HSE Inspection] Submit error:', error);
+
+                    // Show specific error message based on error type
+                    let errorMessage = '';
+                    let errorTitle = '❌ Submission Failed';
+
                     if (error instanceof Error) {
-                      alert(
-                        `Submission Error:\n\n${error.message}\n\nPlease check your internet connection and try again.`,
-                      );
+                      if (error.name === 'AbortError') {
+                        errorTitle = '⏱️ Request Timeout';
+                        errorMessage =
+                          'The submission is taking too long. This might be due to:\n\n• Slow internet connection\n• Server processing delays\n• Large observation photos\n\nYour data is saved locally. Please try again.';
+                      } else if (error.message.includes('fetch') || error.message.includes('network')) {
+                        errorTitle = '🌐 Network Error';
+                        errorMessage =
+                          'Unable to reach the server. Please check:\n\n• Your internet connection\n• VPN or firewall settings\n• Server availability\n\nYour data is saved locally.';
+                      } else {
+                        errorMessage = `Error: ${error.message}\n\nYour data is saved locally. If the problem persists, contact support.`;
+                      }
                     } else {
-                      alert(
-                        'Failed to submit inspection due to a network error. Please check your connection and try again.',
-                      );
+                      errorMessage = 'An unknown error occurred.\n\nYour data is saved locally. Please try again.';
                     }
+
+                    alert(`${errorTitle}\n\n${errorMessage}`);
                   }
                 }}
                 className="w-full bg-blue-600 text-white py-3 font-medium hover:bg-blue-700 transition-colors rounded-md"

@@ -204,24 +204,78 @@ const ManhoursReport: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      // Check internet connectivity first
+      if (!navigator.onLine) {
+        alert(
+          '❌ No Internet Connection\n\nYou are currently offline. Please connect to the internet and try again.\n\nYour data will be preserved on this page.',
+        );
+        return;
+      }
+
+      console.log('[Man-hours] Starting submission...', {
+        month: reportData.month,
+        year: reportData.year,
+        status: submitType,
+      });
+
       const submittedReport = {
         ...reportData,
         status: submitType as ReportStatus,
         completedAt: new Date().toISOString(),
         submittedAt: new Date().toISOString(),
       };
+
+      // Submit with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch('/api/manhours', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submittedReport),
+        signal: controller.signal,
       });
-      if (!response.ok) throw new Error('Failed to submit report');
+
+      clearTimeout(timeoutId);
+
+      console.log('[Man-hours] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[Man-hours] Submission failed:', errorData);
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('[Man-hours] Submission successful:', result);
+
       setReportData(submittedReport);
       setStep('complete');
       setShowSubmitDialog(false);
     } catch (error) {
-      console.error('Error submitting report:', error);
-      alert('Failed to submit report. Please try again.');
+      console.error('[Man-hours] Submit error:', error);
+
+      // Show specific error message based on error type
+      let errorMessage = '';
+      let errorTitle = '❌ Submission Failed';
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorTitle = '⏱️ Request Timeout';
+          errorMessage =
+            'The submission is taking too long. This might be due to:\n\n• Slow internet connection\n• Server processing delays\n• Large data size\n\nYour data is still on this page. Please try again.';
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+          errorTitle = '🌐 Network Error';
+          errorMessage =
+            'Unable to reach the server. Please check:\n\n• Your internet connection\n• VPN or firewall settings\n• Server availability\n\nYour data is still on this page.';
+        } else {
+          errorMessage = `Error: ${error.message}\n\nYour data is still on this page. If the problem persists, contact support.`;
+        }
+      } else {
+        errorMessage = 'An unknown error occurred.\n\nYour data is still on this page. Please try again.';
+      }
+
+      alert(`${errorTitle}\n\n${errorMessage}`);
     }
   };
 

@@ -348,7 +348,24 @@ const FirstAidInspection: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      // Submit to Supabase
+      // Check internet connectivity first
+      if (!navigator.onLine) {
+        alert(
+          '❌ No Internet Connection\n\nYou are currently offline. Please connect to the internet and try again.\n\nYour data has been saved as a draft.',
+        );
+        return;
+      }
+
+      console.log('[First Aid] Starting submission...', {
+        inspectedBy: inspectionData.inspectedBy,
+        inspectionDate: inspectionData.inspectionDate,
+        kitsCount: inspectionData.kits.length,
+      });
+
+      // Submit to Supabase with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -372,12 +389,21 @@ const FirstAidInspection: React.FC = () => {
             inspectorName: inspectionData.inspectedBy,
           },
         }),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
+      console.log('[First Aid] Response status:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit inspection');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[First Aid] Submission failed:', errorData);
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('[First Aid] Submission successful:', result);
 
       // Remove from drafts after successful submission
       const drafts =
@@ -389,13 +415,38 @@ const FirstAidInspection: React.FC = () => {
         localStorage.setItem('first-aid-drafts', JSON.stringify(updatedDrafts));
 
       setShowSubmitDialog(false);
-      alert('First Aid Inspection submitted successfully!');
+
+      // Show success message with inspection number
+      const inspectionNumber = result.inspection?.inspection_number || 'N/A';
+      alert(
+        `✅ First Aid Inspection submitted successfully!\n\nInspection #${inspectionNumber}\n\nYou can now view it in the History page.`,
+      );
+
       router.push('/inspector/forms');
     } catch (error) {
-      console.error('Submit error:', error);
-      alert(
-        `Failed to submit inspection: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      console.error('[First Aid] Submit error:', error);
+
+      // Show specific error message based on error type
+      let errorMessage = '';
+      let errorTitle = '❌ Submission Failed';
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorTitle = '⏱️ Request Timeout';
+          errorMessage =
+            'The submission is taking too long. This might be due to:\n\n• Slow internet connection\n• Server processing delays\n• Large file attachments\n\nYour data is saved as a draft. Please try again.';
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+          errorTitle = '🌐 Network Error';
+          errorMessage =
+            'Unable to reach the server. Please check:\n\n• Your internet connection\n• VPN or firewall settings\n• Server availability\n\nYour data is saved as a draft.';
+        } else {
+          errorMessage = `Error: ${error.message}\n\nYour data is saved as a draft. If the problem persists, contact support.`;
+        }
+      } else {
+        errorMessage = 'An unknown error occurred.\n\nYour data is saved as a draft. Please try again.';
+      }
+
+      alert(`${errorTitle}\n\n${errorMessage}`);
     }
   };
 

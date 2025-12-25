@@ -744,13 +744,24 @@ const FireExtinguisherChecklist: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      // Check internet connectivity first
+      if (!navigator.onLine) {
+        alert(
+          '❌ No Internet Connection\n\nYou are currently offline. Please connect to the internet and try again.\n\nYour data has been saved as a draft.',
+        );
+        return;
+      }
+
       console.log('[Fire Extinguisher] Starting submission...', {
         inspectedBy: checklistData.inspectedBy,
         inspectionDate: checklistData.inspectionDate,
         extinguishersCount: checklistData.extinguishers.length,
       });
 
-      // Submit to Supabase
+      // Submit to Supabase with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+
       const response = await fetch('/api/inspections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -773,7 +784,10 @@ const FireExtinguisherChecklist: React.FC = () => {
             inspectorName: checklistData.inspectedBy,
           },
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       console.log('[Fire Extinguisher] Response status:', response.status);
 
@@ -803,11 +817,27 @@ const FireExtinguisherChecklist: React.FC = () => {
     } catch (error) {
       console.error('[Fire Extinguisher] Submit error:', error);
 
-      // Show detailed error message
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(
-        `❌ Failed to submit checklist\n\nError: ${errorMessage}\n\nPlease check your internet connection and try again. If the problem persists, contact support.`,
-      );
+      // Show specific error message based on error type
+      let errorMessage = '';
+      let errorTitle = '❌ Submission Failed';
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorTitle = '⏱️ Request Timeout';
+          errorMessage =
+            'The submission is taking too long. This might be due to:\n\n• Slow internet connection\n• Server processing delays\n• Large file attachments\n\nYour data is saved as a draft. Please try again.';
+        } else if (error.message.includes('fetch') || error.message.includes('network')) {
+          errorTitle = '🌐 Network Error';
+          errorMessage =
+            'Unable to reach the server. Please check:\n\n• Your internet connection\n• VPN or firewall settings\n• Server availability\n\nYour data is saved as a draft.';
+        } else {
+          errorMessage = `Error: ${error.message}\n\nYour data is saved as a draft. If the problem persists, contact support.`;
+        }
+      } else {
+        errorMessage = 'An unknown error occurred.\n\nYour data is saved as a draft. Please try again.';
+      }
+
+      alert(`${errorTitle}\n\n${errorMessage}`);
     }
   };
 
