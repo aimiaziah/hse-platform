@@ -183,11 +183,17 @@ const SafetyAnalyticsDashboard: React.FC = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error('[Announcements] Error response:', errorData);
-        throw new Error(`Failed to fetch announcements: ${response.status} ${errorData.error || ''}`);
+        throw new Error(
+          `Failed to fetch announcements: ${response.status} ${errorData.error || ''}`,
+        );
       }
 
       const data = await response.json();
-      console.log('[Announcements] Success! Received', data.announcements?.length || 0, 'announcements');
+      console.log(
+        '[Announcements] Success! Received',
+        data.announcements?.length || 0,
+        'announcements',
+      );
       setAnnouncements(data.announcements || []);
     } catch (error) {
       console.error('Error loading announcements:', error);
