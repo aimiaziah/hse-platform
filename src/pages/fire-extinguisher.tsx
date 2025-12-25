@@ -744,6 +744,12 @@ const FireExtinguisherChecklist: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      console.log('[Fire Extinguisher] Starting submission...', {
+        inspectedBy: checklistData.inspectedBy,
+        inspectionDate: checklistData.inspectionDate,
+        extinguishersCount: checklistData.extinguishers.length,
+      });
+
       // Submit to Supabase
       const response = await fetch('/api/inspections', {
         method: 'POST',
@@ -769,10 +775,16 @@ const FireExtinguisherChecklist: React.FC = () => {
         }),
       });
 
+      console.log('[Fire Extinguisher] Response status:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit inspection');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[Fire Extinguisher] Submission failed:', errorData);
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('[Fire Extinguisher] Submission successful:', result);
 
       // Remove from drafts after successful submission
       const drafts = JSON.parse(localStorage.getItem('fire-extinguisher-drafts') || '[]');
@@ -780,12 +792,21 @@ const FireExtinguisherChecklist: React.FC = () => {
       localStorage.setItem('fire-extinguisher-drafts', JSON.stringify(updatedDrafts));
 
       setShowSubmitDialog(false);
-      alert('Fire Extinguisher Checklist submitted successfully!');
+
+      // Show success message with inspection number
+      const inspectionNumber = result.inspection?.inspection_number || 'N/A';
+      alert(
+        `✅ Fire Extinguisher Checklist submitted successfully!\n\nInspection #${inspectionNumber}\n\nYou can now view it in the History page.`,
+      );
+
       router.push('/inspector/forms');
     } catch (error) {
-      console.error('Submit error:', error);
+      console.error('[Fire Extinguisher] Submit error:', error);
+
+      // Show detailed error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       alert(
-        `Failed to submit checklist: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `❌ Failed to submit checklist\n\nError: ${errorMessage}\n\nPlease check your internet connection and try again. If the problem persists, contact support.`,
       );
     }
   };

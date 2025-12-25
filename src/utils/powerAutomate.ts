@@ -136,3 +136,253 @@ const blobToBase64 = (blob: Blob): Promise<string> => {
 export const isPowerAutomateConfigured = (): boolean => {
   return Boolean(process.env.NEXT_PUBLIC_POWER_AUTOMATE_WEBHOOK_URL);
 };
+
+/**
+ * Interface for SharePoint inspection metadata
+ * Used for uploading inspections with rich metadata columns
+ */
+export interface SharePointInspectionMetadata {
+  excelFileBase64: string;
+  fileName: string;
+  inspectionNumber: string;
+  inspectionType: string;
+  inspectorName: string;
+  submissionDate: string;
+  status: string;
+  reviewerName?: string | null;
+  reviewDate?: string | null;
+  reviewComments?: string | null;
+  inspectionId: string;
+  inspectionDate: string;
+}
+
+/**
+ * Interface for SharePoint upload response
+ */
+export interface SharePointUploadResponse {
+  success: boolean;
+  message: string;
+  fileId: string;
+  fileUrl: string;
+}
+
+/**
+ * Interface for SharePoint metadata update params
+ */
+export interface SharePointMetadataUpdateParams {
+  fileId: string;
+  status: string;
+  reviewerName: string;
+  reviewDate: string;
+  reviewComments: string | null;
+}
+
+/**
+ * Upload inspection to SharePoint with metadata
+ * This is the main function for exporting inspections to SharePoint
+ * Uses direct OAuth integration (no Power Automate needed)
+ *
+ * @param inspection - Inspection data from database
+ * @param excelBlob - Excel file as Blob
+ * @returns Promise with fileId and fileUrl
+ */
+export async function uploadInspectionToSharePoint(
+  inspection: any,
+  excelBlob: Blob,
+): Promise<{ fileId: string; fileUrl: string }> {
+  try {
+    // Import server-side SharePoint utility
+    const { uploadFileToSharePoint } = await import('@/utils/sharepoint-server');
+
+    // Generate filename
+    const fileName =
+      generateFileName(
+        inspection.inspection_type,
+        inspection.inspection_date,
+        inspection.inspection_number,
+      ) + '.xlsx';
+
+    // Format inspection type for SharePoint (e.g., fire_extinguisher -> Fire Extinguisher)
+    const formattedType = inspection.inspection_type
+      .split('_')
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    // Determine folder path based on inspection type and date
+    const date = new Date(inspection.inspection_date);
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const year = date.getFullYear();
+    const month = monthNames[date.getMonth()];
+
+    // Folder structure: {InspectionType}/{Year}/{Month}
+    const typeFolder = inspection.inspection_type
+      .split('_')
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join('_');
+
+    const folderPath = `${typeFolder}/${year}/${month}`;
+
+    // Prepare metadata for SharePoint columns (ultra-simplified - just 1 Status column!)
+    const submissionDate = new Date(inspection.submitted_at || new Date());
+    const formattedDate = submissionDate.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    // Put everything in Status column
+    const statusText = `${formattedType} - ${inspection.inspection_number}\nSubmitted by ${inspection.inspected_by} on ${formattedDate}`;
+
+    const metadata = {
+      Status: statusText,
+    };
+
+    console.log(`📤 Uploading ${formattedType} to SharePoint via OAuth...`);
+
+    // Upload to SharePoint using OAuth
+    const result = await uploadFileToSharePoint(excelBlob, fileName, folderPath, metadata);
+
+    console.log(`✅ SharePoint upload successful: ${result.webUrl}`);
+
+    return {
+      fileId: result.itemId,
+      fileUrl: result.webUrl,
+    };
+  } catch (error) {
+    console.error('SharePoint upload error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update SharePoint metadata when inspection status changes
+ * Called when supervisor approves or rejects an inspection
+ * Uses direct OAuth integration (no Power Automate needed)
+ *
+ * @param params - Update parameters (fileId, status, reviewer info)
+ */
+export async function updateSharePointMetadata(
+  params: SharePointMetadataUpdateParams,
+): Promise<void> {
+  try {
+    // Import server-side SharePoint utility
+    const { updateMetadataByItemId } = await import('@/utils/sharepoint-server');
+
+    console.log(`📝 Updating SharePoint metadata for file ${params.fileId}...`);
+
+    // Format review date
+    const reviewDate = new Date(params.reviewDate);
+    const formattedReviewDate = reviewDate.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    // Build status text - append to existing status (keeps submission info)
+    let statusText = `${params.status} on ${formattedReviewDate}`;
+
+    if (params.reviewComments) {
+      statusText += `\nComments: ${params.reviewComments}`;
+    }
+
+    // Note: This will REPLACE the status, not append
+    // If you want to keep submission info, we'd need to read current status first
+    // For now, keeping it simple - just show the review status
+    const metadata: Record<string, any> = {
+      Status: statusText,
+    };
+
+    // Update metadata in SharePoint
+    await updateMetadataByItemId(params.fileId, metadata);
+
+    console.log(`✅ SharePoint metadata updated successfully`);
+  } catch (error) {
+    console.error('SharePoint metadata update error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Format status with user name for SharePoint
+ * Converts app status + user name to human-readable format
+ *
+ * @param status - Inspection status from database
+ * @param userName - Name of the user (inspector or reviewer)
+ * @returns Formatted status string
+ */
+export function formatStatusForSharePoint(
+  status: 'pending_review' | 'approved' | 'rejected' | string,
+  userName: string,
+): string {
+  switch (status) {
+    case 'pending_review':
+      return `Submitted by ${userName}`;
+    case 'approved':
+      return `Approved by ${userName}`;
+    case 'rejected':
+      return `Rejected by ${userName}`;
+    case 'draft':
+      return 'Draft';
+    case 'completed':
+      return `Completed by ${userName}`;
+    default:
+      return status;
+  }
+}
+
+/**
+ * Generate filename for SharePoint upload
+ * Format: InspectionType_Month_Year_InspectionNumber
+ *
+ * @param inspectionType - Type of inspection
+ * @param inspectionDate - Date of inspection
+ * @param inspectionNumber - Unique inspection number
+ * @returns Formatted filename without extension
+ */
+function generateFileName(
+  inspectionType: string,
+  inspectionDate: string,
+  inspectionNumber: string,
+): string {
+  const date = new Date(inspectionDate);
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
+
+  // Format inspection type: fire_extinguisher -> Fire_Extinguisher
+  const typePrefix = inspectionType
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('_');
+
+  return `${typePrefix}_${monthYear}_${inspectionNumber}`;
+}

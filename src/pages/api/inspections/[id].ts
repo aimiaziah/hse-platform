@@ -155,6 +155,62 @@ async function updateInspection(
       newValues: updateData,
     });
 
+    // [NEW] Update SharePoint metadata when status changes to approved/rejected
+    if (
+      updateData.status &&
+      (updateData.status === 'approved' || updateData.status === 'rejected') &&
+      (existingInspection as any).sharepoint_file_id
+    ) {
+      try {
+        // Import SharePoint functions
+        const { updateSharePointMetadata, formatStatusForSharePoint } = await import(
+          '@/utils/powerAutomate'
+        );
+
+        const statusText = formatStatusForSharePoint(updateData.status, user.name);
+
+        await updateSharePointMetadata({
+          fileId: (existingInspection as any).sharepoint_file_id,
+          status: statusText,
+          reviewerName: user.name,
+          reviewDate: updateData.reviewed_at || new Date().toISOString(),
+          reviewComments: reviewComments || null,
+        });
+
+        // Update sync status
+        await supabase
+          .from('inspections')
+          .update({
+            sharepoint_last_sync: new Date().toISOString(),
+            sharepoint_sync_status: 'synced',
+          })
+          .eq('id', inspectionId);
+
+        // Log sync
+        await supabase.from('sharepoint_sync_log').insert({
+          inspection_id: inspectionId,
+          sync_type: 'update',
+          status: 'success',
+        });
+
+        console.log(`✅ SharePoint metadata updated for ${inspectionId}`);
+      } catch (syncError: any) {
+        console.error('SharePoint sync failed:', syncError);
+
+        await supabase
+          .from('inspections')
+          .update({ sharepoint_sync_status: 'failed' })
+          .eq('id', inspectionId);
+
+        await supabase.from('sharepoint_sync_log').insert({
+          inspection_id: inspectionId,
+          sync_type: 'update',
+          status: 'failure',
+          error_message: syncError?.message || 'Unknown error',
+        });
+      }
+    }
+
     // Send push notification to inspector when status changes to approved/rejected
     if (
       updateData.status &&

@@ -249,6 +249,89 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
       newValues: inspectionData,
     });
 
+    // [NEW] Automatically export to SharePoint if status is pending_review
+    // This MUST complete before response is sent to ensure export happens
+    if (inspectionStatus === 'pending_review') {
+      try {
+        console.log(`[SharePoint] Starting export for inspection ${newInspection.id}...`);
+
+        // Import SharePoint functions
+        const { generateInspectionExcel } = await import('@/utils/inspectionExcelExporter');
+        const { uploadInspectionToSharePoint, formatStatusForSharePoint } = await import(
+          '@/utils/powerAutomate'
+        );
+
+        console.log(`[SharePoint] Generating Excel for ${formType}...`);
+
+        // Generate Excel
+        const excelBlob = await generateInspectionExcel(formType as any, data, {
+          inspectionNumber: newInspection.inspection_number || 'DRAFT',
+          inspectorName: actualInspectorName,
+          inspectionDate: newInspection.inspection_date,
+          status: formatStatusForSharePoint('pending_review', actualInspectorName),
+        });
+
+        console.log(`[SharePoint] Excel generated (${excelBlob.size} bytes), uploading...`);
+
+        // Upload to SharePoint
+        const sharePointResult = await uploadInspectionToSharePoint(newInspection, excelBlob);
+
+        console.log(`[SharePoint] Upload successful, updating database...`);
+
+        // Update tracking
+        await supabase
+          .from('inspections')
+          .update({
+            sharepoint_file_id: sharePointResult.fileId,
+            sharepoint_file_url: sharePointResult.fileUrl,
+            sharepoint_exported_at: new Date().toISOString(),
+            sharepoint_sync_status: 'synced',
+          })
+          .eq('id', newInspection.id);
+
+        // Log success
+        await supabase.from('sharepoint_sync_log').insert({
+          inspection_id: newInspection.id,
+          sync_type: 'create',
+          status: 'success',
+          metadata: { fileId: sharePointResult.fileId, fileUrl: sharePointResult.fileUrl },
+        });
+
+        console.log(`✅ [SharePoint] Export complete: ${sharePointResult.fileUrl}`);
+      } catch (exportError: any) {
+        // Don't fail inspection creation - just log error
+        console.error(
+          `❌ [SharePoint] Export failed for inspection ${newInspection.id}:`,
+          exportError,
+        );
+        console.error(`[SharePoint] Error details:`, {
+          message: exportError?.message,
+          stack: exportError?.stack,
+          cause: exportError?.cause,
+        });
+
+        try {
+          await supabase
+            .from('inspections')
+            .update({ sharepoint_sync_status: 'failed' })
+            .eq('id', newInspection.id);
+
+          await supabase.from('sharepoint_sync_log').insert({
+            inspection_id: newInspection.id,
+            sync_type: 'create',
+            status: 'failure',
+            error_message: exportError?.message || 'Unknown error',
+            metadata: {
+              error: exportError?.message,
+              stack: exportError?.stack?.substring(0, 500), // Limit stack trace length
+            },
+          });
+        } catch (logError) {
+          console.error(`[SharePoint] Failed to log error:`, logError);
+        }
+      }
+    }
+
     // Send push notification to assigned supervisor (if status is pending_review)
     if (inspectionStatus === 'pending_review' && assignedSupervisorId) {
       try {

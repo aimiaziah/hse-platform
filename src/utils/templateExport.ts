@@ -7,6 +7,15 @@ import { supabase } from '@/lib/supabase';
 import { loadTemplate } from './templateLoader';
 
 /**
+ * Interface for captured images from AI scan
+ */
+export interface CapturedImage {
+  stepId: string;
+  dataUrl: string;
+  timestamp: number;
+}
+
+/**
  * Interface for fire extinguisher form data
  */
 export interface FireExtinguisherFormData {
@@ -31,6 +40,7 @@ export interface FireExtinguisherFormData {
     servicingTags: '✓' | 'X' | 'NA' | null;
     expiryDate: string;
     remarks: string;
+    aiCapturedImages?: CapturedImage[];
   }>;
 }
 
@@ -168,6 +178,129 @@ async function fillFireExtinguisherTemplate(
     worksheet.getCell(`${mapping.columns.expiryDate}${rowNumber}`).value = extinguisher.expiryDate;
     worksheet.getCell(`${mapping.columns.remarks}${rowNumber}`).value = extinguisher.remarks;
   });
+
+  // ==========================================
+  // AI SCAN IMAGES SHEET (if images exist)
+  // ==========================================
+
+  const extinguishersWithImages = formData.extinguishers.filter(
+    (ext) => ext.aiCapturedImages && ext.aiCapturedImages.length > 0,
+  );
+
+  if (extinguishersWithImages.length > 0) {
+    // Create a new worksheet for AI scan images
+    const imgWs = workbook.addWorksheet('Images');
+
+    const date = new Date(formData.inspectionDate);
+    const formattedDateForSheet = `${String(date.getDate()).padStart(2, '0')}/${String(
+      date.getMonth() + 1,
+    ).padStart(2, '0')}/${date.getFullYear()}`;
+
+    // Find the maximum number of images any extinguisher has
+    const maxImages = Math.max(
+      ...extinguishersWithImages.map((ext) => ext.aiCapturedImages?.length || 0),
+    );
+
+    // Calculate merge range for title
+    const lastColumn = String.fromCharCode(68 + maxImages); // D is column 4, then add maxImages
+
+    // Row 1: Title
+    imgWs.getCell('A1').value = 'IMAGES - FIRE EXTINGUISHER INSPECTION';
+    imgWs.getCell('A1').font = { bold: true, size: 14 };
+    imgWs.getCell('A1').alignment = { horizontal: 'center' };
+    imgWs.mergeCells(`A1:${lastColumn}1`);
+
+    // Row 2: Blank
+
+    // Row 3: Metadata
+    imgWs.getCell('A3').value = 'Inspection Date:';
+    imgWs.getCell('B3').value = formattedDateForSheet;
+    imgWs.getCell('D3').value = 'Inspector:';
+    imgWs.getCell('E3').value = formData.inspectedBy;
+
+    // Row 4: Blank
+
+    // Row 5: Note
+    imgWs.getCell('A5').value =
+      'Note: Each extinguisher is one row. Images are displayed in columns.';
+    imgWs.mergeCells(`A5:${lastColumn}5`);
+
+    // Row 6: Blank
+
+    // Row 7: Headers
+    imgWs.getCell('A7').value = 'Extinguisher #';
+    imgWs.getCell('B7').value = 'Serial No';
+    imgWs.getCell('C7').value = 'Location';
+    imgWs.getCell('D7').value = 'Type/Size';
+
+    // Add image column headers dynamically based on max images
+    for (let i = 0; i < maxImages; i++) {
+      const col = String.fromCharCode(69 + i); // E, F, G, etc.
+      imgWs.getCell(`${col}7`).value = `Image ${i + 1}`;
+    }
+
+    // Style headers
+    const headerCells = ['A7', 'B7', 'C7', 'D7'];
+    for (let i = 0; i < maxImages; i++) {
+      const col = String.fromCharCode(69 + i);
+      headerCells.push(`${col}7`);
+    }
+
+    headerCells.forEach((cell) => {
+      imgWs.getCell(cell).font = { bold: true };
+      imgWs.getCell(cell).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFD3D3D3' },
+      };
+    });
+
+    // Set column widths
+    imgWs.getColumn('A').width = 15; // Extinguisher #
+    imgWs.getColumn('B').width = 20; // Serial No
+    imgWs.getColumn('C').width = 15; // Location
+    imgWs.getColumn('D').width = 12; // Type/Size
+
+    // Set width for image columns
+    for (let i = 0; i < maxImages; i++) {
+      const colLetter = String.fromCharCode(69 + i);
+      imgWs.getColumn(colLetter).width = 50; // Wide enough for base64 data
+    }
+
+    // Add image data starting from row 8 - one row per extinguisher
+    let imageRow = 8;
+    extinguishersWithImages.forEach((ext) => {
+      // Fill basic info
+      imgWs.getCell(`A${imageRow}`).value = ext.no;
+      imgWs.getCell(`B${imageRow}`).value = ext.serialNo;
+      imgWs.getCell(`C${imageRow}`).value = ext.location;
+      imgWs.getCell(`D${imageRow}`).value = ext.typeSize;
+
+      // Fill images across columns
+      if (ext.aiCapturedImages) {
+        ext.aiCapturedImages.forEach((image, imgIndex) => {
+          const col = String.fromCharCode(69 + imgIndex); // E, F, G, etc.
+          imgWs.getCell(`${col}${imageRow}`).value = image.dataUrl; // Base64 image data
+        });
+      }
+
+      imageRow += 1;
+    });
+
+    // Add summary section
+    imageRow += 1;
+    imgWs.getCell(`A${imageRow}`).value = 'Total Images:';
+    imgWs.getCell(`B${imageRow}`).value = extinguishersWithImages.reduce(
+      (sum, ext) => sum + (ext.aiCapturedImages?.length || 0),
+      0,
+    );
+    imgWs.getCell(`A${imageRow}`).font = { bold: true };
+
+    imageRow += 1;
+    imgWs.getCell(`A${imageRow}`).value = 'Extinguishers Scanned:';
+    imgWs.getCell(`B${imageRow}`).value = extinguishersWithImages.length;
+    imgWs.getCell(`A${imageRow}`).font = { bold: true };
+  }
 }
 
 /**

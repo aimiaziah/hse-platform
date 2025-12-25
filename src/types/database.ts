@@ -236,6 +236,11 @@ export interface Database {
           form_data: Json;
           signature: string | null;
           remarks: string | null;
+          sharepoint_file_id: string | null;
+          sharepoint_file_url: string | null;
+          sharepoint_exported_at: string | null;
+          sharepoint_last_sync: string | null;
+          sharepoint_sync_status: 'pending' | 'synced' | 'failed' | 'retrying';
           created_at: string;
           updated_at: string;
         };
@@ -258,6 +263,11 @@ export interface Database {
           form_data: Json;
           signature?: string | null;
           remarks?: string | null;
+          sharepoint_file_id?: string | null;
+          sharepoint_file_url?: string | null;
+          sharepoint_exported_at?: string | null;
+          sharepoint_last_sync?: string | null;
+          sharepoint_sync_status?: 'pending' | 'synced' | 'failed' | 'retrying';
           created_at?: string;
           updated_at?: string;
         };
@@ -280,6 +290,11 @@ export interface Database {
           form_data?: Json;
           signature?: string | null;
           remarks?: string | null;
+          sharepoint_file_id?: string | null;
+          sharepoint_file_url?: string | null;
+          sharepoint_exported_at?: string | null;
+          sharepoint_last_sync?: string | null;
+          sharepoint_sync_status?: 'pending' | 'synced' | 'failed' | 'retrying';
           created_at?: string;
           updated_at?: string;
         };
@@ -517,6 +532,35 @@ export interface Database {
           read_at?: string | null;
           created_at?: string;
           expires_at?: string | null;
+        };
+      };
+      sharepoint_sync_log: {
+        Row: {
+          id: string;
+          inspection_id: string;
+          sync_type: 'create' | 'update';
+          status: 'success' | 'failure';
+          error_message: string | null;
+          metadata: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          inspection_id: string;
+          sync_type: 'create' | 'update';
+          status: 'success' | 'failure';
+          error_message?: string | null;
+          metadata?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          inspection_id?: string;
+          sync_type?: 'create' | 'update';
+          status?: 'success' | 'failure';
+          error_message?: string | null;
+          metadata?: Json | null;
+          created_at?: string;
         };
       };
     };
