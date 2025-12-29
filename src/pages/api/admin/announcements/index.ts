@@ -9,7 +9,7 @@ import { User } from '@/hooks/useAuth';
  * POST /api/admin/announcements - Create new announcement (admin only)
  */
 async function handler(req: any, res: NextApiResponse, user: User) {
-  const supabase = getServiceSupabase();
+  const supabase = getServiceSupabase() as any;
 
   try {
     // GET - List all announcements
@@ -52,11 +52,11 @@ async function handler(req: any, res: NextApiResponse, user: User) {
         announcementData.published_at = new Date().toISOString();
       }
 
-      const { data: announcement, error } = await supabase
+      const { data: announcement, error } = (await supabase
         .from('announcements')
         .insert(announcementData)
         .select()
-        .single();
+        .single()) as { data: any; error: any };
 
       if (error) {
         console.error('Error creating announcement:', error);

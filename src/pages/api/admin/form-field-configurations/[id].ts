@@ -9,7 +9,7 @@ import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
  * DELETE /api/admin/form-field-configurations/[id] - Delete configuration
  */
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  const supabase = getServiceSupabase();
+  const supabase = getServiceSupabase() as any;
   const { id } = req.query;
 
   if (!id || typeof id !== 'string') {
@@ -36,11 +36,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       } = req.body;
 
       // Get existing configuration to log changes
-      const { data: existingConfig, error: fetchError } = await supabase
+      const { data: existingConfig, error: fetchError } = (await supabase
         .from('form_field_configurations')
         .select('*')
         .eq('id', id)
-        .single();
+        .single()) as { data: any; error: any };
 
       if (fetchError || !existingConfig) {
         return res.status(404).json({ error: 'Configuration not found' });
@@ -63,12 +63,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       if (validation_rules !== undefined) updateData.validation_rules = validation_rules;
       if (is_active !== undefined) updateData.is_active = is_active;
 
-      const { data: updatedConfig, error: updateError } = await supabase
+      const { data: updatedConfig, error: updateError } = (await supabase
         .from('form_field_configurations')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
-        .single();
+        .single()) as { data: any; error: any };
 
       if (updateError) {
         console.error('Error updating form field configuration:', updateError);
@@ -102,21 +102,21 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     // DELETE - Delete configuration (actually deactivate)
     if (req.method === 'DELETE') {
       // Get existing configuration to log deletion
-      const { data: existingConfig, error: fetchError } = await supabase
+      const { data: existingConfig, error: fetchError } = (await supabase
         .from('form_field_configurations')
         .select('*')
         .eq('id', id)
-        .single();
+        .single()) as { data: any; error: any };
 
       if (fetchError || !existingConfig) {
         return res.status(404).json({ error: 'Configuration not found' });
       }
 
       // Instead of deleting, deactivate it
-      const { error: deactivateError } = await supabase
+      const { error: deactivateError } = (await supabase
         .from('form_field_configurations')
-        .update({ is_active: false })
-        .eq('id', id);
+        .update({ is_active: false } as any)
+        .eq('id', id)) as { error: any };
 
       if (deactivateError) {
         console.error('Error deactivating form field configuration:', deactivateError);

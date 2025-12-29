@@ -10,7 +10,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
   }
 
   try {
-    const supabase = getServiceSupabase();
+    const supabase = getServiceSupabase() as any;
 
     // Get recent inspections with their SharePoint sync status
     const { data: inspections, error: inspectionsError } = await supabase
@@ -38,9 +38,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
     }
 
     // Count by status
-    const { data: statusCounts, error: countsError } = await supabase
+    const { data: statusCounts, error: countsError } = (await supabase
       .from('inspections')
-      .select('sharepoint_sync_status');
+      .select('sharepoint_sync_status')) as { data: any[] | null; error: any };
 
     if (countsError) {
       throw countsError;

@@ -166,6 +166,7 @@ async function validateAuthToken(token: string): Promise<User | null> {
       permissions: {
         canManageUsers: permissions.can_manage_users || false,
         canManageForms: permissions.can_manage_forms || false,
+        canManageSettings: permissions.can_manage_settings || false,
         canCreateInspections: permissions.can_create_inspections || false,
         canViewInspections: permissions.can_view_inspections || false,
         canReviewInspections: permissions.can_review_inspections || false,
@@ -229,6 +230,7 @@ export function getRolePermissions(role: UserRole): User['permissions'] {
         // Admin has ALL permissions
         canManageUsers: true,
         canManageForms: true,
+        canManageSettings: true,
         canCreateInspections: true,
         canViewInspections: true,
         canReviewInspections: true,
@@ -243,6 +245,7 @@ export function getRolePermissions(role: UserRole): User['permissions'] {
         // Admin permissions
         canManageUsers: false,
         canManageForms: false,
+        canManageSettings: false,
 
         // Inspector permissions - Conduct Inspections
         canCreateInspections: true,
@@ -263,6 +266,7 @@ export function getRolePermissions(role: UserRole): User['permissions'] {
         // Admin permissions
         canManageUsers: false,
         canManageForms: false,
+        canManageSettings: false,
 
         // Inspector permissions
         canCreateInspections: false,
@@ -283,6 +287,7 @@ export function getRolePermissions(role: UserRole): User['permissions'] {
         // Admin permissions
         canManageUsers: false,
         canManageForms: false,
+        canManageSettings: false,
 
         // Inspector permissions
         canCreateInspections: false,
@@ -303,6 +308,7 @@ export function getRolePermissions(role: UserRole): User['permissions'] {
       return {
         canManageUsers: false,
         canManageForms: false,
+        canManageSettings: false,
         canCreateInspections: false,
         canViewInspections: false,
         canReviewInspections: false,

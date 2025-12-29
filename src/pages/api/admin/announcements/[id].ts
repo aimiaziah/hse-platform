@@ -10,7 +10,7 @@ import { User } from '@/hooks/useAuth';
  * DELETE /api/admin/announcements/[id] - Delete announcement
  */
 async function handler(req: any, res: NextApiResponse, user: User) {
-  const supabase = getServiceSupabase();
+  const supabase = getServiceSupabase() as any;
   const { id } = req.query;
 
   if (!id || typeof id !== 'string') {
@@ -24,7 +24,7 @@ async function handler(req: any, res: NextApiResponse, user: User) {
         .from('announcements')
         .select('*')
         .eq('id', id)
-        .single();
+        .single() as { data: any; error: any };
 
       if (error || !announcement) {
         return res.status(404).json({ error: 'Announcement not found' });
@@ -41,11 +41,11 @@ async function handler(req: any, res: NextApiResponse, user: User) {
       const { title, body, is_published, is_pinned } = req.body;
 
       // Get existing announcement for audit trail
-      const { data: existingAnnouncement } = await supabase
+      const { data: existingAnnouncement } = (await supabase
         .from('announcements')
         .select('*')
         .eq('id', id)
-        .single();
+        .single()) as { data: any; error: any };
 
       if (!existingAnnouncement) {
         return res.status(404).json({ error: 'Announcement not found' });
@@ -74,12 +74,12 @@ async function handler(req: any, res: NextApiResponse, user: User) {
         updateData.is_pinned = is_pinned === true;
       }
 
-      const { data: announcement, error } = await supabase
+      const { data: announcement, error } = (await supabase
         .from('announcements')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
-        .single();
+        .single()) as { data: any; error: any };
 
       if (error) {
         console.error('Error updating announcement:', error);
@@ -107,11 +107,11 @@ async function handler(req: any, res: NextApiResponse, user: User) {
     // DELETE - Delete announcement
     if (req.method === 'DELETE') {
       // Get existing announcement for audit trail
-      const { data: existingAnnouncement } = await supabase
+      const { data: existingAnnouncement } = (await supabase
         .from('announcements')
         .select('*')
         .eq('id', id)
-        .single();
+        .single()) as { data: any; error: any };
 
       if (!existingAnnouncement) {
         return res.status(404).json({ error: 'Announcement not found' });

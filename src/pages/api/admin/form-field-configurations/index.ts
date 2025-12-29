@@ -9,7 +9,7 @@ import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
  * POST /api/admin/form-field-configurations - Create new field configuration
  */
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  const supabase = getServiceSupabase();
+  const supabase = getServiceSupabase() as any;
 
   try {
     // GET - Fetch configurations
@@ -79,12 +79,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
       // Deactivate existing field with same key if creating new active one
       if (is_active !== false) {
-        await supabase
+        (await supabase
           .from('form_field_configurations')
-          .update({ is_active: false })
+          .update({ is_active: false } as any)
           .eq('form_type', form_type)
           .eq('field_key', field_key)
-          .eq('is_active', true);
+          .eq('is_active', true)) as { error: any };
       }
 
       const insertData: any = {
@@ -106,11 +106,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       if (help_text !== undefined) insertData.help_text = help_text;
       if (validation_rules !== undefined) insertData.validation_rules = validation_rules;
 
-      const { data: config, error: createError } = await supabase
+      const { data: config, error: createError } = (await supabase
         .from('form_field_configurations')
         .insert(insertData)
         .select()
-        .single();
+        .single()) as { data: any; error: any };
 
       if (createError) {
         console.error('Error creating form field configuration:', createError);

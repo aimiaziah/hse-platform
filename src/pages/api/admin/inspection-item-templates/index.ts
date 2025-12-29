@@ -9,7 +9,7 @@ import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
  * POST /api/admin/inspection-item-templates - Create new template item
  */
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  const supabase = getServiceSupabase();
+  const supabase = getServiceSupabase() as any;
 
   try {
     // GET - Fetch templates
@@ -107,11 +107,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
         insertData.metadata = metadata;
       }
 
-      const { data: template, error: createError } = await supabase
+      const { data: template, error: createError } = (await supabase
         .from('inspection_item_templates')
         .insert(insertData)
         .select()
-        .single();
+        .single()) as { data: any; error: any };
 
       if (createError) {
         console.error('Error creating inspection item template:', createError);

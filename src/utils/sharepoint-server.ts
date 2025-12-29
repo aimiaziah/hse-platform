@@ -103,7 +103,7 @@ async function getAccessToken(): Promise<string> {
   cachedToken = data.access_token;
   tokenExpiry = Date.now() + (data.expires_in - 300) * 1000; // Refresh 5 minutes before expiry
 
-  return cachedToken;
+  return cachedToken as string;
 }
 
 /**

@@ -18,6 +18,7 @@ export interface User {
     // Admin permissions
     canManageUsers: boolean;
     canManageForms: boolean;
+    canManageSettings: boolean;
 
     // Inspector permissions
     canCreateInspections: boolean;
@@ -62,6 +63,7 @@ const defaultUsers: User[] = [
       // Admin permissions - Manage Users & Forms
       canManageUsers: true,
       canManageForms: true,
+      canManageSettings: true,
 
       // Inspector permissions
       canCreateInspections: true,
@@ -88,6 +90,7 @@ const defaultUsers: User[] = [
       // Admin permissions
       canManageUsers: false,
       canManageForms: false,
+      canManageSettings: false,
 
       // Inspector permissions - Conduct Inspections
       canCreateInspections: true,
@@ -114,6 +117,7 @@ const defaultUsers: User[] = [
       // Admin permissions
       canManageUsers: false,
       canManageForms: false,
+      canManageSettings: false,
 
       // Inspector permissions
       canCreateInspections: false,
@@ -140,6 +144,7 @@ const defaultUsers: User[] = [
       // Admin permissions
       canManageUsers: false,
       canManageForms: false,
+      canManageSettings: false,
 
       // Inspector permissions
       canCreateInspections: false,

@@ -3,7 +3,8 @@
 
 import { getServiceSupabase } from './supabase';
 import { cachedFetch, getCacheKey, CACHE_PREFIX, CACHE_TTL } from './cache';
-import { logger } from './logger';
+import { logger, type LogContext } from './logger';
+import { getRedisClient } from './redis';
 
 /**
  * Get job queue status with caching
@@ -145,7 +146,7 @@ export async function getCachedInspectionStats(startDate: string, endDate: strin
 
       // Aggregate in memory (less efficient but works)
       const stats = new Map();
-      data?.forEach((inspection) => {
+      (data as Array<{ inspection_type: string; status: string; created_at: string }>)?.forEach((inspection) => {
         const date = inspection.created_at.split('T')[0];
         const key = `${inspection.inspection_type}:${inspection.status}:${date}`;
 
@@ -158,12 +159,15 @@ export async function getCachedInspectionStats(startDate: string, endDate: strin
           });
         }
 
-        stats.get(key).count++;
+        const stat = stats.get(key);
+        if (stat) {
+          stat.count++;
+        }
       });
 
       return Array.from(stats.values());
     },
-    CACHE_TTL.ANALYTICS,
+    CACHE_TTL.ANALYTICS_DASHBOARD,
   );
 }
 
@@ -205,7 +209,7 @@ export async function getUserRecentInspections(userId: string, limit: number = 1
 export async function invalidateCache(pattern: string) {
   try {
     // If Redis is available, use it
-    const redis = (await import('./redis')).default;
+    const redis = getRedisClient();
     if (redis) {
       const keys = await redis.keys(`${pattern}*`);
       if (keys.length > 0) {
@@ -215,7 +219,7 @@ export async function invalidateCache(pattern: string) {
     }
   } catch (error) {
     // Redis not available or error - that's okay, cache will expire naturally
-    logger.warn('Cache invalidation skipped (Redis not available)', error);
+    logger.warn('Cache invalidation skipped (Redis not available)', error as LogContext);
   }
 }
 

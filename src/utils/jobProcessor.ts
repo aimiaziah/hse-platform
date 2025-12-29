@@ -66,7 +66,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
     const supabase = getServiceSupabase();
 
     // Get inspection details
-    const { data: inspection, error: inspectionError } = await supabase
+    const { data: inspection, error: inspectionError } = await (supabase as any)
       .from('inspections')
       .select('*')
       .eq('id', inspectionId)
@@ -127,7 +127,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
         );
 
         // Update inspection with SharePoint metadata
-        await supabase
+        await (supabase as any)
           .from('inspections')
           .update({
             sharepoint_file_id: result.fileId,
@@ -138,7 +138,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
           .eq('id', inspectionId);
 
         // Log success
-        await supabase.from('sharepoint_sync_log').insert({
+        await (supabase as any).from('sharepoint_sync_log').insert({
           inspection_id: inspectionId,
           sync_type: 'create',
           status: 'success',
@@ -181,7 +181,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
     console.log(`[SharePoint] Upload successful, updating database...`);
 
     // Update inspection with SharePoint metadata
-    await supabase
+    await (supabase as any)
       .from('inspections')
       .update({
         sharepoint_file_id: sharePointResult.fileId,
@@ -192,7 +192,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
       .eq('id', inspectionId);
 
     // Log success
-    await supabase.from('sharepoint_sync_log').insert({
+    await (supabase as any).from('sharepoint_sync_log').insert({
       inspection_id: inspectionId,
       sync_type: 'create',
       status: 'success',
@@ -213,7 +213,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
 
     // Update inspection sync status
     const supabase = getServiceSupabase();
-    const { error: updateError } = await supabase
+    const { error: updateError } = await (supabase as any)
       .from('inspections')
       .update({ sharepoint_sync_status: 'failed' })
       .eq('id', inspectionId);
@@ -223,7 +223,7 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
     }
 
     // Log failure
-    const { error: logError } = await supabase.from('sharepoint_sync_log').insert({
+    const { error: logError } = await (supabase as any).from('sharepoint_sync_log').insert({
       inspection_id: inspectionId,
       sync_type: 'create',
       status: 'failure',
@@ -253,7 +253,7 @@ export async function getNextJob(): Promise<Job | null> {
 
   // Get next job (highest priority, oldest first)
   // Get pending jobs first
-  let { data: jobs, error } = await supabase
+  let { data: jobs, error } = await (supabase as any)
     .from('job_queue')
     .select('*')
     .eq('status', 'pending')
@@ -269,12 +269,12 @@ export async function getNextJob(): Promise<Job | null> {
 
   // If no pending jobs, try failed jobs with retries remaining
   if (!jobs || jobs.length === 0) {
-    const result = await supabase.rpc('get_retryable_job');
+    const result = await (supabase as any).rpc('get_retryable_job');
 
     if (result.error) {
       console.error('[JobProcessor] Error fetching retryable jobs:', result.error);
       // Fallback: manually query failed jobs with retries
-      const { data: failedJobs, error: failedError } = await supabase
+      const { data: failedJobs, error: failedError } = await (supabase as any)
         .from('job_queue')
         .select('*')
         .eq('status', 'failed')
@@ -308,7 +308,7 @@ export async function getNextJob(): Promise<Job | null> {
 export async function markJobAsProcessing(jobId: string): Promise<boolean> {
   const supabase = getServiceSupabase();
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('job_queue')
     .update({
       status: 'processing',
@@ -330,7 +330,7 @@ export async function markJobAsProcessing(jobId: string): Promise<boolean> {
 export async function markJobAsCompleted(jobId: string, result?: any): Promise<boolean> {
   const supabase = getServiceSupabase();
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('job_queue')
     .update({
       status: 'completed',
@@ -359,7 +359,7 @@ export async function markJobAsFailed(
   const supabase = getServiceSupabase();
 
   // Increment retry count
-  const { data: job } = await supabase
+  const { data: job } = await (supabase as any)
     .from('job_queue')
     .select('retry_count, max_retries')
     .eq('id', jobId)
@@ -368,7 +368,7 @@ export async function markJobAsFailed(
   const retryCount = (job?.retry_count || 0) + 1;
   const maxRetries = job?.max_retries || 3;
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('job_queue')
     .update({
       status: 'failed',
@@ -452,7 +452,7 @@ export async function enqueueJob(
 ): Promise<string | null> {
   const supabase = getServiceSupabase();
 
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from('job_queue')
     .insert({
       job_type: jobType,

@@ -19,7 +19,7 @@ export async function uploadToSharePointWithUserToken(
   const supabase = getServiceSupabase();
 
   // Get user's Microsoft access token from database
-  const { data: user, error: userError } = await supabase
+  const { data: user, error: userError } = await (supabase as any)
     .from('users')
     .select('microsoft_access_token, microsoft_token_expires_at, microsoft_refresh_token')
     .eq('id', userId)
@@ -116,7 +116,7 @@ async function refreshMicrosoftToken(userId: string, refreshToken: string): Prom
 
   // Update user's tokens in database
   const supabase = getServiceSupabase();
-  await supabase
+  await (supabase as any)
     .from('users')
     .update({
       microsoft_access_token: data.access_token,
@@ -283,7 +283,7 @@ async function createFolderStructure(
 export async function canUserUploadToSharePoint(userId: string): Promise<boolean> {
   const supabase = getServiceSupabase();
 
-  const { data: user, error } = await supabase
+  const { data: user, error } = await (supabase as any)
     .from('users')
     .select('microsoft_access_token, microsoft_token_expires_at, microsoft_refresh_token')
     .eq('id', userId)

@@ -9,7 +9,7 @@ import { getServiceSupabase, logAuditTrail } from '@/lib/supabase';
  * DELETE /api/admin/inspection-item-templates/[id] - Delete template
  */
 async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
-  const supabase = getServiceSupabase();
+  const supabase = getServiceSupabase() as any;
   const { id } = req.query;
 
   if (!id || typeof id !== 'string') {
@@ -36,11 +36,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       } = req.body;
 
       // Get existing template to log changes
-      const { data: existingTemplate, error: fetchError } = await supabase
+      const { data: existingTemplate, error: fetchError } = (await supabase
         .from('inspection_item_templates')
         .select('*')
         .eq('id', id)
-        .single();
+        .single()) as { data: any; error: any };
 
       if (fetchError || !existingTemplate) {
         return res.status(404).json({ error: 'Template not found' });
@@ -63,12 +63,12 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       if (is_active !== undefined) updateData.is_active = is_active;
       if (metadata !== undefined) updateData.metadata = metadata;
 
-      const { data: updatedTemplate, error: updateError } = await supabase
+      const { data: updatedTemplate, error: updateError } = (await supabase
         .from('inspection_item_templates')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
-        .single();
+        .single()) as { data: any; error: any };
 
       if (updateError) {
         console.error('Error updating inspection item template:', updateError);
@@ -102,11 +102,11 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     // DELETE - Delete template
     if (req.method === 'DELETE') {
       // Get existing template to log deletion
-      const { data: existingTemplate, error: fetchError } = await supabase
+      const { data: existingTemplate, error: fetchError } = (await supabase
         .from('inspection_item_templates')
         .select('*')
         .eq('id', id)
-        .single();
+        .single()) as { data: any; error: any };
 
       if (fetchError || !existingTemplate) {
         return res.status(404).json({ error: 'Template not found' });
