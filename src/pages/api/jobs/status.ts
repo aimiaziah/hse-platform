@@ -50,7 +50,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
       .select('id, retry_count, max_retries')
       .eq('status', 'failed');
 
-    const retriableFailedCount = failedJobs?.filter((j) => j.retry_count < j.max_retries).length || 0;
+    const retriableFailedCount =
+      failedJobs?.filter((j) => j.retry_count < j.max_retries).length || 0;
 
     // Get processing jobs (stuck jobs check)
     const { data: processingJobs } = await supabase
@@ -58,13 +59,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse, user: User) {
       .select('id, started_at')
       .eq('status', 'processing');
 
-    const stuckJobs = processingJobs?.filter((j) => {
-      if (!j.started_at) return false;
-      const startTime = new Date(j.started_at);
-      const now = new Date();
-      const minutesElapsed = (now.getTime() - startTime.getTime()) / (1000 * 60);
-      return minutesElapsed > 30; // Consider stuck if processing for more than 30 minutes
-    }) || [];
+    const stuckJobs =
+      processingJobs?.filter((j) => {
+        if (!j.started_at) return false;
+        const startTime = new Date(j.started_at);
+        const now = new Date();
+        const minutesElapsed = (now.getTime() - startTime.getTime()) / (1000 * 60);
+        return minutesElapsed > 30; // Consider stuck if processing for more than 30 minutes
+      }) || [];
 
     return res.status(200).json({
       success: true,

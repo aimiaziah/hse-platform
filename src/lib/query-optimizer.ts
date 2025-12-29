@@ -39,11 +39,7 @@ export async function getCachedJobQueueStatus() {
           .eq('status', 'failed'),
 
         // Get recent jobs (limited to 10)
-        supabase
-          .from('job_queue')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10),
+        supabase.from('job_queue').select('*').order('created_at', { ascending: false }).limit(10),
       ]);
 
       return {
@@ -102,10 +98,7 @@ export async function batchFetchInspections(inspectionIds: string[]) {
 
   const supabase = getServiceSupabase();
 
-  const { data, error } = await supabase
-    .from('inspections')
-    .select('*')
-    .in('id', inspectionIds);
+  const { data, error } = await supabase.from('inspections').select('*').in('id', inspectionIds);
 
   if (error) {
     logger.error('Error batch fetching inspections', error);
@@ -278,4 +271,3 @@ export default {
   invalidateJobQueueCaches,
   warmUpCache,
 };
-

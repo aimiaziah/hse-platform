@@ -76,24 +76,20 @@ export function getPooledServiceClient(): SupabaseClient<Database> {
       );
     }
 
-    serviceClientPool = createClient<Database>(
-      env.NEXT_PUBLIC_SUPABASE_URL,
-      supabaseServiceKey,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-        global: {
-          headers: {
-            'x-application-name': 'pwa-inspection-platform-admin',
-          },
-        },
-        db: {
-          schema: 'public',
+    serviceClientPool = createClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          'x-application-name': 'pwa-inspection-platform-admin',
         },
       },
-    );
+      db: {
+        schema: 'public',
+      },
+    });
   }
 
   return serviceClientPool;
@@ -103,9 +99,7 @@ export function getPooledServiceClient(): SupabaseClient<Database> {
  * Batch query helper - Execute multiple queries in a single transaction
  * Reduces Disk IO by batching operations
  */
-export async function batchQuery<T>(
-  queries: Array<() => Promise<T>>,
-): Promise<Array<T | Error>> {
+export async function batchQuery<T>(queries: Array<() => Promise<T>>): Promise<Array<T | Error>> {
   const results: Array<T | Error> = [];
 
   for (const query of queries) {
@@ -193,4 +187,3 @@ export default {
   resetPools,
   checkDatabaseHealth,
 };
-

@@ -208,9 +208,7 @@ const JobQueuePage: React.FC = () => {
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-800 mb-1">
-                    Automatic Job Processing
-                  </p>
+                  <p className="text-sm font-medium text-blue-800 mb-1">Automatic Job Processing</p>
                   <p className="text-sm text-gray-700">
                     Jobs are processed automatically when forms are submitted. You can also manually
                     trigger processing using the &quot;Process Jobs Now&quot; button above.
@@ -227,9 +225,7 @@ const JobQueuePage: React.FC = () => {
             {/* Recent Jobs Table */}
             <div className="bg-white rounded-lg shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800">
-                  Recent Jobs (Last 24 Hours)
-                </h2>
+                <h2 className="text-lg font-semibold text-gray-800">Recent Jobs (Last 24 Hours)</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">

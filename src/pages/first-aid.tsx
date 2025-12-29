@@ -320,7 +320,7 @@ const FirstAidInspection: React.FC = () => {
                 ...kit,
                 items: kit.items.map((item) => ({
                   ...item,
-                  status: allMarkedOK ? null : ('✓' as RatingType)
+                  status: allMarkedOK ? null : ('✓' as RatingType),
                 })),
               }
             : kit,

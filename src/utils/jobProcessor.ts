@@ -94,15 +94,37 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
         // Determine folder path
         const baseFolder = process.env.SHAREPOINT_BASE_FOLDER || 'HSE/New Document';
         const date = new Date(inspection.inspection_date);
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        const folderPath = `${baseFolder}/${formType}/${date.getFullYear()}/${monthNames[date.getMonth()]}`;
+        const monthNames = [
+          'January',
+          'February',
+          'March',
+          'April',
+          'May',
+          'June',
+          'July',
+          'August',
+          'September',
+          'October',
+          'November',
+          'December',
+        ];
+        const folderPath = `${baseFolder}/${formType}/${date.getFullYear()}/${
+          monthNames[date.getMonth()]
+        }`;
 
         // Generate filename
         const monthYear = `${monthNames[date.getMonth()]}_${date.getFullYear()}`;
-        const fileName = `${formType}_${monthYear}_${inspection.inspection_number || inspectionId}.xlsx`;
+        const fileName = `${formType}_${monthYear}_${
+          inspection.inspection_number || inspectionId
+        }.xlsx`;
 
         // Upload using user's delegated token
-        const result = await uploadToSharePointWithUserToken(userId, excelBlob, fileName, folderPath);
+        const result = await uploadToSharePointWithUserToken(
+          userId,
+          excelBlob,
+          fileName,
+          folderPath,
+        );
 
         // Update inspection with SharePoint metadata
         await supabase
@@ -134,7 +156,9 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
           },
         };
       } catch (delegatedError: any) {
-        console.warn(`⚠️ [SharePoint] Delegated upload failed, falling back to app-only: ${delegatedError.message}`);
+        console.warn(
+          `⚠️ [SharePoint] Delegated upload failed, falling back to app-only: ${delegatedError.message}`,
+        );
         // Fall through to app-only upload
       }
     }
@@ -199,18 +223,16 @@ async function processSharePointExport(job: Job): Promise<JobResult> {
     }
 
     // Log failure
-    const { error: logError } = await supabase
-      .from('sharepoint_sync_log')
-      .insert({
-        inspection_id: inspectionId,
-        sync_type: 'create',
-        status: 'failure',
-        error_message: error?.message || 'Unknown error',
-        metadata: {
-          error: error?.message,
-          stack: error?.stack?.substring(0, 500),
-        },
-      });
+    const { error: logError } = await supabase.from('sharepoint_sync_log').insert({
+      inspection_id: inspectionId,
+      sync_type: 'create',
+      status: 'failure',
+      error_message: error?.message || 'Unknown error',
+      metadata: {
+        error: error?.message,
+        stack: error?.stack?.substring(0, 500),
+      },
+    });
 
     if (logError) {
       console.error('[SharePoint] Failed to log error:', logError);

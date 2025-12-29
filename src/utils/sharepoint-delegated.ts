@@ -62,7 +62,14 @@ export async function uploadToSharePointWithUserToken(
   }
 
   // Upload to SharePoint using user's token
-  return await uploadFileToSharePoint(accessToken, siteUrl, libraryName, file, fileName, folderPath);
+  return await uploadFileToSharePoint(
+    accessToken,
+    siteUrl,
+    libraryName,
+    file,
+    fileName,
+    folderPath,
+  );
 }
 
 /**
