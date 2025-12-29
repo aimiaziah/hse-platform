@@ -249,143 +249,109 @@ async function createInspection(req: NextApiRequest, res: NextApiResponse, user:
       newValues: inspectionData,
     });
 
-    // [NEW] Automatically export to SharePoint if status is pending_review
-    // This runs asynchronously (fire-and-forget) to avoid blocking the response
+    // Enqueue and immediately process SharePoint export job (non-blocking)
     if (inspectionStatus === 'pending_review') {
-      // Fire and forget - don't await this
+      // Fire and forget - don't await to avoid blocking the response
       (async () => {
         try {
-          console.log(`[SharePoint] Starting export for inspection ${newInspection.id}...`);
+          const { enqueueJob, processQueue } = await import('@/utils/jobProcessor');
 
-          // Import SharePoint functions
-          const { generateInspectionExcel } = await import('@/utils/inspectionExcelExporter');
-          const { uploadInspectionToSharePoint, formatStatusForSharePoint } = await import(
-            '@/utils/powerAutomate'
+          const jobId = await enqueueJob(
+            'sharepoint_export',
+            {
+              inspectionId: newInspection.id,
+              formType,
+              formData: data,
+              userId: user.id, // Pass user ID for delegated token upload
+              metadata: {
+                inspectionNumber: newInspection.inspection_number || 'DRAFT',
+                inspectorName: actualInspectorName,
+                inspectionDate: newInspection.inspection_date,
+              },
+            },
+            {
+              priority: 10, // High priority for new submissions
+              maxRetries: 3,
+            },
           );
 
-          console.log(`[SharePoint] Generating Excel for ${formType}...`);
-
-          // Generate Excel
-          const excelBlob = await generateInspectionExcel(formType as any, data, {
-            inspectionNumber: newInspection.inspection_number || 'DRAFT',
-            inspectorName: actualInspectorName,
-            inspectionDate: newInspection.inspection_date,
-            status: formatStatusForSharePoint('pending_review', actualInspectorName),
-          });
-
-          console.log(`[SharePoint] Excel generated (${excelBlob.size} bytes), uploading...`);
-
-          // Upload to SharePoint
-          const sharePointResult = await uploadInspectionToSharePoint(newInspection, excelBlob);
-
-          console.log(`[SharePoint] Upload successful, updating database...`);
-
-          // Update tracking
-          await supabase
-            .from('inspections')
-            .update({
-              sharepoint_file_id: sharePointResult.fileId,
-              sharepoint_file_url: sharePointResult.fileUrl,
-              sharepoint_exported_at: new Date().toISOString(),
-              sharepoint_sync_status: 'synced',
-            })
-            .eq('id', newInspection.id);
-
-          // Log success
-          await supabase.from('sharepoint_sync_log').insert({
-            inspection_id: newInspection.id,
-            sync_type: 'create',
-            status: 'success',
-            metadata: { fileId: sharePointResult.fileId, fileUrl: sharePointResult.fileUrl },
-          });
-
-          console.log(`✅ [SharePoint] Export complete: ${sharePointResult.fileUrl}`);
-        } catch (exportError: any) {
-          // Don't fail inspection creation - just log error
-          console.error(
-            `❌ [SharePoint] Export failed for inspection ${newInspection.id}:`,
-            exportError,
-          );
-          console.error(`[SharePoint] Error details:`, {
-            message: exportError?.message,
-            stack: exportError?.stack,
-            cause: exportError?.cause,
-          });
-
-          try {
+          if (jobId) {
+            // Mark inspection as pending export
             await supabase
               .from('inspections')
-              .update({ sharepoint_sync_status: 'failed' })
+              .update({ sharepoint_sync_status: 'pending' })
               .eq('id', newInspection.id);
 
-            await supabase.from('sharepoint_sync_log').insert({
-              inspection_id: newInspection.id,
-              sync_type: 'create',
-              status: 'failure',
-              error_message: exportError?.message || 'Unknown error',
-              metadata: {
-                error: exportError?.message,
-                stack: exportError?.stack?.substring(0, 500), // Limit stack trace length
-              },
+            console.log(`✅ [SharePoint] Export job enqueued: ${jobId}`);
+
+            // Immediately process the job queue (non-blocking)
+            processQueue(1).catch((err) => {
+              console.error('[SharePoint] Error processing job queue:', err);
             });
-          } catch (logError) {
-            console.error(`[SharePoint] Failed to log error:`, logError);
+          } else {
+            console.error(`❌ [SharePoint] Failed to enqueue export job`);
           }
+        } catch (error) {
+          console.error('[SharePoint] Error enqueueing job:', error);
+          // Don't fail the inspection creation if job enqueueing fails
         }
       })();
     }
 
-    // Send push notification to assigned supervisor (if status is pending_review)
+    // Send push notification to assigned supervisor (non-blocking)
     if (inspectionStatus === 'pending_review' && assignedSupervisorId) {
-      try {
-        // Get supervisor details
-        const { data: supervisor } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', assignedSupervisorId)
-          .single();
+      // Fire and forget - don't await to avoid blocking the response
+      (async () => {
+        try {
+          // Get supervisor details
+          const { data: supervisor } = await supabase
+            .from('users')
+            .select('name')
+            .eq('id', assignedSupervisorId)
+            .single();
 
-        // Send notification (fire and forget - don't wait for it)
-        fetch(
-          `${
-            process.env.NEXT_PUBLIC_BASE_URL ||
-            'https://hse-platform-j2zac.ondigitalocean.app/login'
-          }/api/notifications/send`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              // Forward auth token from original request
-              Cookie: req.headers.cookie || '',
-            },
-            body: JSON.stringify({
-              userId: assignedSupervisorId,
-              notificationType: 'inspection_assigned',
-              title: 'New Inspection Assigned',
-              body: `${actualInspectorName} submitted a ${formatInspectionType(
-                formType,
-              )} inspection for your review.`,
-              data: {
-                inspectionId: newInspection.id,
-                inspectionType: formType,
-                inspectorName: actualInspectorName,
-                url: `/supervisor/review/${newInspection.id}`,
+          // Send notification (fire and forget - don't wait for it)
+          fetch(
+            `${
+              process.env.NEXT_PUBLIC_BASE_URL ||
+              'https://hse-platform-j2zac.ondigitalocean.app/login'
+            }/api/notifications/send`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                // Forward auth token from original request
+                Cookie: req.headers.cookie || '',
               },
-              inspectionId: newInspection.id,
-            }),
-          },
-        ).catch((err) => {
-          console.error('Failed to send push notification:', err);
-          // Don't fail the inspection creation if notification fails
-        });
+              body: JSON.stringify({
+                userId: assignedSupervisorId,
+                notificationType: 'inspection_assigned',
+                title: 'New Inspection Assigned',
+                body: `${actualInspectorName} submitted a ${formatInspectionType(
+                  formType,
+                )} inspection for your review.`,
+                data: {
+                  inspectionId: newInspection.id,
+                  inspectionType: formType,
+                  inspectorName: actualInspectorName,
+                  url: `/supervisor/review/${newInspection.id}`,
+                },
+                inspectionId: newInspection.id,
+              }),
+            },
+          ).catch((err) => {
+            console.error('Failed to send push notification:', err);
+            // Don't fail the inspection creation if notification fails
+          });
 
-        console.log(
-          `📬 Notification queued for supervisor: ${supervisor?.name || assignedSupervisorId}`,
-        );
-      } catch (notificationError) {
-        console.error('Error sending notification:', notificationError);
-        // Don't fail the inspection creation if notification fails
-      }
+          console.log(
+            `📬 Notification queued for supervisor: ${supervisor?.name || assignedSupervisorId}`,
+          );
+        } catch (notificationError) {
+          console.error('Error sending notification:', notificationError);
+          // Don't fail the inspection creation if notification fails
+        }
+      })();
     }
 
     return res.status(201).json({

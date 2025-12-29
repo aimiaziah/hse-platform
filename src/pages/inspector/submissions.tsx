@@ -6,9 +6,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import ProtectedRoute from '@/shared/components/ProtectedRoute';
 import InspectorLayout from '@/roles/inspector/layouts/InspectorLayout';
-import { storage } from '@/utils/storage';
 import { useAuth } from '@/hooks/useAuth';
-import { Trash2, FileText, Calendar } from 'lucide-react';
+import { Trash2, FileText, Calendar, Loader2 } from 'lucide-react';
 
 interface Submission {
   id: string;
@@ -24,111 +23,72 @@ const InspectorSubmissions: React.FC = () => {
   const router = useRouter();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [filter, setFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadSubmissions();
   }, [user]);
 
-  const loadSubmissions = () => {
+  const loadSubmissions = async () => {
     if (!user) return;
 
     try {
-      const allSubmissions: Submission[] = [];
+      setLoading(true);
 
-      // Fire Extinguisher Inspections
-      const fireInspections = storage.load<any[]>('fire_extinguisher_inspections', []);
-      fireInspections
-        .filter((i: any) => i.inspectorId === user.id || i.inspectedBy === user.name)
-        .forEach((i: any) => {
-          allSubmissions.push({
-            id: i.id,
-            type: 'fire_extinguisher_inspections',
-            formName: 'Fire Extinguisher',
-            createdAt: i.createdAt,
-            location: i.location,
-            status: i.status,
-          });
-        });
+      // Fetch from Supabase API
+      const response = await fetch('/api/inspections?limit=100');
+      if (!response.ok) {
+        throw new Error('Failed to fetch submissions');
+      }
 
-      // First Aid Inspections
-      const firstAidInspections = storage.load<any[]>('first_aid_inspections', []);
-      firstAidInspections
-        .filter((i: any) => i.inspectorId === user.id || i.inspectedBy === user.name)
-        .forEach((i: any) => {
-          allSubmissions.push({
-            id: i.id,
-            type: 'first_aid_inspections',
-            formName: 'First Aid Items',
-            createdAt: i.createdAt,
-            location: i.location,
-            status: i.status,
-          });
-        });
+      const data = await response.json();
+      const inspections = data.inspections || [];
 
-      // Manhours Reports
-      const manhoursReports = storage.load<any[]>('manhours_reports', []);
-      manhoursReports
-        .filter((i: any) => i.inspectorId === user.id || i.inspectedBy === user.name)
-        .forEach((i: any) => {
-          allSubmissions.push({
-            id: i.id,
-            type: 'manhours_reports',
-            formName: 'Monthly Safety & Health Man-hours Report',
-            createdAt: i.createdAt,
-          });
-        });
+      // Map inspection types to form names
+      const typeMap: Record<string, string> = {
+        fire_extinguisher: 'Fire Extinguisher',
+        first_aid: 'First Aid Items',
+        manhours: 'Monthly Safety & Health Man-hours Report',
+        hse_general: 'Health, Safety & Environment (HSE) Inspection',
+        hse_observation: 'Observation Form',
+      };
 
-      // HSE Inspections
-      const hseInspections = storage.load<any[]>('hse_inspections', []);
-      hseInspections
-        .filter((i: any) => i.inspectorId === user.id || i.inspectedBy === user.name)
-        .forEach((i: any) => {
-          allSubmissions.push({
-            id: i.id,
-            type: 'hse_inspections',
-            formName: 'Health, Safety & Environment (HSE) Inspection',
-            createdAt: i.createdAt,
-            location: i.location,
-            status: i.status,
-          });
-        });
-
-      // HSE Observations
-      const hseObservations = storage.load<any[]>('hse_observations', []);
-      hseObservations
-        .filter((i: any) => i.inspectorId === user.id || i.inspectedBy === user.name)
-        .forEach((i: any) => {
-          allSubmissions.push({
-            id: i.id,
-            type: 'hse_observations',
-            formName: 'Observation Form',
-            createdAt: i.createdAt,
-            location: i.location,
-          });
-        });
-
-      // Sort by date (newest first)
-      allSubmissions.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
+      // Transform to submissions format
+      const allSubmissions: Submission[] = inspections.map((inspection: any) => ({
+        id: inspection.id,
+        type: inspection.inspection_type,
+        formName: typeMap[inspection.inspection_type] || inspection.inspection_type,
+        createdAt: inspection.created_at,
+        location: inspection.form_data?.location || null,
+        status: inspection.status,
+      }));
 
       setSubmissions(allSubmissions);
     } catch (error) {
       console.error('Error loading submissions:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = (submission: Submission) => {
+  const handleDelete = async (submission: Submission) => {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete this ${submission.formName} submission?\n\nThis action cannot be undone.`,
     );
     if (!confirmDelete) return;
 
     try {
-      const inspections = storage.load<any[]>(submission.type, []);
-      const filteredInspections = inspections.filter((i: any) => i.id !== submission.id);
-      storage.save(submission.type, filteredInspections);
-      loadSubmissions();
+      const response = await fetch(`/api/inspections/${submission.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete submission');
+      }
+
+      // Reload submissions after successful delete
+      await loadSubmissions();
+      alert('Submission deleted successfully');
     } catch (error) {
       console.error('Error deleting submission:', error);
       alert('Failed to delete submission. Please try again.');
@@ -178,9 +138,9 @@ const InspectorSubmissions: React.FC = () => {
                 All Forms
               </button>
               <button
-                onClick={() => setFilter('fire_extinguisher_inspections')}
+                onClick={() => setFilter('fire_extinguisher')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  filter === 'fire_extinguisher_inspections'
+                  filter === 'fire_extinguisher'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -188,9 +148,9 @@ const InspectorSubmissions: React.FC = () => {
                 Fire Extinguisher
               </button>
               <button
-                onClick={() => setFilter('first_aid_inspections')}
+                onClick={() => setFilter('first_aid')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  filter === 'first_aid_inspections'
+                  filter === 'first_aid'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -198,9 +158,9 @@ const InspectorSubmissions: React.FC = () => {
                 First Aid
               </button>
               <button
-                onClick={() => setFilter('manhours_reports')}
+                onClick={() => setFilter('manhours')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  filter === 'manhours_reports'
+                  filter === 'manhours'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -208,9 +168,9 @@ const InspectorSubmissions: React.FC = () => {
                 Manhours
               </button>
               <button
-                onClick={() => setFilter('hse_inspections')}
+                onClick={() => setFilter('hse_general')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  filter === 'hse_inspections'
+                  filter === 'hse_general'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -218,9 +178,9 @@ const InspectorSubmissions: React.FC = () => {
                 HSE Inspection
               </button>
               <button
-                onClick={() => setFilter('hse_observations')}
+                onClick={() => setFilter('hse_observation')}
                 className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  filter === 'hse_observations'
+                  filter === 'hse_observation'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -231,7 +191,12 @@ const InspectorSubmissions: React.FC = () => {
           </div>
 
           {/* Submissions List */}
-          {filteredSubmissions.length === 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <Loader2 className="mx-auto h-12 w-12 text-blue-600 mb-3 animate-spin" />
+              <p className="text-gray-500 text-sm">Loading submissions...</p>
+            </div>
+          ) : filteredSubmissions.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm p-8 text-center">
               <FileText className="mx-auto h-12 w-12 text-gray-300 mb-3" />
               <p className="text-gray-500 text-sm">No submissions found</p>

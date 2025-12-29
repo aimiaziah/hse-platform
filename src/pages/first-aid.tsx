@@ -106,10 +106,24 @@ const FirstAidInspection: React.FC = () => {
   const [firstAidItemsList, setFirstAidItemsList] = useState<string[]>(FIRST_AID_ITEMS);
   const [firstAidKitsList, setFirstAidKitsList] = useState(INITIAL_KITS_DATA);
 
-  const loadPreviousInspectionData = () => {
+  const loadPreviousInspectionData = async () => {
     try {
-      const history = JSON.parse(localStorage.getItem('first-aid-history') || '[]');
-      return history.length > 0 ? history[history.length - 1] : null;
+      // Fetch the most recent first aid inspection from Supabase
+      const response = await fetch('/api/inspections?formType=first_aid&limit=1');
+      if (!response.ok) {
+        console.error('Failed to fetch previous inspection');
+        return null;
+      }
+
+      const data = await response.json();
+      const inspections = data.inspections || [];
+
+      if (inspections.length > 0) {
+        const latestInspection = inspections[0];
+        return latestInspection.form_data;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error loading previous inspection:', error);
       return null;
@@ -117,7 +131,6 @@ const FirstAidInspection: React.FC = () => {
   };
 
   const [inspectionData, setInspectionData] = useState<InspectionData>(() => {
-    const previousInspection = typeof window !== 'undefined' ? loadPreviousInspectionData() : null;
     return {
       id: Date.now().toString(),
       inspectedBy: user?.name || '',
@@ -126,18 +139,14 @@ const FirstAidInspection: React.FC = () => {
       signature: '',
       status: 'draft',
       kits: INITIAL_KITS_DATA.map((kit) => {
-        const previousKit = previousInspection?.kitInspections?.find(
-          (pk: any) => pk.modelNo === kit.modelNo && pk.location === kit.location,
-        );
         return {
           ...kit,
-          items: createInitialItems().map((item, idx) => {
-            const previousItem = previousKit?.items?.[idx];
+          items: createInitialItems().map((item) => {
             return {
               ...item,
-              previousQuantity: previousItem?.quantity || '',
-              expiryDateOption: previousItem?.expiryDateOption || 'NA',
-              expiryDate: previousItem?.expiryDate || '',
+              previousQuantity: '',
+              expiryDateOption: 'NA' as 'NA' | 'date',
+              expiryDate: '',
             };
           }),
           remarks: '',
@@ -198,32 +207,36 @@ const FirstAidInspection: React.FC = () => {
   useEffect(() => {
     if (loadingTemplates) return;
 
-    const previousInspection = typeof window !== 'undefined' ? loadPreviousInspectionData() : null;
+    const loadAndUpdateData = async () => {
+      const previousInspection = await loadPreviousInspectionData();
 
-    setInspectionData((prev) => ({
-      ...prev,
-      kits: firstAidKitsList.map((kit) => {
-        const previousKit = previousInspection?.kitInspections?.find(
-          (pk: any) => pk.modelNo === kit.modelNo && pk.location === kit.location,
-        );
-        return {
-          ...kit,
-          items: firstAidItemsList.map((name, idx) => {
-            const previousItem = previousKit?.items?.[idx];
-            return {
-              id: `item${idx + 1}`,
-              name,
-              expiryDateOption: (previousItem?.expiryDateOption || 'NA') as 'NA' | 'date',
-              expiryDate: previousItem?.expiryDate || '',
-              quantity: '',
-              previousQuantity: previousItem?.quantity || '',
-              status: null,
-            };
-          }),
-          remarks: '',
-        };
-      }),
-    }));
+      setInspectionData((prev) => ({
+        ...prev,
+        kits: firstAidKitsList.map((kit) => {
+          const previousKit = previousInspection?.kitInspections?.find(
+            (pk: any) => pk.modelNo === kit.modelNo && pk.location === kit.location,
+          );
+          return {
+            ...kit,
+            items: firstAidItemsList.map((name, idx) => {
+              const previousItem = previousKit?.items?.[idx];
+              return {
+                id: `item${idx + 1}`,
+                name,
+                expiryDateOption: (previousItem?.expiryDateOption || 'NA') as 'NA' | 'date',
+                expiryDate: previousItem?.expiryDate || '',
+                quantity: '',
+                previousQuantity: previousItem?.quantity || '',
+                status: null,
+              };
+            }),
+            remarks: '',
+          };
+        }),
+      }));
+    };
+
+    loadAndUpdateData();
   }, [firstAidItemsList, firstAidKitsList, loadingTemplates]);
 
   // Load existing draft if available
@@ -292,6 +305,28 @@ const FirstAidInspection: React.FC = () => {
       ...prev,
       kits: prev.kits.map((kit, idx) => (idx === kitIndex ? { ...kit, remarks } : kit)),
     }));
+  };
+
+  const autoTickAllItems = (kitIndex: number) => {
+    setInspectionData((prev) => {
+      const currentKit = prev.kits[kitIndex];
+      const allMarkedOK = currentKit.items.every((item) => item.status === '✓');
+
+      return {
+        ...prev,
+        kits: prev.kits.map((kit, idx) =>
+          idx === kitIndex
+            ? {
+                ...kit,
+                items: kit.items.map((item) => ({
+                  ...item,
+                  status: allMarkedOK ? null : ('✓' as RatingType)
+                })),
+              }
+            : kit,
+        ),
+      };
+    });
   };
 
   const checkItemExpiryDate = (expiryDate: string) => {
@@ -443,7 +478,8 @@ const FirstAidInspection: React.FC = () => {
           errorMessage = `Error: ${error.message}\n\nYour data is saved as a draft. If the problem persists, contact support.`;
         }
       } else {
-        errorMessage = 'An unknown error occurred.\n\nYour data is saved as a draft. Please try again.';
+        errorMessage =
+          'An unknown error occurred.\n\nYour data is saved as a draft. Please try again.';
       }
 
       alert(`${errorTitle}\n\n${errorMessage}`);
@@ -760,14 +796,22 @@ const FirstAidInspection: React.FC = () => {
                       </div>
                       {isExpanded && (
                         <div className="p-4 space-y-3">
-                          <button
-                            onClick={() => startPhotoCapture(kitIndex)}
-                            className="w-full rounded-md bg-blue-600 text-white py-2 px-4 font-medium hover:bg-blue-700 transition-all"
-                          >
-                            {kit.capturedImages && kit.capturedImages.length > 0
-                              ? 'Add More Photos'
-                              : 'Capture Photos'}
-                          </button>
+                          <div className="flex gap-2 mb-4">
+                            <button
+                              onClick={() => startPhotoCapture(kitIndex)}
+                              className="flex-1 bg-white border border-gray-300 text-gray-700 rounded-md py-2 px-3 text-xs font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
+                            >
+                              {kit.capturedImages && kit.capturedImages.length > 0
+                                ? 'Add Photos'
+                                : 'Capture Photos'}
+                            </button>
+                            <button
+                              onClick={() => autoTickAllItems(kitIndex)}
+                              className="flex-1 bg-green-600 text-white rounded-md py-2 px-3 text-xs font-medium hover:bg-green-700 transition-colors shadow-sm"
+                            >
+                              Mark All OK
+                            </button>
+                          </div>
                           {kit.capturedImages && kit.capturedImages.length > 0 && (
                             <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
                               <p className="text-xs text-blue-800 font-medium mb-3">

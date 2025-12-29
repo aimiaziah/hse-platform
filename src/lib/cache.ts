@@ -6,27 +6,33 @@ import { logger } from './logger';
  * Cache TTL (Time To Live) configurations in seconds
  */
 export const CACHE_TTL = {
-  // User data - 5 minutes (frequently updated)
-  USER_PROFILE: 5 * 60,
-  USER_PERMISSIONS: 5 * 60,
+  // User data - 10 minutes (increased to reduce DB queries)
+  USER_PROFILE: 10 * 60,
+  USER_PERMISSIONS: 10 * 60,
 
   // Reference data - 1 hour (rarely changes)
   LOCATIONS: 60 * 60,
   FORM_TEMPLATES: 60 * 60,
   ASSETS: 30 * 60,
 
-  // Analytics - 15 minutes (can be slightly stale)
-  ANALYTICS_DASHBOARD: 15 * 60,
+  // Analytics - 20 minutes (increased - can be slightly stale)
+  ANALYTICS_DASHBOARD: 20 * 60,
   ANALYTICS_SUMMARY: 30 * 60,
 
-  // Audit logs - 2 minutes (for dashboards)
-  AUDIT_LOGS: 2 * 60,
-  SECURITY_LOGS: 2 * 60,
+  // Audit logs - 5 minutes (increased to reduce queries)
+  AUDIT_LOGS: 5 * 60,
+  SECURITY_LOGS: 5 * 60,
 
   // Inspections - 5 minutes (moderate updates)
   INSPECTION_DETAILS: 5 * 60,
-  INSPECTION_LIST: 3 * 60,
-  PENDING_INSPECTIONS: 2 * 60,
+  INSPECTION_LIST: 5 * 60,
+  PENDING_INSPECTIONS: 3 * 60,
+
+  // Job queue - 1 minute (new - cache job queue queries)
+  JOB_QUEUE_STATUS: 1 * 60,
+
+  // Announcements - 10 minutes (new)
+  ANNOUNCEMENTS: 10 * 60,
 
   // Short-lived cache - 1 minute
   SHORT: 60,
@@ -52,6 +58,9 @@ export const CACHE_PREFIX = {
   ANALYTICS: 'analytics',
   AUDIT_LOGS: 'audit_logs',
   SECURITY_LOGS: 'security_logs',
+  JOB_QUEUE: 'job_queue', // New - cache job queue queries
+  ANNOUNCEMENTS: 'announcements', // New - cache announcements
+  HEALTH_CHECK: 'health', // New - cache health checks
 };
 
 /**

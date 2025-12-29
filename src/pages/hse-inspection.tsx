@@ -1146,7 +1146,10 @@ const HSEInspectionForm = () => {
                         errorTitle = '⏱️ Request Timeout';
                         errorMessage =
                           'The submission is taking too long. This might be due to:\n\n• Slow internet connection\n• Server processing delays\n• Large observation photos\n\nYour data is saved locally. Please try again.';
-                      } else if (error.message.includes('fetch') || error.message.includes('network')) {
+                      } else if (
+                        error.message.includes('fetch') ||
+                        error.message.includes('network')
+                      ) {
                         errorTitle = '🌐 Network Error';
                         errorMessage =
                           'Unable to reach the server. Please check:\n\n• Your internet connection\n• VPN or firewall settings\n• Server availability\n\nYour data is saved locally.';
@@ -1154,7 +1157,8 @@ const HSEInspectionForm = () => {
                         errorMessage = `Error: ${error.message}\n\nYour data is saved locally. If the problem persists, contact support.`;
                       }
                     } else {
-                      errorMessage = 'An unknown error occurred.\n\nYour data is saved locally. Please try again.';
+                      errorMessage =
+                        'An unknown error occurred.\n\nYour data is saved locally. Please try again.';
                     }
 
                     alert(`${errorTitle}\n\n${errorMessage}`);

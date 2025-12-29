@@ -272,7 +272,8 @@ const ManhoursReport: React.FC = () => {
           errorMessage = `Error: ${error.message}\n\nYour data is still on this page. If the problem persists, contact support.`;
         }
       } else {
-        errorMessage = 'An unknown error occurred.\n\nYour data is still on this page. Please try again.';
+        errorMessage =
+          'An unknown error occurred.\n\nYour data is still on this page. Please try again.';
       }
 
       alert(`${errorTitle}\n\n${errorMessage}`);

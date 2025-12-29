@@ -24,7 +24,7 @@ export default function Document() {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Theta HSE" />
+        <meta name="apple-mobile-web-app-title" content="HSE Platform" />
 
         {/* PWA and SEO meta tags are handled in _app.tsx and layouts */}
         {/* Additional document-level head elements can go here */}
