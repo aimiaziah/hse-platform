@@ -71,7 +71,7 @@ jobs:
           fi
 
       - name: Upload audit results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: npm-audit-report
@@ -100,7 +100,7 @@ jobs:
           sarif_file: semgrep-results.sarif
 
       - name: Upload Semgrep results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: semgrep-results
@@ -131,7 +131,7 @@ jobs:
             --output-file eslint-results.json || true
 
       - name: Upload ESLint results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: eslint-security-results
@@ -186,7 +186,7 @@ jobs:
           JWT_SECRET: dummy-jwt-secret-for-build-must-be-32-chars-long
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-output
           path: .next
@@ -311,7 +311,7 @@ jobs:
           echo '{"schemaVersion":1,"label":"security","message":"passing","color":"green"}' > badges/security-badge.json
 
       - name: Upload security badge
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: security-badge
           path: badges/security-badge.json
