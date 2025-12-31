@@ -20,11 +20,11 @@ async function handler(req: any, res: NextApiResponse, user: User) {
   try {
     // GET - Fetch single announcement
     if (req.method === 'GET') {
-      const { data: announcement, error } = await supabase
+      const { data: announcement, error } = (await supabase
         .from('announcements')
         .select('*')
         .eq('id', id)
-        .single() as { data: any; error: any };
+        .single()) as { data: any; error: any };
 
       if (error || !announcement) {
         return res.status(404).json({ error: 'Announcement not found' });

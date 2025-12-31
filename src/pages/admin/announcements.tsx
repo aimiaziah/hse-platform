@@ -240,10 +240,14 @@ const AnnouncementsManagement: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            {announcement.is_pinned && <span className="text-lg">📌</span>}
+                          <h3 className="text-lg font-semibold text-gray-900">
                             {announcement.title}
                           </h3>
+                          {announcement.is_pinned && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white uppercase tracking-wide">
+                              Pinned
+                            </span>
+                          )}
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                               announcement.is_published
@@ -253,11 +257,6 @@ const AnnouncementsManagement: React.FC = () => {
                           >
                             {announcement.is_published ? 'Published' : 'Draft'}
                           </span>
-                          {announcement.is_pinned && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              Pinned
-                            </span>
-                          )}
                         </div>
                         <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                           {announcement.body}
@@ -288,14 +287,20 @@ const AnnouncementsManagement: React.FC = () => {
                       <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={() => handleTogglePin(announcement)}
-                          className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 ${
+                          className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1.5 transition-colors ${
                             announcement.is_pinned
                               ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                               : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                           }`}
                           title={announcement.is_pinned ? 'Unpin' : 'Pin to top'}
                         >
-                          <span className="text-sm">📌</span>
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M10 3a1 1 0 011 1v5h3a1 1 0 110 2h-3v6a1 1 0 11-2 0v-6H6a1 1 0 110-2h3V4a1 1 0 011-1z" />
+                          </svg>
                           {announcement.is_pinned ? 'Unpin' : 'Pin'}
                         </button>
                         <button

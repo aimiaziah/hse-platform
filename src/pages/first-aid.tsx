@@ -134,7 +134,7 @@ const FirstAidInspection: React.FC = () => {
     return {
       id: Date.now().toString(),
       inspectedBy: user?.name || '',
-      designation: user?.role || 'HSE',
+      designation: user?.role === 'inspector' ? 'HSE Inspector' : (user?.role || 'HSE'),
       inspectionDate: new Date().toISOString().split('T')[0],
       signature: '',
       status: 'draft',
@@ -406,7 +406,7 @@ const FirstAidInspection: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           formType: 'first_aid',
-          status: 'pending_review',
+          status: 'completed',
           data: {
             inspectedBy: inspectionData.inspectedBy,
             inspectionDate: inspectionData.inspectionDate,
@@ -959,7 +959,7 @@ const FirstAidInspection: React.FC = () => {
                                       />
                                       {item.expiryDate && checkItemExpiryDate(item.expiryDate) && (
                                         <div
-                                          className={`mt-2 p-2 rounded-md border flex items-start gap-2 ${
+                                          className={`mt-2 p-2 rounded-md border ${
                                             checkItemExpiryDate(item.expiryDate)?.type === 'expired'
                                               ? 'bg-red-50 border-red-200'
                                               : checkItemExpiryDate(item.expiryDate)?.type ===
@@ -968,16 +968,7 @@ const FirstAidInspection: React.FC = () => {
                                               : 'bg-green-50 border-green-200'
                                           }`}
                                         >
-                                          <span className="flex-shrink-0 text-base">
-                                            {checkItemExpiryDate(item.expiryDate)?.type ===
-                                            'expired'
-                                              ? '⚠️'
-                                              : checkItemExpiryDate(item.expiryDate)?.type ===
-                                                'warning'
-                                              ? '⏰'
-                                              : '✅'}
-                                          </span>
-                                          <div className="flex-1">
+                                          <div>
                                             <p
                                               className={`text-xs font-semibold ${
                                                 checkItemExpiryDate(item.expiryDate)?.type ===

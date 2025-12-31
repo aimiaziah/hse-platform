@@ -575,12 +575,18 @@ const SafetyAnalyticsDashboard: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-start gap-2 mb-2">
-                      {announcement.is_pinned && (
-                        <span className="text-base flex-shrink-0">📌</span>
-                      )}
-                      <h4 className="text-sm font-semibold text-gray-900 flex-1">
-                        {announcement.title}
-                      </h4>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="text-sm font-semibold text-gray-900">
+                            {announcement.title}
+                          </h4>
+                          {announcement.is_pinned && (
+                            <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded uppercase tracking-wide flex-shrink-0">
+                              Pinned
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
                       {announcement.body}

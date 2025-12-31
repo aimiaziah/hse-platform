@@ -105,30 +105,33 @@ export default function NotificationBell({ onSettingsClick }: NotificationBellPr
                 <div className="divide-y divide-gray-100">
                   {announcements.map((announcement) => (
                     <div key={announcement.id} className="p-4 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start gap-2 mb-2">
-                        <span className="text-base flex-shrink-0">📌</span>
-                        <div className="flex-1">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                            {announcement.title}
-                          </h4>
-                          <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
-                            {announcement.body}
-                          </p>
-                          {announcement.published_at && (
-                            <p className="text-xs text-gray-400 mt-2">
-                              {new Date(announcement.published_at).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="text-sm font-semibold text-gray-900">
+                                {announcement.title}
+                              </h4>
+                              <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded uppercase tracking-wide flex-shrink-0">
+                                Pinned
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                              {announcement.body}
                             </p>
-                          )}
+                            {announcement.published_at && (
+                              <p className="text-xs text-gray-400 mt-2">
+                                {new Date(announcement.published_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded uppercase flex-shrink-0">
-                          Priority
-                        </span>
                       </div>
                     </div>
                   ))}

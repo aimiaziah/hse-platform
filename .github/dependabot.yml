@@ -12,9 +12,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     reviewers:
-      - "aimiaziah"  # Replace with your GitHub username
+      - "aimiaziah"
     assignees:
-      - "aimiaziah"  # Replace with your GitHub username
+      - "aimiaziah"  
     commit-message:
       prefix: "deps"
       include: "scope"

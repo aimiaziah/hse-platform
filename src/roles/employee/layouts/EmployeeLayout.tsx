@@ -7,7 +7,6 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/hooks/useAuth';
 import MobileHeader from '@/components/MobileHeader';
 import MobileBottomNav from '@/components/MobileBottomNav';
-import NotificationBell from '@/components/NotificationBell';
 import { UserAvatarIcon } from '@/components/UserAvatar';
 
 interface EmployeeLayoutProps {
@@ -55,7 +54,7 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({
       <div className="min-h-screen bg-white pb-20 md:pb-0">
         {/* Mobile Header - Shows only on mobile */}
         <div className="md:hidden">
-          <MobileHeader title="" showLogo showNotificationForEmployee />
+          <MobileHeader title="" showLogo />
         </div>
 
         {/* Desktop Navigation Header - Hidden on mobile - Sticky Header */}
@@ -90,9 +89,8 @@ const EmployeeLayout: React.FC<EmployeeLayoutProps> = ({
                 </Link>
               </div>
 
-              {/* Right side - Notification Bell */}
+              {/* Right side - Logout Button */}
               <div className="flex items-center gap-4">
-                <NotificationBell />
                 <button
                   type="button"
                   onClick={handleLogout}

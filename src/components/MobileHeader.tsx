@@ -4,20 +4,17 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatarIcon } from '@/components/UserAvatar';
-import NotificationBell from '@/components/NotificationBell';
 
 interface MobileHeaderProps {
   title?: string;
   showLogo?: boolean;
   showUserInfo?: boolean;
-  showNotificationForEmployee?: boolean;
 }
 
 const MobileHeader: React.FC<MobileHeaderProps> = ({
   title = '',
   showLogo = true,
   showUserInfo = false,
-  showNotificationForEmployee = false,
 }) => {
   const { user } = useAuth();
 
@@ -48,36 +45,31 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
             </Link>
           )}
 
-          {/* Right side - Notification Bell for Employee or User Info and Profile Link */}
+          {/* Right side - User Info and Profile Link */}
           <div className="flex items-center gap-3">
-            {user && user.role === 'employee' && showNotificationForEmployee ? (
-              <NotificationBell />
-            ) : (
-              user &&
-              user.role !== 'employee' && (
-                <>
-                  {/* User Name and Role */}
-                  <div className="text-right space-y-0">
-                    <p className="text-sm font-semibold text-gray-900 leading-none mt-1 mb-0">
-                      {user.name}
-                    </p>
-                    <p className="text-xs text-gray-600 capitalize font-normal leading-none -mt-0.5">
-                      {user.role}
-                    </p>
-                  </div>
+            {user && user.role !== 'employee' && (
+              <>
+                {/* User Name and Role */}
+                <div className="text-right space-y-0">
+                  <p className="text-sm font-semibold text-gray-900 leading-none mt-1 mb-0">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-gray-600 capitalize font-normal leading-none -mt-0.5">
+                    {user.role}
+                  </p>
+                </div>
 
-                  {/* Profile Icon */}
-                  {(user.role === 'inspector' || user.role === 'supervisor') && (
-                    <Link
-                      href={getProfileLink()}
-                      className="hover:opacity-80 transition-opacity"
-                      title="Go to Profile"
-                    >
-                      <UserAvatarIcon user={user} size="lg" />
-                    </Link>
-                  )}
-                </>
-              )
+                {/* Profile Icon */}
+                {(user.role === 'inspector' || user.role === 'supervisor') && (
+                  <Link
+                    href={getProfileLink()}
+                    className="hover:opacity-80 transition-opacity"
+                    title="Go to Profile"
+                  >
+                    <UserAvatarIcon user={user} size="lg" />
+                  </Link>
+                )}
+              </>
             )}
           </div>
         </div>

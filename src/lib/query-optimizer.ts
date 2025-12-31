@@ -146,24 +146,26 @@ export async function getCachedInspectionStats(startDate: string, endDate: strin
 
       // Aggregate in memory (less efficient but works)
       const stats = new Map();
-      (data as Array<{ inspection_type: string; status: string; created_at: string }>)?.forEach((inspection) => {
-        const date = inspection.created_at.split('T')[0];
-        const key = `${inspection.inspection_type}:${inspection.status}:${date}`;
+      (data as Array<{ inspection_type: string; status: string; created_at: string }>)?.forEach(
+        (inspection) => {
+          const date = inspection.created_at.split('T')[0];
+          const key = `${inspection.inspection_type}:${inspection.status}:${date}`;
 
-        if (!stats.has(key)) {
-          stats.set(key, {
-            inspection_type: inspection.inspection_type,
-            status: inspection.status,
-            inspection_date: date,
-            count: 0,
-          });
-        }
+          if (!stats.has(key)) {
+            stats.set(key, {
+              inspection_type: inspection.inspection_type,
+              status: inspection.status,
+              inspection_date: date,
+              count: 0,
+            });
+          }
 
-        const stat = stats.get(key);
-        if (stat) {
-          stat.count++;
-        }
-      });
+          const stat = stats.get(key);
+          if (stat) {
+            stat.count++;
+          }
+        },
+      );
 
       return Array.from(stats.values());
     },
