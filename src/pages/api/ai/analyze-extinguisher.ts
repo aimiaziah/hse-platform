@@ -39,7 +39,7 @@ const { GCP_CLOUD_RUN_ENDPOINT } = process.env;
 const { AZURE_FUNCTION_ENDPOINT } = process.env;
 
 // Confidence thresholds
-const MIN_CONFIDENCE = parseFloat(process.env.AI_MIN_CONFIDENCE || '0.7');
+const MIN_CONFIDENCE = parseFloat(process.env.AI_MIN_CONFIDENCE || '0.5');
 const DETECTION_TIMEOUT = parseInt(process.env.AI_TIMEOUT_MS || '30000');
 
 // ============================================================================
