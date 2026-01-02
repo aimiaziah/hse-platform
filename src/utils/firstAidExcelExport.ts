@@ -287,7 +287,10 @@ export async function generateFirstAidExcel(
 
                 // Set placeholder text in cell
                 imgWs.getCell(`F${imageRow}`).value = 'Image ' + (imgIndex + 1);
-                imgWs.getCell(`F${imageRow}`).alignment = { vertical: 'middle', horizontal: 'center' };
+                imgWs.getCell(`F${imageRow}`).alignment = {
+                  vertical: 'middle',
+                  horizontal: 'center',
+                };
               }
             } catch (error) {
               console.error('Error embedding image in Excel:', error);

@@ -1,0 +1,23 @@
+# Python dependencies for YOLO AI Model Server
+# Optimized for DigitalOcean deployment with minimal disk usage
+
+# FastAPI server dependencies
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+python-multipart==0.0.18
+pydantic==2.10.0
+
+# Image processing
+pillow==11.0.0
+numpy==1.26.4
+opencv-python-headless==4.10.0.84
+
+# ONNX runtime for YOLO inference (lightweight, CPU-only)
+# This is MUCH smaller than PyTorch and doesn't include CUDA/cuDNN
+# Using 1.20.1 for better opset 22 support (or re-export model with opset=21)
+onnxruntime==1.20.1
+
+# Note: We removed ultralytics because it pulls in PyTorch with CUDA dependencies
+# which causes disk space issues on DigitalOcean (PyTorch + CUDA = ~2GB+).
+# Instead, we use direct ONNX inference with onnxruntime which is much lighter (~100MB).
+# The model_server.py has been updated to use onnxruntime directly for inference.

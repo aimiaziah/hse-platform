@@ -227,11 +227,17 @@ services:
 
   # YOLO AI Model Server (Python FastAPI)
   - name: ai-model-server
-    # Source code configuration - same repo
+    # Source code configuration - same repo but DIFFERENT directory
+    # Using source_dir isolates Python files from Node.js package.json
+    # This prevents buildpack confusion between Node.js and Python
     github:
       repo: aimiaziah/hse-platform
       branch: main
       deploy_on_push: true
+
+    # CRITICAL: source_dir tells DO to only look at this subdirectory
+    # This ensures Python buildpack is selected (no package.json in this dir)
+    source_dir: ai-server
 
     # Python build configuration - optimized for disk space
     # --no-cache-dir prevents pip from caching packages (saves disk space)
