@@ -488,7 +488,7 @@ const FireExtinguisherChecklist: React.FC = () => {
     id: Date.now().toString(),
     inspectedBy: user?.name || '',
     inspectionDate: new Date().toISOString().split('T')[0],
-    designation: user?.role === 'inspector' ? 'HSE Inspector' : (user?.role || 'HSE'),
+    designation: user?.role === 'inspector' ? 'HSE Inspector' : user?.role || 'HSE',
     signature: '',
     extinguishers: INITIAL_EXTINGUISHERS,
     status: 'draft',

@@ -12,6 +12,7 @@ import { loadTemplate } from './templateLoader';
 export interface CapturedImage {
   stepId: string;
   dataUrl: string;
+  url?: string; // URL from DigitalOcean Spaces/R2
   timestamp: number;
 }
 
@@ -222,7 +223,7 @@ async function fillFireExtinguisherTemplate(
 
     // Row 5: Note
     imgWs.getCell('A5').value =
-      'Note: Each extinguisher is one row. Images are displayed in columns.';
+      'Note: Each extinguisher is one row. Images are embedded visually in the cells.';
     imgWs.mergeCells(`A5:${lastColumn}5`);
 
     // Row 6: Blank
@@ -264,7 +265,7 @@ async function fillFireExtinguisherTemplate(
     // Set width for image columns
     for (let i = 0; i < maxImages; i++) {
       const colLetter = String.fromCharCode(69 + i);
-      imgWs.getColumn(colLetter).width = 50; // Wide enough for base64 data
+      imgWs.getColumn(colLetter).width = 30; // Width for embedded images
     }
 
     // Add image data starting from row 8 - one row per extinguisher
@@ -276,11 +277,44 @@ async function fillFireExtinguisherTemplate(
       imgWs.getCell(`C${imageRow}`).value = ext.location;
       imgWs.getCell(`D${imageRow}`).value = ext.typeSize;
 
+      // Set row height to accommodate images (approximately 150 pixels)
+      imgWs.getRow(imageRow).height = 112.5; // 150 pixels = 112.5 points
+
       // Fill images across columns
       if (ext.aiCapturedImages) {
         ext.aiCapturedImages.forEach((image, imgIndex) => {
           const col = String.fromCharCode(69 + imgIndex); // E, F, G, etc.
-          imgWs.getCell(`${col}${imageRow}`).value = image.dataUrl; // Base64 image data
+          const colIndex = 4 + imgIndex; // Column E = 4
+          const cell = imgWs.getCell(`${col}${imageRow}`);
+
+          try {
+            // Embed the actual image visually in the Excel cell
+            const base64Data = image.dataUrl;
+
+            if (base64Data && base64Data.startsWith('data:image')) {
+              // Extract base64 string without the data URL prefix
+              const base64String = base64Data.split(',')[1];
+
+              // Add image to workbook
+              const imageId = workbook.addImage({
+                base64: base64String,
+                extension: 'jpeg',
+              });
+
+              // Insert image in the cell
+              imgWs.addImage(imageId, {
+                tl: { col: colIndex, row: imageRow - 1 }, // 0-indexed row
+                ext: { width: 200, height: 150 }, // Image dimensions in pixels
+              });
+
+              // Set placeholder text in cell
+              cell.value = `Image ${imgIndex + 1}`;
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            }
+          } catch (error) {
+            console.error('Error embedding image in Excel:', error);
+            cell.value = 'Image failed to embed';
+          }
         });
       }
 

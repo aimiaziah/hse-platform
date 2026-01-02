@@ -1,9 +1,12 @@
 /* eslint-disable */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
+import { compressAndUploadImage } from '@/utils/imageStorage';
+import { COMPRESSION_PRESETS } from '@/utils/imageCompression';
 
 export interface CapturedImage {
   dataUrl: string;
+  url?: string; // URL from DigitalOcean Spaces
   timestamp: number;
 }
 
@@ -25,6 +28,7 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreview, setCurrentPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -174,17 +178,46 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
   };
 
   // Confirm captured photo
-  const confirmCapture = () => {
+  const confirmCapture = async () => {
     if (currentPreview) {
-      const newCapture: CapturedImage = {
-        dataUrl: currentPreview,
-        timestamp: Date.now(),
-      };
+      setIsUploading(true);
 
-      const allCaptures = [...capturedImages, newCapture];
-      setCapturedImages(allCaptures);
-      setShowPreview(false);
-      setCurrentPreview(null);
+      try {
+        // Upload image to DigitalOcean Spaces (with compression)
+        const uploadResult = await compressAndUploadImage(
+          currentPreview,
+          'inspections/photos',
+          COMPRESSION_PRESETS.photo
+        );
+
+        const newCapture: CapturedImage = {
+          dataUrl: currentPreview, // Keep as fallback
+          url: uploadResult.isUrl ? uploadResult.data : undefined, // Use URL if available
+          timestamp: Date.now(),
+        };
+
+        const allCaptures = [...capturedImages, newCapture];
+        setCapturedImages(allCaptures);
+        setShowPreview(false);
+        setCurrentPreview(null);
+
+        console.log('[SimpleCameraCapture] Image captured:', {
+          hasUrl: !!newCapture.url,
+          url: newCapture.url,
+        });
+      } catch (error) {
+        console.error('[SimpleCameraCapture] Error uploading image:', error);
+        // If upload fails, still save with base64
+        const newCapture: CapturedImage = {
+          dataUrl: currentPreview,
+          timestamp: Date.now(),
+        };
+        setCapturedImages([...capturedImages, newCapture]);
+        setShowPreview(false);
+        setCurrentPreview(null);
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -296,15 +329,24 @@ const SimpleCameraCapture: React.FC<SimpleCameraCaptureProps> = ({
             <div className="p-6 bg-gray-900 border-t border-gray-800 flex gap-3">
               <button
                 onClick={retakePhoto}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3.5 px-4 rounded-lg font-medium transition-colors"
+                disabled={isUploading}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3.5 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Retake
               </button>
               <button
                 onClick={confirmCapture}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-4 rounded-lg font-medium transition-colors"
+                disabled={isUploading}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Confirm
+                {isUploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  'Confirm'
+                )}
               </button>
             </div>
           </div>

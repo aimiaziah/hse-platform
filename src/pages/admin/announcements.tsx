@@ -294,11 +294,7 @@ const AnnouncementsManagement: React.FC = () => {
                           }`}
                           title={announcement.is_pinned ? 'Unpin' : 'Pin to top'}
                         >
-                          <svg
-                            className="w-3.5 h-3.5"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M10 3a1 1 0 011 1v5h3a1 1 0 110 2h-3v6a1 1 0 11-2 0v-6H6a1 1 0 110-2h3V4a1 1 0 011-1z" />
                           </svg>
                           {announcement.is_pinned ? 'Unpin' : 'Pin'}

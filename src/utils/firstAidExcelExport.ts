@@ -6,6 +6,7 @@ import { loadTemplate } from './templateLoader';
 
 interface CapturedImage {
   dataUrl: string;
+  url?: string; // URL from DigitalOcean Spaces/R2
   timestamp: number;
 }
 
@@ -218,7 +219,7 @@ export async function generateFirstAidExcel(
 
       // Row 5: Note
       imgWs.getCell('A5').value =
-        'Note: This sheet contains image metadata with timestamps. Images are embedded as base64 data URLs.';
+        'Note: This sheet contains captured images embedded visually in the cells.';
       imgWs.mergeCells('A5:F5');
 
       // Row 6: Blank
@@ -229,7 +230,7 @@ export async function generateFirstAidExcel(
       imgWs.getCell('C7').value = 'Location';
       imgWs.getCell('D7').value = 'Model No.';
       imgWs.getCell('E7').value = 'Capture Time';
-      imgWs.getCell('F7').value = 'Image Data (Base64)';
+      imgWs.getCell('F7').value = 'Image';
 
       // Style headers
       ['A7', 'B7', 'C7', 'D7', 'E7', 'F7'].forEach((cell) => {
@@ -247,19 +248,53 @@ export async function generateFirstAidExcel(
       imgWs.getColumn('C').width = 15; // Location
       imgWs.getColumn('D').width = 15; // Model No.
       imgWs.getColumn('E').width = 22; // Capture Time
-      imgWs.getColumn('F').width = 50; // Image Data
+      imgWs.getColumn('F').width = 30; // Image (visual)
 
       // Add image data starting from row 8
       let imageRow = 8;
       kitsWithImages.forEach((kit) => {
         if (kit.capturedImages) {
-          kit.capturedImages.forEach((image) => {
+          kit.capturedImages.forEach((image, imgIndex) => {
             imgWs.getCell(`A${imageRow}`).value = kit.no;
             imgWs.getCell(`B${imageRow}`).value = kit.model;
             imgWs.getCell(`C${imageRow}`).value = kit.location;
             imgWs.getCell(`D${imageRow}`).value = kit.modelNo;
             imgWs.getCell(`E${imageRow}`).value = new Date(image.timestamp).toLocaleString();
-            imgWs.getCell(`F${imageRow}`).value = image.dataUrl; // Full base64 data URL
+
+            // Embed the actual image visually in the Excel cell
+            try {
+              // Use base64 data for embedding (fetch from URL if needed)
+              const base64Data = image.dataUrl;
+
+              if (base64Data && base64Data.startsWith('data:image')) {
+                // Extract base64 string without the data URL prefix
+                const base64String = base64Data.split(',')[1];
+
+                // Add image to workbook
+                const imageId = wb.addImage({
+                  base64: base64String,
+                  extension: 'jpeg', // Default to jpeg, works for most images
+                });
+
+                // Set row height to accommodate image (approximately 150 pixels)
+                imgWs.getRow(imageRow).height = 112.5; // 150 pixels = 112.5 points
+
+                // Insert image in column F
+                imgWs.addImage(imageId, {
+                  tl: { col: 5, row: imageRow - 1 }, // F column = index 5, row is 0-indexed
+                  ext: { width: 200, height: 150 }, // Image dimensions in pixels
+                });
+
+                // Set placeholder text in cell
+                imgWs.getCell(`F${imageRow}`).value = 'Image ' + (imgIndex + 1);
+                imgWs.getCell(`F${imageRow}`).alignment = { vertical: 'middle', horizontal: 'center' };
+              }
+            } catch (error) {
+              console.error('Error embedding image in Excel:', error);
+              // Fallback: just put a note
+              imgWs.getCell(`F${imageRow}`).value = 'Image failed to embed';
+            }
+
             imageRow += 1;
           });
         }

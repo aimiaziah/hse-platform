@@ -134,7 +134,7 @@ const FirstAidInspection: React.FC = () => {
     return {
       id: Date.now().toString(),
       inspectedBy: user?.name || '',
-      designation: user?.role === 'inspector' ? 'HSE Inspector' : (user?.role || 'HSE'),
+      designation: user?.role === 'inspector' ? 'HSE Inspector' : user?.role || 'HSE',
       inspectionDate: new Date().toISOString().split('T')[0],
       signature: '',
       status: 'draft',

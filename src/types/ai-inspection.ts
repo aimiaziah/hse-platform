@@ -38,7 +38,8 @@ export interface AIInspectionResult {
 
 export interface CapturedImage {
   stepId: string;
-  dataUrl: string;
+  dataUrl: string; // Base64 data URL (fallback)
+  url?: string; // Actual image URL from DigitalOcean Spaces/R2
   timestamp: number;
 }
 

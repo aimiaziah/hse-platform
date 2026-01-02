@@ -20,6 +20,11 @@ export interface YOLOImageResult {
  *
  * This function converts raw object detections into structured
  * inspection results with pass/fail values and reasoning
+ *
+ * Detection Mapping Logic:
+ * 1. Direct Class Mapping: hose, nozzle, pressure_gauge, safety_pin, pin_seal, service_tag
+ * 2. Shell-Dependent Logic: If shell detected → tick accessible, NOT missing/not in place
+ * 3. Missing Component Logic: Flag components not detected within shell's bounding box
  */
 export function mapYOLOToInspectionResults(
   yoloResults: YOLOImageResult[],
@@ -34,7 +39,7 @@ export function mapYOLOToInspectionResults(
   // Normalize class names (convert spaces to underscores for consistency)
   const normalizedDetections = allDetections.map(det => ({
     ...det,
-    class: det.class.replace(/\s+/g, '_')
+    class: det.class.replace(/\s+/g, '_').toLowerCase()
   }));
 
   console.log('[YOLO Mapper] Normalized detections:', normalizedDetections);
@@ -73,16 +78,43 @@ export function mapYOLOToInspectionResults(
   // Generate inspection results for each field
   const detections: AIDetectionResult[] = [];
 
+  // ============================================================================
+  // SHELL-DEPENDENT LOGIC
+  // ============================================================================
+
   // 1. Shell condition
   const shellDetections = componentDetections['shell'] || [];
-  if (shellDetections.length > 0) {
+  const hasShell = shellDetections.length > 0;
+  let shellBBox: [number, number, number, number] | null = null;
+
+  if (hasShell) {
     const avgConfidence = average(shellDetections.map(d => d.confidence));
     const confidencePercent = Math.round(avgConfidence * 100);
+
+    // Get the largest shell bounding box (most confident/largest area)
+    shellBBox = getLargestBBox(shellDetections);
+
     detections.push({
       field: 'shell',
       value: '✓',
       confidence: avgConfidence,
       reasoning: `Shell detected at ${confidencePercent}% confidence`
+    });
+
+    // Shell-dependent logic: If shell detected → automatically tick accessible
+    detections.push({
+      field: 'accessible',
+      value: '✓',
+      confidence: avgConfidence * 0.95,
+      reasoning: `Shell visible and clear for camera (${confidencePercent}% confidence) - assumed accessible`
+    });
+
+    // Shell-dependent logic: If shell detected → tick NOT missing/not in place
+    detections.push({
+      field: 'missingNotInPlace',
+      value: '✓',
+      confidence: avgConfidence,
+      reasoning: `Fire extinguisher shell detected in place (${confidencePercent}% confidence)`
     });
   } else {
     detections.push({
@@ -91,7 +123,27 @@ export function mapYOLOToInspectionResults(
       confidence: 0.9,
       reasoning: 'Shell not detected in image'
     });
+
+    // If no shell, mark as potentially missing
+    detections.push({
+      field: 'accessible',
+      value: 'X',
+      confidence: 0.85,
+      reasoning: 'Shell not visible - may be obstructed or missing'
+    });
+
+    detections.push({
+      field: 'missingNotInPlace',
+      value: 'X',
+      confidence: 0.9,
+      reasoning: 'Fire extinguisher shell not detected'
+    });
   }
+
+  // ============================================================================
+  // DIRECT CLASS MAPPING
+  // Simple logic: If component detected → tick (✓), if not detected → cross (X)
+  // ============================================================================
 
   // 2. Hose condition
   const hoseDetections = componentDetections['hose'] || [];
@@ -109,7 +161,7 @@ export function mapYOLOToInspectionResults(
       field: 'hose',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Hose not detected'
+      reasoning: 'Hose not detected - missing'
     });
   }
 
@@ -129,7 +181,7 @@ export function mapYOLOToInspectionResults(
       field: 'nozzle',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Nozzle not detected'
+      reasoning: 'Nozzle not detected - missing'
     });
   }
 
@@ -145,26 +197,15 @@ export function mapYOLOToInspectionResults(
       reasoning: `Pressure gauge detected at ${confidencePercent}% confidence`
     });
 
-    // Assume pressure is OK if gauge is detected
-    detections.push({
-      field: 'emptyPressureLow',
-      value: '✓',
-      confidence: avgConfidence * 0.7,
-      reasoning: `Pressure gauge visible (${confidencePercent}% confidence)`
-    });
+    // IMPORTANT: Do NOT auto-tick emptyPressureLow
+    // This requires manual inspector verification or specific gauge reading
+    // AI cannot reliably determine pressure levels from image alone
   } else {
     detections.push({
       field: 'pressureGauge',
       value: 'X',
       confidence: 0.9,
-      reasoning: 'Pressure gauge not detected'
-    });
-
-    detections.push({
-      field: 'emptyPressureLow',
-      value: 'X',
-      confidence: 0.9,
-      reasoning: 'Pressure gauge not visible'
+      reasoning: 'Pressure gauge not detected - missing'
     });
   }
 
@@ -184,7 +225,7 @@ export function mapYOLOToInspectionResults(
       field: 'safetyPin',
       value: 'X',
       confidence: 0.85,
-      reasoning: 'Safety pin not detected'
+      reasoning: 'Safety pin not detected - missing'
     });
   }
 
@@ -204,7 +245,7 @@ export function mapYOLOToInspectionResults(
       field: 'pinSeal',
       value: 'X',
       confidence: 0.85,
-      reasoning: 'Pin seal not detected'
+      reasoning: 'Pin seal not detected - missing'
     });
   }
 
@@ -224,62 +265,12 @@ export function mapYOLOToInspectionResults(
       field: 'servicingTags',
       value: 'X',
       confidence: 0.85,
-      reasoning: 'Service tag not detected'
+      reasoning: 'Service tag not detected - missing'
     });
   }
 
-  // 8. Accessibility check - based on component visibility
-  const coreComponents = [
-    { name: 'shell', detections: componentDetections['shell'] || [] },
-    { name: 'hose', detections: componentDetections['hose'] || [] },
-    { name: 'nozzle', detections: componentDetections['nozzle'] || [] },
-    { name: 'pressure_gauge', detections: componentDetections['pressure_gauge'] || [] },
-    { name: 'safety_pin', detections: componentDetections['safety_pin'] || [] },
-    { name: 'pin_seal', detections: componentDetections['pin_seal'] || [] }
-  ];
-
-  // Check if components are detected (lowered threshold to 2 for better detection)
-  const detectedCount = coreComponents.filter(c => c.detections.length > 0).length;
-
-  if (detectedCount >= 2) {
-    // Calculate average confidence across detected components
-    const componentConfidences = coreComponents
-      .filter(c => c.detections.length > 0)
-      .map(c => average(c.detections.map(d => d.confidence)));
-    const overallConfidence = average(componentConfidences);
-    const confidencePercent = Math.round(overallConfidence * 100);
-
-    detections.push({
-      field: 'accessible',
-      value: '✓',
-      confidence: overallConfidence,
-      reasoning: `Components visible at ${confidencePercent}% confidence`
-    });
-  } else {
-    detections.push({
-      field: 'accessible',
-      value: 'X',
-      confidence: 0.70,
-      reasoning: `Few components visible - may be obstructed or not accessible`
-    });
-  }
-
-  // 9. Missing/Not in place check - if any components detected, assume it's in place
-  if (detectedCount >= 1) {
-    detections.push({
-      field: 'missingNotInPlace',
-      value: '✓',
-      confidence: 0.80,
-      reasoning: 'Fire extinguisher detected in image'
-    });
-  } else {
-    detections.push({
-      field: 'missingNotInPlace',
-      value: 'X',
-      confidence: 0.90,
-      reasoning: 'Fire extinguisher not detected'
-    });
-  }
+  // Note: Accessibility and Missing/Not in Place are already handled in shell-dependent logic above
+  // Note: Empty/Pressure Low is NOT auto-filled by AI - requires manual inspector verification
 
   // Extract expiry date if visible
   const extractedData: any = {};
@@ -362,4 +353,59 @@ export function getDetectionStats(detections: YOLODetection[]) {
     })),
     overallAvgConfidence: average(detections.map(d => d.confidence))
   };
+}
+
+/**
+ * Get the largest bounding box from a list of detections
+ * Used to get the primary shell bounding box for contextual analysis
+ */
+function getLargestBBox(detections: YOLODetection[]): [number, number, number, number] {
+  if (detections.length === 0) {
+    return [0, 0, 0, 0];
+  }
+
+  // Calculate area for each detection and find the largest
+  let largestDetection = detections[0];
+  let largestArea = 0;
+
+  for (const detection of detections) {
+    const [x1, y1, x2, y2] = detection.bbox;
+    const area = (x2 - x1) * (y2 - y1);
+    if (area > largestArea) {
+      largestArea = area;
+      largestDetection = detection;
+    }
+  }
+
+  return largestDetection.bbox;
+}
+
+/**
+ * Check if a bounding box is within another bounding box
+ * Used for contextual component detection (e.g., checking if hose is within shell area)
+ */
+function isWithinBBox(
+  component: [number, number, number, number],
+  container: [number, number, number, number],
+  tolerance: number = 0.2
+): boolean {
+  const [cx1, cy1, cx2, cy2] = component;
+  const [tx1, ty1, tx2, ty2] = container;
+
+  // Allow some tolerance for components that might be partially outside
+  const expandedTx1 = tx1 - (tx2 - tx1) * tolerance;
+  const expandedTy1 = ty1 - (ty2 - ty1) * tolerance;
+  const expandedTx2 = tx2 + (tx2 - tx1) * tolerance;
+  const expandedTy2 = ty2 + (ty2 - ty1) * tolerance;
+
+  // Check if component center is within the expanded container
+  const centerX = (cx1 + cx2) / 2;
+  const centerY = (cy1 + cy2) / 2;
+
+  return (
+    centerX >= expandedTx1 &&
+    centerX <= expandedTx2 &&
+    centerY >= expandedTy1 &&
+    centerY <= expandedTy2
+  );
 }
